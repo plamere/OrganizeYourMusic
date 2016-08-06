@@ -1,0 +1,751 @@
+{
+  "href" : "https://api.spotify.com/v1/users/plamere/playlists/15FixItWeekNewReleases/tracks?offset=0&limit=10",
+  "items" : [ {
+    "added_at" : "2015-12-03T08:41:40Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "single",
+        "available_markets" : [ "NZ", "AU", "HK", "MY", "PH", "SG", "TW", "BG", "CY", "EE", "GR", "LT", "LV", "RO", "TR", "AD", "AT", "BE", "CH", "CZ", "DE", "ES", "FR", "HU", "IT", "LI", "LU", "MC", "MT", "NL", "PL", "SI", "SK", "GB", "IE", "IS", "PT" ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/7fWuPEAA8JJTYaHLEdPuRF"
+        },
+        "href" : "https://api.spotify.com/v1/albums/7fWuPEAA8JJTYaHLEdPuRF",
+        "id" : "7fWuPEAA8JJTYaHLEdPuRF",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/2752509f00ef3cf46bf7fcb6433e3a3a631ed10c",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/9f31af5ca97f84f23a46ad152a89481668e6008f",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/16f43c30d41f88e6e7b7ad9c08003fc64dc27583",
+          "width" : 64
+        } ],
+        "name" : "Adventure Of A Lifetime (Radio Edit)",
+        "type" : "album",
+        "uri" : "spotify:album:7fWuPEAA8JJTYaHLEdPuRF"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/4gzpq5DPGxSnKTe4SA8HAU"
+        },
+        "href" : "https://api.spotify.com/v1/artists/4gzpq5DPGxSnKTe4SA8HAU",
+        "id" : "4gzpq5DPGxSnKTe4SA8HAU",
+        "name" : "Coldplay",
+        "type" : "artist",
+        "uri" : "spotify:artist:4gzpq5DPGxSnKTe4SA8HAU"
+      } ],
+      "available_markets" : [ "NZ", "AU", "HK", "MY", "PH", "SG", "TW", "BG", "CY", "EE", "GR", "LT", "LV", "RO", "TR", "AD", "AT", "BE", "CH", "CZ", "DE", "ES", "FR", "HU", "IT", "LI", "LU", "MC", "MT", "NL", "PL", "SI", "SK", "GB", "IE", "IS", "PT" ],
+      "disc_number" : 1,
+      "duration_ms" : 223053,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "GBAYE1501058"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/6v6BO9dFaI8KmHXQW81nWb"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/6v6BO9dFaI8KmHXQW81nWb",
+      "id" : "6v6BO9dFaI8KmHXQW81nWb",
+      "name" : "Adventure Of A Lifetime - Radio Edit",
+      "popularity" : 0,
+      "preview_url" : "https://p.scdn.co/mp3-preview/5e00b3fdfcc79c68894874ceb68bd281de9232ad",
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:6v6BO9dFaI8KmHXQW81nWb"
+    }
+  }, {
+    "added_at" : "2015-12-03T08:41:40Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "single",
+        "available_markets" : [ "NZ", "AU", "HK", "MY", "PH", "SG", "TW", "BG", "CY", "EE", "FI", "GR", "LT", "LV", "RO", "TR", "AD", "AT", "BE", "CH", "CZ", "DE", "DK", "ES", "FR", "HU", "IT", "LI", "LU", "MC", "MT", "NL", "NO", "PL", "SE", "SI", "SK", "GB", "IE", "IS", "PT" ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/7CUcBQ9e6MDpsdBzz7wJaT"
+        },
+        "href" : "https://api.spotify.com/v1/albums/7CUcBQ9e6MDpsdBzz7wJaT",
+        "id" : "7CUcBQ9e6MDpsdBzz7wJaT",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/9680cd709838a5ba5a2118e018e0ae2edf4f24f7",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/3dc71cd41e4d8e07b65e8d67b90115310ab94409",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/96f1d3946526489826db3196061e5d73f53ae25f",
+          "width" : 64
+        } ],
+        "name" : "Stay",
+        "type" : "album",
+        "uri" : "spotify:album:7CUcBQ9e6MDpsdBzz7wJaT"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/23fqKkggKUBHNkbKtXEls4"
+        },
+        "href" : "https://api.spotify.com/v1/artists/23fqKkggKUBHNkbKtXEls4",
+        "id" : "23fqKkggKUBHNkbKtXEls4",
+        "name" : "Kygo",
+        "type" : "artist",
+        "uri" : "spotify:artist:23fqKkggKUBHNkbKtXEls4"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/5JSXWmQO8csVUy6hSRu8TA"
+        },
+        "href" : "https://api.spotify.com/v1/artists/5JSXWmQO8csVUy6hSRu8TA",
+        "id" : "5JSXWmQO8csVUy6hSRu8TA",
+        "name" : "Maty Noyes",
+        "type" : "artist",
+        "uri" : "spotify:artist:5JSXWmQO8csVUy6hSRu8TA"
+      } ],
+      "available_markets" : [ "NZ", "AU", "HK", "MY", "PH", "SG", "TW", "BG", "CY", "EE", "FI", "GR", "LT", "LV", "RO", "TR", "AD", "AT", "BE", "CH", "CZ", "DE", "DK", "ES", "FR", "HU", "IT", "LI", "LU", "MC", "MT", "NL", "NO", "PL", "SE", "SI", "SK", "GB", "IE", "IS", "PT" ],
+      "disc_number" : 1,
+      "duration_ms" : 239465,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "SEBGA1500364"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/7gBj0VgcuAgkXkiRRYvSmK"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/7gBj0VgcuAgkXkiRRYvSmK",
+      "id" : "7gBj0VgcuAgkXkiRRYvSmK",
+      "name" : "Stay",
+      "popularity" : 0,
+      "preview_url" : "https://p.scdn.co/mp3-preview/a4efa1b584efd2077c680cc92b62553fdeee976d",
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:7gBj0VgcuAgkXkiRRYvSmK"
+    }
+  }, {
+    "added_at" : "2015-12-03T08:41:40Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "single",
+        "available_markets" : [ ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/6rUfBM5R3mrOdZpQpkDdzM"
+        },
+        "href" : "https://api.spotify.com/v1/albums/6rUfBM5R3mrOdZpQpkDdzM",
+        "id" : "6rUfBM5R3mrOdZpQpkDdzM",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/88b70a45211775dcc57012432e5583f22812e502",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/f6de00be174ab32b2d977b468f58e28190392074",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/98d89a0605662ffd623246c20385fc489d4c4429",
+          "width" : 64
+        } ],
+        "name" : "Work EP",
+        "type" : "album",
+        "uri" : "spotify:album:6rUfBM5R3mrOdZpQpkDdzM"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/6l5dAUNRhHnRSPPmRJSKQr"
+        },
+        "href" : "https://api.spotify.com/v1/artists/6l5dAUNRhHnRSPPmRJSKQr",
+        "id" : "6l5dAUNRhHnRSPPmRJSKQr",
+        "name" : "Marcus Marr",
+        "type" : "artist",
+        "uri" : "spotify:artist:6l5dAUNRhHnRSPPmRJSKQr"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/2Q0MyH5YMI5HPQjFjlq5g3"
+        },
+        "href" : "https://api.spotify.com/v1/artists/2Q0MyH5YMI5HPQjFjlq5g3",
+        "id" : "2Q0MyH5YMI5HPQjFjlq5g3",
+        "name" : "Chet Faker",
+        "type" : "artist",
+        "uri" : "spotify:artist:2Q0MyH5YMI5HPQjFjlq5g3"
+      } ],
+      "available_markets" : [ ],
+      "disc_number" : 1,
+      "duration_ms" : 466300,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "AUFF01500736"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/4eoPKeSccEjpQfGicUGvIw"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/4eoPKeSccEjpQfGicUGvIw",
+      "id" : "4eoPKeSccEjpQfGicUGvIw",
+      "name" : "Birthday Card",
+      "popularity" : 0,
+      "preview_url" : null,
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:4eoPKeSccEjpQfGicUGvIw"
+    }
+  }, {
+    "added_at" : "2015-12-03T08:41:40Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "single",
+        "available_markets" : [ ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/3qmjJVxvSp5k7seea8z0PU"
+        },
+        "href" : "https://api.spotify.com/v1/albums/3qmjJVxvSp5k7seea8z0PU",
+        "id" : "3qmjJVxvSp5k7seea8z0PU",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/47827fbf1492983ba2eae4d109ca44467126d4c4",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/eec169cb9c70bde4998c437d37cb849b47572f7a",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/df36cadc3eeb0fb6b8da7c6490e53a2f1229775b",
+          "width" : 64
+        } ],
+        "name" : "Broken Arrows (Remixes)",
+        "type" : "album",
+        "uri" : "spotify:album:3qmjJVxvSp5k7seea8z0PU"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/1vCWHaC5f2uS3yhpwWbIA6"
+        },
+        "href" : "https://api.spotify.com/v1/artists/1vCWHaC5f2uS3yhpwWbIA6",
+        "id" : "1vCWHaC5f2uS3yhpwWbIA6",
+        "name" : "Avicii",
+        "type" : "artist",
+        "uri" : "spotify:artist:1vCWHaC5f2uS3yhpwWbIA6"
+      } ],
+      "available_markets" : [ ],
+      "disc_number" : 1,
+      "duration_ms" : 238515,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "CHB701400349"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/3ebotdEx3D8hvHv0TAfDws"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/3ebotdEx3D8hvHv0TAfDws",
+      "id" : "3ebotdEx3D8hvHv0TAfDws",
+      "name" : "Broken Arrows - M-22 Remix",
+      "popularity" : 0,
+      "preview_url" : null,
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:3ebotdEx3D8hvHv0TAfDws"
+    }
+  }, {
+    "added_at" : "2015-11-29T07:51:37Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "single",
+        "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/58X6ic2C9hCW8MLANoWEH6"
+        },
+        "href" : "https://api.spotify.com/v1/albums/58X6ic2C9hCW8MLANoWEH6",
+        "id" : "58X6ic2C9hCW8MLANoWEH6",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/f4a098c202c28a4b45508b26a531e0f23702b7e0",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/2089d20640843ab91af161a16cf461aa04f87e91",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/f6b15f0eecc19e3f61a8c8b05b38809746733828",
+          "width" : 64
+        } ],
+        "name" : "The More You Give (The More You\"ll Have)",
+        "type" : "album",
+        "uri" : "spotify:album:58X6ic2C9hCW8MLANoWEH6"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/1GxkXlMwML1oSg5eLPiAz3"
+        },
+        "href" : "https://api.spotify.com/v1/artists/1GxkXlMwML1oSg5eLPiAz3",
+        "id" : "1GxkXlMwML1oSg5eLPiAz3",
+        "name" : "Michael Bublé",
+        "type" : "artist",
+        "uri" : "spotify:artist:1GxkXlMwML1oSg5eLPiAz3"
+      } ],
+      "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+      "disc_number" : 1,
+      "duration_ms" : 191748,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "USRE11500564"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/7f4zVC7NpraLjXjFx9DNDt"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/7f4zVC7NpraLjXjFx9DNDt",
+      "id" : "7f4zVC7NpraLjXjFx9DNDt",
+      "name" : "The More You Give (The More You\"ll Have)",
+      "popularity" : 54,
+      "preview_url" : "https://p.scdn.co/mp3-preview/fac52fca30d023b5bcccb5b0b0dc8257609e861a",
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:7f4zVC7NpraLjXjFx9DNDt"
+    }
+  }, {
+    "added_at" : "2015-11-29T07:51:37Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "album",
+        "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/0gK4HvNlLb3avRZiBNV0pQ"
+        },
+        "href" : "https://api.spotify.com/v1/albums/0gK4HvNlLb3avRZiBNV0pQ",
+        "id" : "0gK4HvNlLb3avRZiBNV0pQ",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/3b56f0978ed23636c24af2db0603ca392c03c99b",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/e96a06db68a07fefdb0cbed03eb2480dc1527a1c",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/1cfe82d02af14d081fb33eef111204291c9fa32a",
+          "width" : 64
+        } ],
+        "name" : "Armin van Buuren presents Armind - Best of 2015",
+        "type" : "album",
+        "uri" : "spotify:album:0gK4HvNlLb3avRZiBNV0pQ"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/2BrB1yM0OCJlZDm74o6wW4"
+        },
+        "href" : "https://api.spotify.com/v1/artists/2BrB1yM0OCJlZDm74o6wW4",
+        "id" : "2BrB1yM0OCJlZDm74o6wW4",
+        "name" : "Omnia",
+        "type" : "artist",
+        "uri" : "spotify:artist:2BrB1yM0OCJlZDm74o6wW4"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/4Vm7RaGmSZfsTd21X0BKb1"
+        },
+        "href" : "https://api.spotify.com/v1/artists/4Vm7RaGmSZfsTd21X0BKb1",
+        "id" : "4Vm7RaGmSZfsTd21X0BKb1",
+        "name" : "Tilde",
+        "type" : "artist",
+        "uri" : "spotify:artist:4Vm7RaGmSZfsTd21X0BKb1"
+      } ],
+      "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+      "disc_number" : 1,
+      "duration_ms" : 180048,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "NLF711504760"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/67KNVpHos8IjFGgMe5vQ3P"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/67KNVpHos8IjFGgMe5vQ3P",
+      "id" : "67KNVpHos8IjFGgMe5vQ3P",
+      "name" : "For The First Time - Radio Edit",
+      "popularity" : 33,
+      "preview_url" : "https://p.scdn.co/mp3-preview/a643cdfd1dcc87a42e0e1090b43b0a7378ce673e",
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:67KNVpHos8IjFGgMe5vQ3P"
+    }
+  }, {
+    "added_at" : "2015-11-28T07:26:56Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "single",
+        "available_markets" : [ ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/4NcwzWl303Wo3nLfmgkzJi"
+        },
+        "href" : "https://api.spotify.com/v1/albums/4NcwzWl303Wo3nLfmgkzJi",
+        "id" : "4NcwzWl303Wo3nLfmgkzJi",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/8c0e86c6ea01a93eea87d1788e48667a068f00f8",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/066c8e4492fa464c9fff8f4ef4d2796657974c72",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/b6d2ed7ac2854513ef45d0b5e88426c43d5ccc7c",
+          "width" : 64
+        } ],
+        "name" : "Firestone",
+        "type" : "album",
+        "uri" : "spotify:album:4NcwzWl303Wo3nLfmgkzJi"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/23fqKkggKUBHNkbKtXEls4"
+        },
+        "href" : "https://api.spotify.com/v1/artists/23fqKkggKUBHNkbKtXEls4",
+        "id" : "23fqKkggKUBHNkbKtXEls4",
+        "name" : "Kygo",
+        "type" : "artist",
+        "uri" : "spotify:artist:23fqKkggKUBHNkbKtXEls4"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/1rw8ZTLnDHd74TWDDukjVi"
+        },
+        "href" : "https://api.spotify.com/v1/artists/1rw8ZTLnDHd74TWDDukjVi",
+        "id" : "1rw8ZTLnDHd74TWDDukjVi",
+        "name" : "Conrad Sewell",
+        "type" : "artist",
+        "uri" : "spotify:artist:1rw8ZTLnDHd74TWDDukjVi"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/1u3iAH558OCRoeuhXECY5k"
+        },
+        "href" : "https://api.spotify.com/v1/artists/1u3iAH558OCRoeuhXECY5k",
+        "id" : "1u3iAH558OCRoeuhXECY5k",
+        "name" : "Conrad",
+        "type" : "artist",
+        "uri" : "spotify:artist:1u3iAH558OCRoeuhXECY5k"
+      } ],
+      "available_markets" : [ ],
+      "disc_number" : 1,
+      "duration_ms" : 256893,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "BXDRS1500018"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/2UGfzooyvdOroCdlyU8LN2"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/2UGfzooyvdOroCdlyU8LN2",
+      "id" : "2UGfzooyvdOroCdlyU8LN2",
+      "name" : "Firestone",
+      "popularity" : 43,
+      "preview_url" : null,
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:2UGfzooyvdOroCdlyU8LN2"
+    }
+  }, {
+    "added_at" : "2015-11-27T07:26:19Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "album",
+        "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/7gx0LHSSKb1zvhDsR1qlXj"
+        },
+        "href" : "https://api.spotify.com/v1/albums/7gx0LHSSKb1zvhDsR1qlXj",
+        "id" : "7gx0LHSSKb1zvhDsR1qlXj",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/aa01d2c40285217c387ee782544c006d242c02eb",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/ab43e1b227eaf85cdd575544e66d0bedb1905f2b",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/aba6b41208c54ac0506e227f8ee43ddcf97836d0",
+          "width" : 64
+        } ],
+        "name" : "A State Of Trance Episode 741",
+        "type" : "album",
+        "uri" : "spotify:album:7gx0LHSSKb1zvhDsR1qlXj"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/2BrB1yM0OCJlZDm74o6wW4"
+        },
+        "href" : "https://api.spotify.com/v1/artists/2BrB1yM0OCJlZDm74o6wW4",
+        "id" : "2BrB1yM0OCJlZDm74o6wW4",
+        "name" : "Omnia",
+        "type" : "artist",
+        "uri" : "spotify:artist:2BrB1yM0OCJlZDm74o6wW4"
+      } ],
+      "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+      "disc_number" : 1,
+      "duration_ms" : 192679,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "NLF711507588"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/1NdXibcqpL33x51Ml2Qsjf"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/1NdXibcqpL33x51Ml2Qsjf",
+      "id" : "1NdXibcqpL33x51Ml2Qsjf",
+      "name" : "Shanghai - Asot 741 Tune Of The Week",
+      "popularity" : 41,
+      "preview_url" : "https://p.scdn.co/mp3-preview/6800e23f83d48fb0361e6fda70fe2a0e52e5b571",
+      "track_number" : 2,
+      "type" : "track",
+      "uri" : "spotify:track:1NdXibcqpL33x51Ml2Qsjf"
+    }
+  }, {
+    "added_at" : "2015-11-27T07:26:19Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "single",
+        "available_markets" : [ "AU", "NZ" ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/594uTLu9vc5MOHY2SzqFou"
+        },
+        "href" : "https://api.spotify.com/v1/albums/594uTLu9vc5MOHY2SzqFou",
+        "id" : "594uTLu9vc5MOHY2SzqFou",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/23ccf1a7d08c02b5e31fa27bff61df467f1b6773",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/aa081b1a998d596e1c10977b1460f6e17342bac1",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/900a54dca06a8e79f831ded7c6777f9365dcfd84",
+          "width" : 64
+        } ],
+        "name" : "Birthday Card - Single",
+        "type" : "album",
+        "uri" : "spotify:album:594uTLu9vc5MOHY2SzqFou"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/6l5dAUNRhHnRSPPmRJSKQr"
+        },
+        "href" : "https://api.spotify.com/v1/artists/6l5dAUNRhHnRSPPmRJSKQr",
+        "id" : "6l5dAUNRhHnRSPPmRJSKQr",
+        "name" : "Marcus Marr",
+        "type" : "artist",
+        "uri" : "spotify:artist:6l5dAUNRhHnRSPPmRJSKQr"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/2Q0MyH5YMI5HPQjFjlq5g3"
+        },
+        "href" : "https://api.spotify.com/v1/artists/2Q0MyH5YMI5HPQjFjlq5g3",
+        "id" : "2Q0MyH5YMI5HPQjFjlq5g3",
+        "name" : "Chet Faker",
+        "type" : "artist",
+        "uri" : "spotify:artist:2Q0MyH5YMI5HPQjFjlq5g3"
+      } ],
+      "available_markets" : [ "AU", "NZ" ],
+      "disc_number" : 1,
+      "duration_ms" : 466300,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "AUFF01500736"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/2NdgpthbNZx7VXRBiTp15V"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/2NdgpthbNZx7VXRBiTp15V",
+      "id" : "2NdgpthbNZx7VXRBiTp15V",
+      "name" : "Birthday Card",
+      "popularity" : 43,
+      "preview_url" : "https://p.scdn.co/mp3-preview/bfd69046024d5246f71b5b632047827f37951085",
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:2NdgpthbNZx7VXRBiTp15V"
+    }
+  }, {
+    "added_at" : "2015-11-26T19:12:02Z",
+    "added_by" : {
+      "external_urls" : {
+        "spotify" : "http://open.spotify.com/user/plamere"
+      },
+      "href" : "https://api.spotify.com/v1/users/plamere",
+      "id" : "plamere",
+      "type" : "user",
+      "uri" : "spotify:user:plamere"
+    },
+    "is_local" : false,
+    "track" : {
+      "album" : {
+        "album_type" : "album",
+        "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/album/7FuRQryJz4eyHX6UgmIWa9"
+        },
+        "href" : "https://api.spotify.com/v1/albums/7FuRQryJz4eyHX6UgmIWa9",
+        "id" : "7FuRQryJz4eyHX6UgmIWa9",
+        "images" : [ {
+          "height" : 640,
+          "url" : "https://i.scdn.co/image/5cdfaf140ef47b8cc877154c729f9649e5d2e90f",
+          "width" : 640
+        }, {
+          "height" : 300,
+          "url" : "https://i.scdn.co/image/4dfbdc173739b64af9d4b567f7469c68153645dd",
+          "width" : 300
+        }, {
+          "height" : 64,
+          "url" : "https://i.scdn.co/image/0413879608101637c31d8680e3d5f742baaa8e18",
+          "width" : 64
+        } ],
+        "name" : "Bang My Head (feat. Sia & Fetty Wap)",
+        "type" : "album",
+        "uri" : "spotify:album:7FuRQryJz4eyHX6UgmIWa9"
+      },
+      "artists" : [ {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/1Cs0zKBU1kc0i8ypK3B9ai"
+        },
+        "href" : "https://api.spotify.com/v1/artists/1Cs0zKBU1kc0i8ypK3B9ai",
+        "id" : "1Cs0zKBU1kc0i8ypK3B9ai",
+        "name" : "David Guetta",
+        "type" : "artist",
+        "uri" : "spotify:artist:1Cs0zKBU1kc0i8ypK3B9ai"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/6PXS4YHDkKvl1wkIl4V8DL"
+        },
+        "href" : "https://api.spotify.com/v1/artists/6PXS4YHDkKvl1wkIl4V8DL",
+        "id" : "6PXS4YHDkKvl1wkIl4V8DL",
+        "name" : "Fetty Wap",
+        "type" : "artist",
+        "uri" : "spotify:artist:6PXS4YHDkKvl1wkIl4V8DL"
+      }, {
+        "external_urls" : {
+          "spotify" : "https://open.spotify.com/artist/5WUlDfRSoLAfcVSX1WnrxN"
+        },
+        "href" : "https://api.spotify.com/v1/artists/5WUlDfRSoLAfcVSX1WnrxN",
+        "id" : "5WUlDfRSoLAfcVSX1WnrxN",
+        "name" : "Sia",
+        "type" : "artist",
+        "uri" : "spotify:artist:5WUlDfRSoLAfcVSX1WnrxN"
+      } ],
+      "available_markets" : [ "AD", "AR", "AT", "AU", "BE", "BG", "BO", "BR", "CA", "CH", "CL", "CO", "CR", "CY", "CZ", "DE", "DK", "DO", "EC", "EE", "ES", "FI", "FR", "GB", "GR", "GT", "HK", "HN", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "MT", "MX", "MY", "NI", "NL", "NO", "NZ", "PA", "PE", "PH", "PL", "PT", "PY", "RO", "SE", "SG", "SI", "SK", "SV", "TR", "TW", "US", "UY" ],
+      "disc_number" : 1,
+      "duration_ms" : 284361,
+      "explicit" : false,
+      "external_ids" : {
+        "isrc" : "GB28K1500113"
+      },
+      "external_urls" : {
+        "spotify" : "https://open.spotify.com/track/1dM6FsF16SIoV7VdCE2r38"
+      },
+      "href" : "https://api.spotify.com/v1/tracks/1dM6FsF16SIoV7VdCE2r38",
+      "id" : "1dM6FsF16SIoV7VdCE2r38",
+      "name" : "Bang my Head (feat. Sia & Fetty Wap) - Extended",
+      "popularity" : 48,
+      "preview_url" : "https://p.scdn.co/mp3-preview/db89300e3a0920434f01a8e2450b07d263c95413",
+      "track_number" : 1,
+      "type" : "track",
+      "uri" : "spotify:track:1dM6FsF16SIoV7VdCE2r38"
+    }
+  } ],
+  "limit" : 10,
+  "next" : "https://api.spotify.com/v1/users/plamere/playlists/15FixItWeekNewReleases/tracks?offset=10&limit=10",
+  "offset" : 0,
+  "previous" : null,
+  "total" : 200
+}

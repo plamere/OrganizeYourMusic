@@ -1,0 +1,8 @@
+cherrypy
+flask
+flask-cors
+plyvel
+pyen
+requests
+simplejson
+spotipy

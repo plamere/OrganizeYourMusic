@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link type="text/css" href="styles.css" rel="stylesheet" />
+    <link href="dist/sp-bootstrap.min.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="shortcut icon" href="images/favicon.png">
+    <title>Organize Your Music</title>
+    <!-- Custom styles for this template -->
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+  <body >
+    <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="index.html">
+            <span class="navbar-logo">Spotify</span>
+            <span class="navbar-title">Organize Your Music</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main jumbotron for a primary marketing message or call to action -->
+      <div id='intro'>
+      <div id='main' class="top jumbotron jumbotron-hero container-fluid">
+          <div  id="jumbo-dialog">
+            <h1 id='ttitle' >Organize Your Music</h1>
+            <p id='ttext'>
+                Organize your Spotify collection (or one of your mega-playlists)
+                by any of a wide range of musical attributes genre, mood, 
+                year of release and more.
+            </p>
+            <p>  Login with your Spotify account to get started</p>
+            <p><a class="btn btn-primary btn-lg" id='go' role="button">Login with Spotify</a></p>
+          </div>
+      </div>
+
+        <div class="container ">
+          <div class="row features">
+             <div class="col-md-offset-2 col-md-8">
+                    <h2 class="text-center">Get your music collection in order</h2>
+                    <p>
+                    With <b> Organize Your Music </b> you can easily order the songs
+                    in any of your playlists be a wide range of parameters. Just
+                    follow these steps:
+                    </p>
+                    <ol>
+                        <li> <b> Login </b> with your Spotify credentials 
+                        <li> <b> Pick </b> your playlist
+                        <li> <b> Sort </b> the playlist by clicking on the column headings in
+                        the playlist table
+                        <li>  <b> Save </b> the sorted playlist to Spotify
+                    </ol>
+              </div> 
+          </div>
+        </div>
+        </div>
+
+
+
+  <div class="row ">
+  <div id="sidebar" class="sidebar work"> </div>
+
+  <div id="main-wrapper">
+      <div class="work" id="main-area">
+          <div id='info' class="text-center"></div>
+          <h3 id="playlist-title"> </h3>
+          <div>
+              <button id="save-button" class="btn btn-xs pull-left btn-primary"> Save as playlist </button>
+          </div>
+          <br>
+          <table id="the-track-table" class="table">
+            <col width="5%">
+            <col width="45%">
+            <col width="45%">
+            <thead>
+                <tr>
+                    <th> # </th>
+                    <th> title </th>
+                    <th> artist </th>
+                </tr>
+            </thead>
+            <tbody id='track-table'> </tbody>
+          </table>
+      </div>
+    </div>
+
+    <div style="clear:both"> </div>
+    <div id="footer">
+      <div class="container text-center">
+            <p class="text-muted">
+                Powered by <a href="http://spotify.com">Spotify</a>
+                Created by <a href="http://twitter.com/plamere">@plamere</a>
+            </p>
+      </div>
+    </div>
+    <script src="lib/jquery-1.11.1.min.js"></script>
+    <script src="lib/bootstrap.min.js"></script>
+    <script src="lib/underscore-min.js"></script>
+    <script type="text/javascript" charset="utf-8"
+        src="//cdnjs.cloudflare.com/ajax/libs/q.js/1.4.1/q.min.js"></script>
+    <script src="config.js"></script>
+
+<script>
+"use strict";
+var accessToken = null;
+var curUserID = null;
+var curTracks = {};
+var curArtists = {};
+var curAlbums = {};
+var skipGenres = new Set(['badgenre']);
+var theWorld = null;
+var audio = $("<audio>");
+var nowPlaying = null;
+var curSpool = null;
+
+function refreshTheWorld() {
+    var ntracks = Object.keys(curTracks).length;
+    info("Found " + ntracks + " tracks in your collection.");
+
+    theWorld = {
+        genres:{ },
+        moods:{ },
+        decades:{ }
+    }
+    refreshGenres();
+    refreshDecades();
+    refreshMoods();
+    refreshPopularity();
+
+    updateViewOfTheWorld();
+}
+
+function showPlaylist(spool) {
+    curSpool = spool;
+    console.log('spool', spool.name, spool.tracks);
+    $("#playlist-title").text("My " + uname(spool.name));
+    var tbl = $("#track-table");
+    tbl.empty();
+    _.each(spool.tracks, function(track, i) {
+        var tr = $("<tr>");
+        tr.append($("<td>").text(i + 1));
+        tr.append($("<td>").text(track.name));
+        tr.append($("<td>").text(track.artists[0].name));
+        tr.on("click", function() {
+            playTrack(track);
+        });
+        tbl.append(tr);
+    });
+}
+
+function saveTracksToPlaylist(playlist, tracks) {
+    var uris = [];
+
+    function saveTracks() {
+        var url = "https://api.spotify.com/v1/users/" + curUserID 
+            + "/playlists/" + playlist.id + "/tracks";
+        var params = {
+            uris:uris
+        }
+        callSpotify("POST", url, params, function(ok, results) {
+            if (ok) {
+                info("Playlist saved");
+            } else {
+                error("Trouble adding tracks to playlist");
+            }
+        });
+    }
+
+    _.each(tracks, function(track) {
+        if (uris.length < 100) {
+            // bug fix me
+            uris.push(track.uri);
+        }
+    });
+    saveTracks();
+}
+
+function savePlaylist() {
+    console.log("saving playlist");
+    if (curSpool != null) {
+        console.log("saving", curSpool.name);
+        info("saving " + uname(curSpool.name));
+        var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists"
+        console.log("url", url);
+        callSpotify("POST", url, {name:"My " + uname(curSpool.name) }, function(ok, results) {
+            if (ok) {
+                console.log("save results", results);
+                saveTracksToPlaylist(results, curSpool.tracks);
+            } else {
+                error("Trouble creating playlist");
+            }
+        })
+    }
+}
+
+function updateViewOfTheWorld() {
+    var minTracksForSection = 5;
+    var sidebar = $("#sidebar");
+    sidebar.empty();
+    var first = true;
+
+    _.each(theWorld, function(pool, name) {
+        var spool = sortedPool(pool);
+        console.log('theworld', spool, name);
+        sidebar.append($("<h4>").text(name));
+        var ul = $("<ul class='playlist-list'>");
+        sidebar.append(ul);
+        _.each(spool, function(spoolItem) {
+            var tracks = spoolItem.tracks;
+            var name = spoolItem.name;
+            if (tracks.length >= minTracksForSection) {
+                var header = $("<li>").text(uname(name) + " (" + tracks.length + " tracks)");
+                ul.append(header);
+                header.on("click", function() {
+                    showPlaylist(spoolItem);
+                });
+                if (first) {
+                    first = false;
+                    showPlaylist(spoolItem);
+                }
+            }
+        });
+    });
+}
+
+function nname(s) {
+    return s.replace(/ /g, '_');
+}
+
+function uname(s) {
+    return s.replace(/_/g, ' ');
+}
+
+
+function sortedPool(pool) {
+    var out = [];
+    _.each(pool, function(tracks, name) {
+        out.push( {tracks:tracks, name:name });
+    });
+
+    out.sort(function(a,b) {
+        if (a.tracks.length > b.tracks.length) {
+            return -1;
+        } else if (a.tracks.length < b.tracks.length) {
+            return 1;
+        } else {
+            return 0;
+        }
+    });
+    return out;
+}
+
+function refreshGenres() {
+    theWorld.genres = {};
+    _.each(curTracks, function(track) {
+        var genres = getGenresForTrack(track);
+        _.each(genres, function(genre) {
+            if (isGoodGenre(genre)) {
+                if (! (genre in theWorld.genres)) {
+                    theWorld.genres[genre] = [];
+                }
+                theWorld.genres[genre].push(track);
+            }
+        });
+    });
+}
+
+function refreshMoods() {
+    theWorld.moods = {
+        acoustic:[],
+        chill:[],
+        sad:[],
+        angry:[],
+        instrumental:[],
+        happy:[],
+        amped:[],
+        danceable:[],
+        live:[],
+    };
+    _.each(curTracks, function(track) {
+        if ('audio_feature' in track) {
+            var feats = track.audio_feature;
+            if (feats.acousticness > .8) {
+                theWorld.moods.acoustic.push(track);
+            }
+
+            if (feats.energy < .2) {
+                theWorld.moods.chill.push(track);
+            }
+
+            if (feats.energy > .8) {
+                theWorld.moods.amped.push(track);
+            }
+            
+            if ((1 - feats.energy) * (1 - feats.valence) > .8) {
+                theWorld.moods.sad.push(track);
+            }
+
+            if (feats.energy * feats.valence > .8) {
+                theWorld.moods.happy.push(track);
+            }
+
+            if (feats.energy * (1 - feats.valence) > .8) {
+                theWorld.moods.angry.push(track);
+            }
+
+            if (feats.danceabilty > .8) {
+                theWorld.moods.danceable.push(track);
+            }
+
+            if (feats.instrumental > .8) {
+                theWorld.moods.instrumental.push(track);
+            }
+
+            if (feats.live > .85) {
+                theWorld.moods.live.push(track);
+            }
+        }
+    });
+}
+
+function refreshDecades() {
+    theWorld.decades = {};
+    _.each(curTracks, function(track) {
+        var decade = getDecadeForTrack(track);
+        if (decade != null) {
+            if (! (decade in theWorld.decades)) {
+                theWorld.decades[decade] = [];
+            }
+            theWorld.decades[decade].push(track);
+        }
+    });
+    refreshNewMusic();
+}
+
+function refreshPopularity() {
+    theWorld.popularity = {
+        popular:[],
+        mainstream:[],
+        hipster:[],
+        deep_tracks:[]
+    };
+
+    _.each(curTracks, function(track) {
+        var pop = track.popularity;
+        if (pop > 60) {
+            theWorld.popularity.popular.push(track);
+        } else if (pop > 40) {
+            theWorld.popularity.mainstream.push(track);
+        } else if (pop > 10) {
+            theWorld.popularity.hipster.push(track);
+        } else {
+            theWorld.popularity.deep_tracks.push(track);
+        }
+    });
+    refreshNewMusic();
+}
+
+
+function refreshNewMusic() {
+    var newYear = 2016; // TBD fix  me
+    theWorld.decades.now = [];
+    _.each(curTracks, function(track) {
+        var year = getYearForTrack(track);
+        if (year != null) {
+            if (year >= newYear) {
+                theWorld.decades.now.push(track);
+            }
+        }
+    });
+}
+
+function getDecadeForTrack(track) {
+    var year = getYearForTrack(track);
+    var decade = null;
+    if (year != null) {
+        decade =  Math.floor(year / 10) * 10
+    } 
+    return decade;
+}
+
+function getYearForTrack(track) {
+    var year = null;
+    if (track.album.id in curAlbums) {
+        var album = curAlbums[track.album.id];
+        if ('release_date' in album) {
+            var date = album.release_date;
+            if (date.length >=4) {
+                var syear = date.substring(0,4);
+                year = parseInt(syear);
+            }
+        }
+    }
+    return year;
+}
+
+function getGenresForTrack(track) {
+    var genres = [];
+    var albumId = track.album.id;
+    if (albumId in curAlbums) {
+        var album = curAlbums[albumId];
+        _.each(album.genres, function(g) {
+            genres.push(g);
+        });
+    }
+
+    _.each(track.artists, function(artist) {
+        if (artist.id in curArtists) {
+            var detailedArtist = curArtists[artist.id];
+            _.each(detailedArtist.genres, function(genre) {
+                genres.push(genre);
+            });
+        }
+    });
+    return genres;
+}
+
+function isGoodGenre(genre) {
+    return !(genre in skipGenres);
+}
+
+function error(msg) {
+    info(msg);
+}
+
+function info(msg) {
+    $("#info").text(msg);
+}
+
+function authorizeUser() {
+    var scopes = 'user-library-read playlist-read-private playlist-modify-private playlist-modify-public';
+
+    var url = 'https://accounts.spotify.com/authorize?client_id=' + SPOTIFY_CLIENT_ID +
+        '&response_type=token' +
+        '&scope=' + encodeURIComponent(scopes) +
+        '&redirect_uri=' + encodeURIComponent(SPOTIFY_REDIRECT_URI);
+    document.location = url;
+}
+
+function parseArgs() {
+    var hash = location.hash.replace(/#/g, '');
+    var all = hash.split('&');
+    var args = {};
+    _.each(all, function(keyvalue) {
+        var kv = keyvalue.split('=');
+        var key = kv[0];
+        var val = kv[1];
+        args[key] = val;
+    });
+    return args;
+}
+
+function callSpotify(type, url, json, callback) {
+    $.ajax(url, {
+        type: type,
+        data: JSON.stringify(json),
+        dataType: 'json',
+        headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json'
+        },
+        success: function(r) {
+            callback(true, r);
+        },
+        error: function(r) {
+            // 2XX status codes are good, but some have no
+            // response data which triggers the error handler
+            // convert it to goodness.
+            if (r.status >= 200 && r.status < 300) {
+                callback(true, r);
+            } else {
+                callback(false, r);
+            }
+        }
+    });
+}
+
+function callSpotifyQ(type, url, json) {
+    return Q.Promise(function(resolve, reject, notify) {
+        $.ajax(url, {
+            type: type,
+            data: JSON.stringify(json),
+            dataType: 'json',
+            headers: {
+                'Authorization': 'Bearer ' + accessToken,
+                'Content-Type': 'application/json'
+            },
+            beforeSend : function () {
+                console.log(type + ": " + this.url);
+            },
+            success: function(data) {
+                resolve(data);
+            },
+            error: function(jqXHR, textStatus) {
+                // 2XX status codes are good, but some have no
+                // response data which triggers the error handler
+                // convert it to goodness.
+                if (jqXHR.status >= 200 && jqXHR.status < 300) {
+                    resolve(undefined);
+                } else {
+                    reject(textStatus);
+                }
+            }
+        });  
+    });
+}
+
+function getSpotify(url, data, callback) {
+    $.ajax(url, {
+        dataType: 'json',
+        data: data,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        },
+        success: function(r) {
+            callback(r);
+        },
+        error: function(r) {
+            callback(null);
+        }
+    });
+}
+
+function getSpotifyQ(url, data) {
+    return Q.Promise(function(resolve, reject, notify) {
+        $.ajax(url, {
+            dataType: 'json',
+            data: data,
+            headers: {
+                'Authorization': 'Bearer ' + accessToken
+            },
+            beforeSend : function () {
+                // console.log("GET: " + this.url);
+            },
+            success: function(data) {
+                resolve(data);
+            },
+            error: function(jqXHR, textStatus) {
+                if (jqXHR.status >= 200 && jqXHR.status < 300) {
+                    resolve(undefined);
+                } else {
+                    reject(textStatus);
+                }
+            }
+        });
+    });
+}
+
+
+function fetchCurrentUserProfile(callback) {
+    var url = 'https://api.spotify.com/v1/me';
+    getSpotify(url, null, callback);
+}
+
+
+function playTrack(track) {
+    if (track != nowPlaying) {
+        audio.attr('src', track.preview_url);
+        audio.get(0).play();
+        nowPlaying = track;
+    } else {
+        stopTrack();
+    }
+}
+
+function stopTrack() {
+    audio.get(0).pause();
+    nowPlaying = null;
+}
+
+
+function collectAudioAttributes(tracks, isLast) {
+    var trackIds = [];
+    _.each(tracks, function(track) {
+        trackIds.push(track.id);
+    });
+
+    getSpotify("https://api.spotify.com/v1/audio-features", 
+        { ids: trackIds.join(',')}, function(results) {
+        _.each(results.audio_features, function(audio_feature) {
+            if (audio_feature) {
+                curTracks[audio_feature.id].audio_feature = audio_feature;
+            }
+        });
+        if (isLast) {
+            refreshTheWorld();
+        }
+    });
+}
+
+function collectArtistAttributes(tracks, isLast) {
+    function getArtistInfo(aids) {
+        getSpotify("https://api.spotify.com/v1/artists", 
+            { ids: aids.join(',')}, function(results) {
+            _.each(results.artists, function(artist) {
+                curArtists[artist.id] = artist;
+            });
+            if (isLast) {
+                refreshTheWorld();
+            }
+        });
+    }
+
+    var aids = [];
+    var maxArtistsPerCall = 50;
+    _.each(tracks, function(track) {
+        _.each(track.artists, function(artist) {
+            if (! (artist.id in curArtists)) {
+                aids.push(artist.id);
+                if (aids.length >= maxArtistsPerCall) {
+                    getArtistInfo(aids);
+                    aids = [];
+                }
+            }
+        });
+    });
+
+    if (aids.length > 0) {
+        getArtistInfo(aids);
+    }
+}
+
+
+function collectAlbumAttributes(tracks, isLast) {
+    function getAlbumInfo(aids) {
+        getSpotify("https://api.spotify.com/v1/albums", 
+            { ids: aids.join(',')}, function(results) {
+            _.each(results.albums, function(album) {
+                curAlbums[album.id] = album;
+            });
+            if (isLast)  {
+                refreshTheWorld();
+            }
+        });
+    }
+
+    var aids = [];
+    var maxAlbumsPerCall = 20;
+    _.each(tracks, function(track) {
+        if (! (track.album.id in curAlbums)) {
+            aids.push(track.album.id);
+            if (aids.length >= maxAlbumsPerCall) {
+                getAlbumInfo(aids);
+                aids = [];
+            }
+        }
+    });
+
+    if (aids.length > 0) {
+        getAlbumInfo(aids);
+    }
+}
+
+function getSavedTracks(offset) {
+    var params = {
+        limit:50,
+        offset:offset,
+    }
+    getSpotify("https://api.spotify.com/v1/me/tracks", params, 
+        function(results) {
+            if (results == null) {
+                error("Trouble reading your collection!");
+                // this is usually because we were logged out
+                // so do something about that
+            } else {
+                var tracks = [];
+                _.each(results.items, function(item) {
+                    if ('id' in item.track) {
+                        item.track.added_at = item.added_at;
+                        tracks.push(item.track);
+                    }
+                });
+                _.each(tracks, function(track) {
+                    info(track.name + " - " + track.artists[0].name);
+                    curTracks[track.id] = track;
+                });
+
+                var isLast = results.offset + results.items.length >= results.total;
+
+                collectAudioAttributes(tracks, isLast);
+                collectArtistAttributes(tracks, isLast);
+                collectAlbumAttributes(tracks, isLast);
+
+                if (!isLast) {
+                    getSavedTracks(results.offset + results.items.length);
+                } else {
+                    refreshTheWorld();
+                }
+            }
+        }
+    );
+}
+
+
+$(document).ready(
+
+    function() {
+        var args = parseArgs();
+        console.log('args', args);
+
+
+        $(".work").hide();
+        if ('error' in args) {
+            error("Sorry, I can't read your music collection from Spotify without authorization");
+            $("#go").show();
+            $("#go").on('click', function() {
+                authorizeUser();
+            });
+        } else if ('access_token' in args) {
+            $(".work").show();
+            $("#intro").hide();
+            accessToken = args['access_token'];
+            $("#save-button").on("click", function() {
+                savePlaylist();
+            });
+            fetchCurrentUserProfile(function(user) {
+                if (user) {
+                    curUserID = user.id;
+                    $("#who").text(user.id);
+                    getSavedTracks(0);
+                    // getSavedAlbums(0);
+                } else {
+                    error("Trouble getting the user profile");
+                }
+            });
+        } else {
+            $("#go").show();
+            $("#go").on('click', function() {
+                authorizeUser();
+            });
+        }
+    }
+);
+
+</script>
+
+</body>
+</html>
