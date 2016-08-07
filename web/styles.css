@@ -16,7 +16,7 @@ body {
   width:240px;
   position: absolute;
   top: 80px;
-  bottom: 20px;
+  bottom: 4px;
   left: 0;
   z-index: 1000;
   padding: 20px;
@@ -58,6 +58,7 @@ body {
   top: 100px;
   left:250px;
   bottom: 5px;
+  overflow-y: scroll;
 }
 
 .playlist-list {
@@ -84,7 +85,7 @@ body {
 }
 
 #main {
-    background-image: url(images/saxman.jpg);
+    background-image: url(images/organize.jpg);
 }   
 
 #playlists {

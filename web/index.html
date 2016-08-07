@@ -36,7 +36,7 @@
           <div  id="jumbo-dialog">
             <h1 id='ttitle' >Organize Your Music</h1>
             <p id='ttext'>
-                Organize your Spotify collection (or one of your mega-playlists)
+                Organize your Spotify collection 
                 by any of a wide range of musical attributes genre, mood, 
                 year of release and more.
             </p>
@@ -52,14 +52,17 @@
                     <p>
                     With <b> Organize Your Music </b> you can easily order the songs
                     in any of your playlists be a wide range of parameters. Just
-                    follow these steps:
+                    follow these steps.
                     </p>
                     <ol>
-                        <li> <b> Login </b> with your Spotify credentials 
-                        <li> <b> Pick </b> your playlist
-                        <li> <b> Sort </b> the playlist by clicking on the column headings in
-                        the playlist table
-                        <li>  <b> Save </b> the sorted playlist to Spotify
+                        <li>  <b> Login </b> with your Spotify
+                        credentials. <b> Organize Your Music</b> will place all
+                        of your tracks into a number of bins. There are Genre
+                        Moods, Decades, and Popularity bins.
+                        <li>  <b> Pick </b> pick one of the bins. You can listen
+                        to previews of the songs in the bin. If you like it you
+                        can ...
+                        <li>  <b> Save </b> the bin to Spotify as a playlist 
                     </ol>
               </div> 
           </div>
@@ -101,6 +104,8 @@
             <p class="text-muted">
                 Powered by <a href="http://spotify.com">Spotify</a>
                 Created by <a href="http://twitter.com/plamere">@plamere</a>
+                at <a href="http://labrosa.ee.columbia.edu/hamr_ismir2016/">The
+                Science of Music Hackathon. NYC Aug 6, 2016</a>
             </p>
       </div>
     </div>
@@ -143,7 +148,6 @@ function refreshTheWorld() {
 
 function showPlaylist(spool) {
     curSpool = spool;
-    console.log('spool', spool.name, spool.tracks);
     $("#playlist-title").text("My " + uname(spool.name));
     var tbl = $("#track-table");
     tbl.empty();
@@ -170,7 +174,7 @@ function saveTracksToPlaylist(playlist, tracks) {
         }
         callSpotify("POST", url, params, function(ok, results) {
             if (ok) {
-                info("Playlist saved");
+                info("playlist saved");
             } else {
                 error("Trouble adding tracks to playlist");
             }
@@ -187,15 +191,11 @@ function saveTracksToPlaylist(playlist, tracks) {
 }
 
 function savePlaylist() {
-    console.log("saving playlist");
     if (curSpool != null) {
-        console.log("saving", curSpool.name);
         info("saving " + uname(curSpool.name));
         var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists"
-        console.log("url", url);
         callSpotify("POST", url, {name:"My " + uname(curSpool.name) }, function(ok, results) {
             if (ok) {
-                console.log("save results", results);
                 saveTracksToPlaylist(results, curSpool.tracks);
             } else {
                 error("Trouble creating playlist");
@@ -212,7 +212,6 @@ function updateViewOfTheWorld() {
 
     _.each(theWorld, function(pool, name) {
         var spool = sortedPool(pool);
-        console.log('theworld', spool, name);
         sidebar.append($("<h4>").text(name));
         var ul = $("<ul class='playlist-list'>");
         sidebar.append(ul);
@@ -299,7 +298,7 @@ function refreshMoods() {
                 theWorld.moods.chill.push(track);
             }
 
-            if (feats.energy > .8) {
+            if (feats.energy > .95) {
                 theWorld.moods.amped.push(track);
             }
             
@@ -439,10 +438,12 @@ function info(msg) {
 }
 
 function authorizeUser() {
-    var scopes = 'user-library-read playlist-read-private playlist-modify-private playlist-modify-public';
+    // var scopes = 'user-library-read playlist-read-private playlist-modify-private playlist-modify-public';
+    var scopes = 'user-library-read playlist-modify-public';
 
     var url = 'https://accounts.spotify.com/authorize?client_id=' + SPOTIFY_CLIENT_ID +
         '&response_type=token' +
+        '&show_dialog=true' +
         '&scope=' + encodeURIComponent(scopes) +
         '&redirect_uri=' + encodeURIComponent(SPOTIFY_REDIRECT_URI);
     document.location = url;
@@ -497,7 +498,6 @@ function callSpotifyQ(type, url, json) {
                 'Content-Type': 'application/json'
             },
             beforeSend : function () {
-                console.log(type + ": " + this.url);
             },
             success: function(data) {
                 resolve(data);
@@ -541,7 +541,6 @@ function getSpotifyQ(url, data) {
                 'Authorization': 'Bearer ' + accessToken
             },
             beforeSend : function () {
-                // console.log("GET: " + this.url);
             },
             success: function(data) {
                 resolve(data);
@@ -662,19 +661,27 @@ function collectAlbumAttributes(tracks, isLast) {
     }
 }
 
+var consecutiveRetries = 0;
+var maxConsecutiveRetries = 10;
+
 function getSavedTracks(offset) {
     var params = {
         limit:50,
+        market:'US',
         offset:offset,
     }
     getSpotify("https://api.spotify.com/v1/me/tracks", params, 
         function(results) {
             if (results == null) {
-                error("Trouble reading your collection!");
-                // this is usually because we were logged out
-                // so do something about that
+                error(" ... going deeper ...");
+                if (consecutiveRetries++ < maxConsecutiveRetries) {
+                    console.log("retrying", consecutiveRetries);
+                    setTimeout(function() { getSavedTracks(offset);}, 300 );
+                    refreshTheWorld();
+                }
             } else {
                 var tracks = [];
+                consecutiveRetries = 0;
                 _.each(results.items, function(item) {
                     if ('id' in item.track) {
                         item.track.added_at = item.added_at;
@@ -682,7 +689,7 @@ function getSavedTracks(offset) {
                     }
                 });
                 _.each(tracks, function(track) {
-                    info(track.name + " - " + track.artists[0].name);
+                    info(Object.keys(curTracks).length + " tracks - " + track.name + " - " + track.artists[0].name);
                     curTracks[track.id] = track;
                 });
 
@@ -707,9 +714,6 @@ $(document).ready(
 
     function() {
         var args = parseArgs();
-        console.log('args', args);
-
-
         $(".work").hide();
         if ('error' in args) {
             error("Sorry, I can't read your music collection from Spotify without authorization");
