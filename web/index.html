@@ -69,8 +69,6 @@
         </div>
         </div>
 
-
-
   <div class="row ">
   <div id="sidebar" class="sidebar work"> </div>
 
@@ -125,7 +123,8 @@ var curUserID = null;
 var curTracks = {};
 var curArtists = {};
 var curAlbums = {};
-var skipGenres = new Set(['badgenre']);
+
+var skipGenrePhrases = ['christmas'];
 var theWorld = null;
 var audio = $("<audio>");
 var nowPlaying = null;
@@ -214,8 +213,12 @@ function updateViewOfTheWorld() {
 
     _.each(theWorld, function(pool, name) {
         var spool = sortedPool(pool);
-        sidebar.append($("<h4>").text(name));
-        var ul = $("<ul class='playlist-list'>");
+        var head = $("<h4>").text(name);
+        head.attr("data-toggle", "collapse");
+        head.attr("data-target", "#" + uname(name));
+        sidebar.append(head);
+        var ul = $("<ul class='playlist-list collapse in'>");
+        ul.attr("id", uname(name));
         sidebar.append(ul);
         _.each(spool, function(spoolItem) {
             var tracks = spoolItem.tracks;
@@ -242,7 +245,6 @@ function nname(s) {
 function uname(s) {
     return s.replace(/_/g, ' ');
 }
-
 
 function sortedPool(pool) {
     var out = [];
@@ -304,15 +306,15 @@ function refreshMoods() {
                 theWorld.moods.amped.push(track);
             }
             
-            if ((1 - feats.energy) * (1 - feats.valence) > .8) {
+            if (feats.sadness > .8) {
                 theWorld.moods.sad.push(track);
             }
 
-            if (feats.energy * feats.valence > .8) {
+            if (feats.happiness > .8) {
                 theWorld.moods.happy.push(track);
             }
 
-            if (feats.energy * (1 - feats.valence) > .8) {
+            if (feats.anger > .8) {
                 theWorld.moods.angry.push(track);
             }
 
@@ -428,7 +430,14 @@ function getGenresForTrack(track) {
 }
 
 function isGoodGenre(genre) {
-    return !(genre in skipGenres);
+    var lgenre = genre.toLowerCase();
+    for (var i = 0; i < skipGenrePhrases.length; i++) {
+        var phrase = skipGenrePhrases[i];
+        if (lgenre.indexOf(phrase) != -1) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function error(msg) {
@@ -440,12 +449,10 @@ function info(msg) {
 }
 
 function authorizeUser() {
-    // var scopes = 'user-library-read playlist-read-private playlist-modify-private playlist-modify-public';
     var scopes = 'user-library-read playlist-modify-public';
-
     var url = 'https://accounts.spotify.com/authorize?client_id=' + SPOTIFY_CLIENT_ID +
         '&response_type=token' +
-        '&show_dialog=true' +
+        '&show_dialog=false' +
         '&scope=' + encodeURIComponent(scopes) +
         '&redirect_uri=' + encodeURIComponent(SPOTIFY_REDIRECT_URI);
     document.location = url;
@@ -489,73 +496,69 @@ function callSpotify(type, url, json, callback) {
     });
 }
 
-function callSpotifyQ(type, url, json) {
-    return Q.Promise(function(resolve, reject, notify) {
-        $.ajax(url, {
-            type: type,
-            data: JSON.stringify(json),
-            dataType: 'json',
-            headers: {
-                'Authorization': 'Bearer ' + accessToken,
-                'Content-Type': 'application/json'
-            },
-            beforeSend : function () {
-            },
-            success: function(data) {
-                resolve(data);
-            },
-            error: function(jqXHR, textStatus) {
-                // 2XX status codes are good, but some have no
-                // response data which triggers the error handler
-                // convert it to goodness.
-                if (jqXHR.status >= 200 && jqXHR.status < 300) {
-                    resolve(undefined);
-                } else {
-                    reject(textStatus);
-                }
-            }
-        });  
-    });
-}
+function getSpotifyWithRetries(url, data, callback) {
+    var curRetry = 0;
+    var maxRetries = 10;
 
-function getSpotify(url, data, callback) {
-    $.ajax(url, {
-        dataType: 'json',
-        data: data,
-        headers: {
-            'Authorization': 'Bearer ' + accessToken
-        },
-        success: function(r) {
-            callback(r);
-        },
-        error: function(r) {
-            callback(null);
-        }
-    });
-}
-
-function getSpotifyQ(url, data) {
-    return Q.Promise(function(resolve, reject, notify) {
+    function go() {
         $.ajax(url, {
             dataType: 'json',
             data: data,
             headers: {
                 'Authorization': 'Bearer ' + accessToken
             },
-            beforeSend : function () {
+            success: function(r) {
+                curRetry = 0;
+                callback(r);
             },
-            success: function(data) {
-                resolve(data);
-            },
-            error: function(jqXHR, textStatus) {
-                if (jqXHR.status >= 200 && jqXHR.status < 300) {
-                    resolve(undefined);
+            error: function(r) {
+                // if the status is a 401, we have been
+                // logged out, so lets just go back to the start
+                // so the user can reauth
+
+                // for larger collections, we will often
+                // get 502 errors. Trying again usually
+                // works ok
+
+                // if we get a 429, we have hit the rate limit
+                // so we need to slow down
+
+                // 2XX status codes are good, but some have no
+                // response data which triggers the error handler
+                // convert it to goodness.
+                if (r.status >= 200 && r.status < 300) {
+                    callback(r);
+                } else if (r.status == 401) {
+                    console.log('going back to the start');
+                    window.location = 'index.html';
+                } else if (r.status == 502) {
+                    if (curRetry++ < maxRetries) {
+                        console.log('502 retry', curRetry);
+                        setTimeout(go, 500);
+                    } else {
+                        console.log('502 error', r);
+                        callback(null);
+                    }
+                } else if (r.status == 429) {
+                    if (curRetry++ < maxRetries) {
+                        console.log('429 retry', curRetry);
+                        setTimeout(go, curRetry * 1000);
+                    } else {
+                        console.log('429 error', r);
+                        callback(null);
+                    }
                 } else {
-                    reject(textStatus);
+                    console.log('error', r);
+                    callback(null);
                 }
             }
         });
-    });
+    }
+    go();
+}
+
+function getSpotify(url, data, callback) {
+    return getSpotifyWithRetries(url, data, callback);
 }
 
 
@@ -580,7 +583,6 @@ function stopTrack() {
     nowPlaying = null;
 }
 
-
 function collectAudioAttributes(tracks, isLast) {
     var trackIds = [];
     _.each(tracks, function(track) {
@@ -592,6 +594,9 @@ function collectAudioAttributes(tracks, isLast) {
         _.each(results.audio_features, function(audio_feature) {
             if (audio_feature) {
                 curTracks[audio_feature.id].audio_feature = audio_feature;
+                audio_feature.sadness=  (1 - audio_feature.energy) * (1 - audio_feature.valence);
+                audio_feature.happiness = audio_feature.energy * audio_feature.valence;
+                audio_feature.anger = audio_feature.energy * (1 - audio_feature.valence);
             }
         });
         if (isLast) {
@@ -669,18 +674,13 @@ var maxConsecutiveRetries = 10;
 function getSavedTracks(offset) {
     var params = {
         limit:50,
-        market:'US',
+        market:'from_token',
         offset:offset,
     }
     getSpotify("https://api.spotify.com/v1/me/tracks", params, 
         function(results) {
             if (results == null) {
-                error(" ... going deeper ...");
-                if (consecutiveRetries++ < maxConsecutiveRetries) {
-                    console.log("retrying", consecutiveRetries);
-                    setTimeout(function() { getSavedTracks(offset);}, 300 );
-                    refreshTheWorld();
-                }
+                error("Trouble getting your saved tracks");
             } else {
                 var tracks = [];
                 consecutiveRetries = 0;
@@ -711,10 +711,17 @@ function getSavedTracks(offset) {
     );
 }
 
+function isLocalHost() {
+    return window.location.host.indexOf('localhost') >= 0;
+}
 
 $(document).ready(
 
     function() {
+
+        if (isLocalHost()) {
+            SPOTIFY_REDIRECT_URI = LOCAL_SPOTIFY_REDIRECT_URI;
+        } 
         var args = parseArgs();
         $(".work").hide();
         if ('error' in args) {
@@ -732,6 +739,7 @@ $(document).ready(
             });
             fetchCurrentUserProfile(function(user) {
                 if (user) {
+                    console.log(user);
                     curUserID = user.id;
                     $("#who").text(user.id);
                     getSavedTracks(0);
@@ -748,6 +756,22 @@ $(document).ready(
         }
     }
 );
+
+</script>
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3675615-27']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type =
+'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
+'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0];
+s.parentNode.insertBefore(ga, s);
+  })();
 
 </script>
 
