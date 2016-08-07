@@ -281,21 +281,27 @@ function refreshGenres() {
 
 function refreshMoods() {
     theWorld.moods = {
-        acoustic:[],
         chill:[],
         sad:[],
         angry:[],
-        instrumental:[],
         happy:[],
         amped:[],
         danceable:[],
-        live:[],
     };
+
+    theWorld.styles = {
+        acoustic:[],
+        instrumental:[],
+        live:[],
+        spoken_word:[],
+        explicit:[]
+    };
+
     _.each(curTracks, function(track) {
         if ('audio_feature' in track) {
             var feats = track.audio_feature;
             if (feats.acousticness > .8) {
-                theWorld.moods.acoustic.push(track);
+                theWorld.styles.acoustic.push(track);
             }
 
             if (feats.energy < .2) {
@@ -323,12 +329,20 @@ function refreshMoods() {
             }
 
             if (feats.instrumental > .8) {
-                theWorld.moods.instrumental.push(track);
+                theWorld.styles.instrumental.push(track);
+            }
+
+            if (feats.speechiness > .8) {
+                theWorld.styles.spoken_word.push(track);
             }
 
             if (feats.live > .85) {
-                theWorld.moods.live.push(track);
+                theWorld.styles.live.push(track);
             }
+        }
+
+        if (track.explicit) {
+            theWorld.styles.explicit.push(track);
         }
     });
 }
