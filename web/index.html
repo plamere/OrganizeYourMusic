@@ -75,9 +75,12 @@
   <div id="main-wrapper">
       <div class="work" id="main-area">
           <div id='info' class="text-center"></div>
-          <h3 id="playlist-title"> </h3>
+          <div id='tiny-track'> </div>
+          <h3 id="playlist-title"> </h3> 
+          <div id="playlist-sub-title"> </div>
           <div>
-              <button id="save-button" class="btn btn-xs pull-left btn-primary"> Save as playlist </button>
+              <button id="save-button" class="btn btn-xs npull-right btn-primary"> 
+              Save as playlist </button>
           </div>
           <br>
           <table id="the-track-table" class="table">
@@ -132,7 +135,8 @@ var curSpool = null;
 
 function refreshTheWorld() {
     var ntracks = Object.keys(curTracks).length;
-    info("Found " + ntracks + " tracks in your collection.");
+    var nArtists = numArtists(curTracks);
+    info("Found " + ntracks + " tracks  by " + nArtists + " artists in your collection.");
 
     theWorld = {
         genres:{ },
@@ -149,7 +153,11 @@ function refreshTheWorld() {
 
 function showPlaylist(spool) {
     curSpool = spool;
-    $("#playlist-title").text("My " + uname(spool.name));
+    var nTracks = spool.tracks.length;
+    var nArtists = numArtists(spool.tracks);
+    $("#playlist-title").text("My " + uname(spool.name) );
+    $("#playlist-sub-title").text(nArtists + " artists / " + nTracks + " tracks");
+
     var tbl = $("#track-table");
     tbl.empty();
     _.each(spool.tracks, function(track, i) {
@@ -227,7 +235,10 @@ function updateViewOfTheWorld() {
             var tracks = spoolItem.tracks;
             var name = spoolItem.name;
             if (tracks.length >= minTracksForSection) {
-                var header = $("<li>").text(uname(name) + " (" + tracks.length + " tracks)");
+                var nArtists = numArtists(spoolItem.tracks);
+                var header = $("<li>").text(uname(name) 
+               // + " (" + tracks.length + " tracks, " + nArtists + " artists)");
+                + " (" + nArtists + "/" + tracks.length + ")");
                 ul.append(header);
                 header.on("click", function() {
                     showPlaylist(spoolItem);
@@ -239,6 +250,17 @@ function updateViewOfTheWorld() {
             }
         });
     });
+}
+
+function numArtists(tracks) {
+    var sartists = new Set();
+
+    _.each(tracks, function(track) {
+        if (track.artists.length > 0) {
+            sartists.add(track.artists[0].id);
+        }
+    });
+    return sartists.size;
 }
 
 function nname(s) {
@@ -297,7 +319,8 @@ function refreshMoods() {
         instrumental:[],
         live:[],
         spoken_word:[],
-        explicit:[]
+        explicit:[],
+        clean:[]
     };
 
     _.each(curTracks, function(track) {
@@ -346,6 +369,8 @@ function refreshMoods() {
 
         if (track.explicit) {
             theWorld.styles.explicit.push(track);
+        } else {
+            theWorld.styles.clean.push(track);
         }
     });
 }
@@ -629,6 +654,7 @@ function collectArtistAttributes(tracks, isLast) {
             _.each(results.artists, function(artist) {
                 curArtists[artist.id] = artist;
             });
+            refreshTheWorld();
             if (isLast) {
                 refreshTheWorld();
             }
@@ -685,8 +711,27 @@ function collectAlbumAttributes(tracks, isLast) {
     }
 }
 
-var consecutiveRetries = 0;
-var maxConsecutiveRetries = 10;
+
+var trackTextQueue = [];
+
+function showTracks(tracks) {
+    var tt = $("#tiny-track");
+    trackTextQueue = tracks.slice();
+
+    function scheduleUpdate() {
+        if (trackTextQueue.length > 0) {
+            var track = trackTextQueue.shift();
+            var text = track.artists[0].name + " - " +  track.name;
+            tt.text(text);
+            if (trackTextQueue.length > 0) {
+                setTimeout(scheduleUpdate, 10);
+            }
+        } else {
+            tt.text("");
+        }
+    }
+    setTimeout(scheduleUpdate, 20);
+}
 
 function getSavedTracks(offset) {
     var params = {
@@ -700,15 +745,14 @@ function getSavedTracks(offset) {
                 error("Trouble getting your saved tracks");
             } else {
                 var tracks = [];
-                consecutiveRetries = 0;
                 _.each(results.items, function(item) {
                     if ('id' in item.track) {
                         item.track.added_at = item.added_at;
                         tracks.push(item.track);
                     }
                 });
+                showTracks(tracks);
                 _.each(tracks, function(track) {
-                    info(Object.keys(curTracks).length + " tracks - " + track.name + " - " + track.artists[0].name);
                     curTracks[track.id] = track;
                 });
 
@@ -740,6 +784,7 @@ $(document).ready(
             SPOTIFY_REDIRECT_URI = LOCAL_SPOTIFY_REDIRECT_URI;
         } 
         var args = parseArgs();
+        //window.location.hash = "";
         $(".work").hide();
         if ('error' in args) {
             error("Sorry, I can't read your music collection from Spotify without authorization");
