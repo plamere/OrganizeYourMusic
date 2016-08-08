@@ -165,9 +165,15 @@ function showPlaylist(spool) {
 }
 
 function saveTracksToPlaylist(playlist, tracks) {
-    var uris = [];
 
     function saveTracks() {
+        var uris = [];
+
+        while (tracks.length > 0 && uris.length < 100) {
+            var track = tracks.shift();
+            uris.push(track.uri);
+        }
+
         var url = "https://api.spotify.com/v1/users/" + curUserID 
             + "/playlists/" + playlist.id + "/tracks";
         var params = {
@@ -175,19 +181,16 @@ function saveTracksToPlaylist(playlist, tracks) {
         }
         callSpotify("POST", url, params, function(ok, results) {
             if (ok) {
-                info("playlist saved");
+                if (tracks.length > 0) {
+                    saveTracks();
+                } else {
+                    info("playlist saved");
+                }
             } else {
                 error("Trouble adding tracks to playlist");
             }
         });
     }
-
-    _.each(tracks, function(track) {
-        if (uris.length < 100) {
-            // bug fix me
-            uris.push(track.uri);
-        }
-    });
     saveTracks();
 }
 
