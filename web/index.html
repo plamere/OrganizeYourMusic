@@ -230,10 +230,10 @@ function updateViewOfTheWorld() {
         var spool = sortedPool(pool);
         var head = $("<h4>").text(uname(name));
         head.attr("data-toggle", "collapse");
-        head.attr("data-target", "#" + uname(name));
+        head.attr("data-target", "#" + nname(name));
         sidebar.append(head);
         var ul = $("<ul class='playlist-list collapse in'>");
-        ul.attr("id", uname(name));
+        ul.attr("id", nname(name));
         sidebar.append(ul);
         _.each(spool, function(spoolItem) {
             var tracks = spoolItem.tracks;
