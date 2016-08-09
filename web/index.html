@@ -152,12 +152,15 @@ function refreshTheWorld() {
     updateViewOfTheWorld();
 }
 
+function sorter(category, bin, tracks) {
+}
+
 function showPlaylist(spool) {
     curSpool = spool;
     var nTracks = spool.tracks.length;
     var nArtists = numArtists(spool.tracks);
     $("#playlist-title").text("My " + uname(spool.name) );
-    $("#playlist-sub-title").text(nArtists + " artists / " + nTracks + " tracks");
+    $("#playlist-sub-title").text(nTracks + " tracks / " + nArtists + " artists");
 
     var tbl = $("#track-table");
     tbl.empty();
@@ -238,8 +241,8 @@ function updateViewOfTheWorld() {
             if (tracks.length >= minTracksForSection) {
                 var nArtists = numArtists(spoolItem.tracks);
                 var header = $("<li>").text(uname(name));
-                var stats = $("<span class='stats'>").text("(" + nArtists + " artists /" 
-                    + tracks.length + " tracks)");
+                var stats = $("<span class='stats'>").text("(" + tracks.length +
+                " tracks / " + nArtists + " artists)");
                 header.append(stats);
                 ul.append(header);
                 header.on("click", function() {
