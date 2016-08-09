@@ -113,6 +113,7 @@
       </div>
     </div>
     <script src="lib/jquery-1.11.1.min.js"></script>
+    <script src="lib/moment.min.js"></script>
     <script src="lib/bootstrap.min.js"></script>
     <script src="lib/underscore-min.js"></script>
     <script type="text/javascript" charset="utf-8"
@@ -224,7 +225,7 @@ function updateViewOfTheWorld() {
 
     _.each(theWorld, function(pool, name) {
         var spool = sortedPool(pool);
-        var head = $("<h4>").text(name);
+        var head = $("<h4>").text(uname(name));
         head.attr("data-toggle", "collapse");
         head.attr("data-target", "#" + uname(name));
         sidebar.append(head);
@@ -236,9 +237,10 @@ function updateViewOfTheWorld() {
             var name = spoolItem.name;
             if (tracks.length >= minTracksForSection) {
                 var nArtists = numArtists(spoolItem.tracks);
-                var header = $("<li>").text(uname(name) 
-               // + " (" + tracks.length + " tracks, " + nArtists + " artists)");
-                + " (" + nArtists + "/" + tracks.length + ")");
+                var header = $("<li>").text(uname(name));
+                var stats = $("<span class='stats'>").text("(" + nArtists + " artists /" 
+                    + tracks.length + " tracks)");
+                header.append(stats);
                 ul.append(header);
                 header.on("click", function() {
                     showPlaylist(spoolItem);
@@ -320,12 +322,68 @@ function refreshMoods() {
         live:[],
         spoken_word:[],
         explicit:[],
-        clean:[]
+        clean:[],
+        loud:[],
+        quiet:[]
     };
 
+    theWorld.added_to_your_collection = {
+        today : [],
+        this_week : [],
+        this_month : [],
+        last_month : [],
+        in_the_last_six_months : [],
+        in_the_last_year : [],
+        over_a_year_ago : [],
+        over_two_years_ago : [],
+        over_five_years_ago : [],
+    };
     _.each(curTracks, function(track) {
+
+        if (track.age < 1.5) {
+            theWorld.added_to_your_collection.today.push(track);
+        }
+
+        if (track.age < 8) {
+            theWorld.added_to_your_collection.this_week.push(track);
+        }
+
+        if (track.age  < 30) {
+            theWorld.added_to_your_collection.this_month.push(track);
+        } else if (track.age < 60) {
+            theWorld.added_to_your_collection.last_month.push(track);
+        }
+
+        if (track.age < 30 * 6) {
+            theWorld.added_to_your_collection.in_the_last_six_months.push(track);
+        }
+
+        if (track.age < 365) {
+            theWorld.added_to_your_collection.in_the_last_year.push(track);
+        }
+
+        if (track.age > 365) {
+            theWorld.added_to_your_collection.over_a_year_ago.push(track);
+        }
+
+        if (track.age > 365 * 2) {
+            theWorld.added_to_your_collection.over_two_years_ago.push(track);
+        }
+
+        if (track.age > 365 * 5) {
+            theWorld.added_to_your_collection.over_five_years_ago.push(track);
+        }
+
         if ('audio_feature' in track) {
             var feats = track.audio_feature;
+
+            // if the track looks like spoken word, then bail after
+            // we add it to the speech bucket
+            if (feats.speechiness > .8) {
+                theWorld.styles.spoken_word.push(track);
+                return;
+            }
+
             if (feats.acousticness > .8) {
                 theWorld.styles.acoustic.push(track);
             }
@@ -354,16 +412,20 @@ function refreshMoods() {
                 theWorld.moods.danceable.push(track);
             }
 
-            if (feats.instrumental > .8) {
+            if (feats.instrumentalness > .9) {
+                console.log('instrumental', track.name);
                 theWorld.styles.instrumental.push(track);
             }
 
-            if (feats.speechiness > .8) {
-                theWorld.styles.spoken_word.push(track);
+            if (feats.liveness > .85) {
+                theWorld.styles.live.push(track);
             }
 
-            if (feats.live > .85) {
-                theWorld.styles.live.push(track);
+            if (feats.loudness > -5) {
+                theWorld.styles.loud.push(track);
+            }
+            if (feats.loudness < -15) {
+                theWorld.styles.quiet.push(track);
             }
         }
 
@@ -741,6 +803,7 @@ function getSavedTracks(offset) {
     }
     getSpotify("https://api.spotify.com/v1/me/tracks", params, 
         function(results) {
+            var now = moment();
             if (results == null) {
                 error("Trouble getting your saved tracks");
             } else {
@@ -748,6 +811,8 @@ function getSavedTracks(offset) {
                 _.each(results.items, function(item) {
                     if ('id' in item.track) {
                         item.track.added_at = item.added_at;
+                        item.track.date_added = moment(item.added_at);
+                        item.track.age = moment.duration(now.diff(item.track.date_added)).asDays();
                         tracks.push(item.track);
                     }
                 });
@@ -784,7 +849,7 @@ $(document).ready(
             SPOTIFY_REDIRECT_URI = LOCAL_SPOTIFY_REDIRECT_URI;
         } 
         var args = parseArgs();
-        //window.location.hash = "";
+        window.location.hash = "";
         $(".work").hide();
         if ('error' in args) {
             error("Sorry, I can't read your music collection from Spotify without authorization");
