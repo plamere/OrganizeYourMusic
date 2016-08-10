@@ -40,8 +40,18 @@
                 by any of a wide range of musical attributes including
                 genre, mood, decade of release and more.
             </p>
-            <p>  Login with your Spotify account to get started</p>
-            <p><a class="btn btn-primary btn-lg" id='go' role="button">Login with Spotify</a></p>
+            <p><a class="btn btn-primary btn-lg" id='go' role="button">Organize
+            your saved music</a></p>
+            <p> Or enter a playlist URI to organize the music in a particular playlist </p>
+            <div id="uri-prompt" class="input-group align-center">
+                <input id="uri-text" type="text" class='form-control' 
+                    placeholder="spotify:user:spotify:playlist:5FJXhjdILmRA2z5bvz4nzf">
+                <span class="input-group-btn">
+                    <button class="btn btn-primary type="button" 
+                        id='uri-go' role="button">Go</button>
+                </span>
+            </div>
+            <div class='err-txt'> </div>
           </div>
       </div>
 
@@ -50,20 +60,28 @@
              <div class="col-md-offset-2 col-md-8">
                     <h2 class="text-center">Get your music collection in order</h2>
                     <p>
-                    With <b> Organize Your Music </b> you can easily order the songs
-                    in any of your playlists be a wide range of parameters. Just
-                    follow these steps.
+                    With <b> Organize Your Music </b> you can easily organize 
+                    yoru saved music. Just follow these steps:
                     </p>
                     <ol>
+                        <li> <b> Click </b> on <i>Organize your Saved Music </i>
+                        or enter a playlist URI.  You will be asked to ...
                         <li>  <b> Login </b> with your Spotify
                         credentials. <b> Organize Your Music</b> will place all
                         of your tracks into a number of bins. There are Genre
-                        Moods, Decades, and Popularity bins.
+                        Moods, Decades and Popularity bins with more being added
+                        all the time.
                         <li>  <b> Pick </b> pick one of the bins. You can listen
                         to previews of the songs in the bin. If you like it you
                         can ...
                         <li>  <b> Save </b> the bin to Spotify as a playlist 
                     </ol>
+                    <p> Don't worry. <b> Organize Your Music </b> will never modify any of
+                    the songs in your saved music or playlists. It will only save
+                    new playlists for you, and only when you explictly click on
+                    the <b> save </b> button.
+                        
+                    </p>
               </div> 
           </div>
         </div>
@@ -133,11 +151,13 @@ var theWorld = null;
 var audio = $("<audio>");
 var nowPlaying = null;
 var curSpool = null;
+var curType = 'collection';
+var curName = 'Your';
 
 function refreshTheWorld() {
     var ntracks = Object.keys(curTracks).length;
     var nArtists = numArtists(curTracks);
-    info("Found " + ntracks + " tracks  by " + nArtists + " artists in your collection.");
+    info("Found " + ntracks + " tracks  by " + nArtists + " artists in your " + curType+ ".");
 
     theWorld = {
         genres:{ },
@@ -159,7 +179,7 @@ function showPlaylist(spool) {
     curSpool = spool;
     var nTracks = spool.tracks.length;
     var nArtists = numArtists(spool.tracks);
-    $("#playlist-title").text("My " + uname(spool.name) );
+    $("#playlist-title").text(curName + " " + uname(spool.name) );
     $("#playlist-sub-title").text(nTracks + " tracks / " + nArtists + " artists");
 
     var tbl = $("#track-table");
@@ -210,7 +230,7 @@ function savePlaylist() {
     if (curSpool != null) {
         info("saving " + uname(curSpool.name));
         var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists"
-        callSpotify("POST", url, {name:"My " + uname(curSpool.name) }, function(ok, results) {
+        callSpotify("POST", url, {name:"Your " + uname(curSpool.name) }, function(ok, results) {
             if (ok) {
                 saveTracksToPlaylist(results, curSpool.tracks);
             } else {
@@ -330,7 +350,7 @@ function refreshMoods() {
         quiet:[]
     };
 
-    theWorld.added_to_your_collection = {
+    theWorld.added = {
         today : [],
         this_week : [],
         this_month : [],
@@ -344,37 +364,37 @@ function refreshMoods() {
     _.each(curTracks, function(track) {
 
         if (track.age < 1.5) {
-            theWorld.added_to_your_collection.today.push(track);
+            theWorld.added.today.push(track);
         }
 
         if (track.age < 8) {
-            theWorld.added_to_your_collection.this_week.push(track);
+            theWorld.added.this_week.push(track);
         }
 
         if (track.age  < 30) {
-            theWorld.added_to_your_collection.this_month.push(track);
+            theWorld.added.this_month.push(track);
         } else if (track.age < 60) {
-            theWorld.added_to_your_collection.last_month.push(track);
+            theWorld.added.last_month.push(track);
         }
 
         if (track.age < 30 * 6) {
-            theWorld.added_to_your_collection.in_the_last_six_months.push(track);
+            theWorld.added.in_the_last_six_months.push(track);
         }
 
         if (track.age < 365) {
-            theWorld.added_to_your_collection.in_the_last_year.push(track);
+            theWorld.added.in_the_last_year.push(track);
         }
 
         if (track.age > 365) {
-            theWorld.added_to_your_collection.over_a_year_ago.push(track);
+            theWorld.added.over_a_year_ago.push(track);
         }
 
         if (track.age > 365 * 2) {
-            theWorld.added_to_your_collection.over_two_years_ago.push(track);
+            theWorld.added.over_two_years_ago.push(track);
         }
 
         if (track.age > 365 * 5) {
-            theWorld.added_to_your_collection.over_five_years_ago.push(track);
+            theWorld.added.over_five_years_ago.push(track);
         }
 
         if ('audio_feature' in track) {
@@ -416,7 +436,6 @@ function refreshMoods() {
             }
 
             if (feats.instrumentalness > .9) {
-                console.log('instrumental', track.name);
                 theWorld.styles.instrumental.push(track);
             }
 
@@ -636,14 +655,13 @@ function getSpotifyWithRetries(url, data, callback) {
                 if (r.status >= 200 && r.status < 300) {
                     callback(r);
                 } else if (r.status == 401) {
-                    console.log('going back to the start');
                     window.location = 'index.html';
-                } else if (r.status == 502) {
+                } else if (r.status >= 500 && r.status < 600) {
                     if (curRetry++ < maxRetries) {
-                        console.log('502 retry', curRetry);
+                        console.log('500 retry', curRetry, r.status);
                         setTimeout(go, 500);
                     } else {
-                        console.log('502 error', r);
+                        console.log('500 error', r);
                         callback(null);
                     }
                 } else if (r.status == 429) {
@@ -798,21 +816,21 @@ function showTracks(tracks) {
     setTimeout(scheduleUpdate, 20);
 }
 
-function getSavedTracks(offset) {
+function getTracksFromAPI(uri, offset) {
     var params = {
         limit:50,
         market:'from_token',
         offset:offset,
     }
-    getSpotify("https://api.spotify.com/v1/me/tracks", params, 
+    getSpotify(uri, params, 
         function(results) {
-            var now = moment();
             if (results == null) {
-                error("Trouble getting your saved tracks");
+                error("Trouble getting your tracks");
             } else {
+                var now = moment();
                 var tracks = [];
                 _.each(results.items, function(item) {
-                    if ('id' in item.track) {
+                    if (!item.is_local && ('id' in item.track)) {
                         item.track.added_at = item.added_at;
                         item.track.date_added = moment(item.added_at);
                         item.track.age = moment.duration(now.diff(item.track.date_added)).asDays();
@@ -831,7 +849,7 @@ function getSavedTracks(offset) {
                 collectAlbumAttributes(tracks, isLast);
 
                 if (!isLast) {
-                    getSavedTracks(results.offset + results.items.length);
+                    getTracksFromAPI(uri, results.offset + results.items.length);
                 } else {
                     refreshTheWorld();
                 }
@@ -840,8 +858,96 @@ function getSavedTracks(offset) {
     );
 }
 
+function getSavedTracks() {
+    return getTracksFromAPI("https://api.spotify.com/v1/me/tracks", 0);
+}
+
+function getPlaylistTitleAndTracks(uri) {
+    if (isValidPlaylistUri(uri)) {
+        var fields = uri.split(':');
+        var userID = fields[2];
+        var playlistID = fields[4];
+        var url = "https://api.spotify.com/v1/users/" 
+            + userID + "/playlists/" + playlistID;
+        var params = { fields:"name" };
+        getSpotify(url, params, function(results) {
+            if (results) {
+                curName = results.name + ": " ;
+                getPlaylistTracks(uri);
+            } else {
+                error("Trouble reading playlist");
+            }
+        });
+    }
+}
+
+function getPlaylistTracks(uri) {
+    if (isValidPlaylistUri(uri)) {
+        var fields = uri.split(':');
+        var userID = fields[2];
+        var playlistID = fields[4];
+        var url = "https://api.spotify.com/v1/users/" 
+            + userID + "/playlists/" + playlistID + "/tracks";
+        return getTracksFromAPI(url, 0);
+    } else {
+        error("bad playlist URI");
+    }
+}
+
 function isLocalHost() {
     return window.location.host.indexOf('localhost') >= 0;
+}
+
+function isValidPlaylistUri(uri) {
+    var fields = uri.split(':');
+    if (fields.length != 5) {
+        return false;
+    }
+    if (fields[0] != 'spotify' || fields[3] != 'playlist') {
+        return false;
+    }
+    return true;
+}
+
+function saveInfo(params) {
+    localStorage.setItem("info", JSON.stringify(params));
+}
+
+function getInfo(params) {
+    var item = localStorage.getItem("info");
+    return JSON.parse(item);
+}
+
+function goCollection() {
+    $('.err-txt').text("");
+    var params = {
+        "type": "collection",
+    }
+    saveInfo(params);
+    authorizeUser();
+}
+
+function normalizeUri(uri) {
+    uri = uri.replace("https://open.spotify.com", 'spotify');
+    uri = uri.replace("https://play.spotify.com", 'spotify');
+    uri = uri.replace(/\//g, ':');
+    console.log("norm uri", uri);
+    return uri;
+}
+
+function goPlaylist() {
+    $('.err-txt').text("");
+    var uri = normalizeUri($("#uri-text").val());
+    if (isValidPlaylistUri(uri)) {
+        var params = {
+            "type": "playlist",
+            "uri": uri
+        }
+        saveInfo(params);
+        authorizeUser();
+    } else {
+        $('.err-txt').text("That's not a playlist URI");
+    }
 }
 
 $(document).ready(
@@ -858,7 +964,7 @@ $(document).ready(
             error("Sorry, I can't read your music collection from Spotify without authorization");
             $("#go").show();
             $("#go").on('click', function() {
-                authorizeUser();
+                goCollection();
             });
         } else if ('access_token' in args) {
             $(".work").show();
@@ -869,11 +975,15 @@ $(document).ready(
             });
             fetchCurrentUserProfile(function(user) {
                 if (user) {
-                    console.log(user);
                     curUserID = user.id;
                     $("#who").text(user.id);
-                    getSavedTracks(0);
-                    // getSavedAlbums(0);
+                    var info = getInfo();
+                    curType = info.type;
+                    if (info.type == "collection") {
+                        getSavedTracks();
+                    } else if (info.type == "playlist") {
+                        getPlaylistTitleAndTracks(info.uri);
+                    }
                 } else {
                     error("Trouble getting the user profile");
                 }
@@ -881,8 +991,16 @@ $(document).ready(
         } else {
             $("#go").show();
             $("#go").on('click', function() {
-                authorizeUser();
+                goCollection();
             });
+
+            $("#uri-go").on('click', goPlaylist);
+            $("#uri-text").keyup(
+                 function(event) {
+                    if(event.keyCode == 13) {
+                        goPlaylist();
+                    }
+                });
         }
     }
 );
