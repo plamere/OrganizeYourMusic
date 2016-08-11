@@ -105,15 +105,17 @@
               Save as playlist </button>
           </div>
           <br>
-          <table id="the-track-table" class="table">
+          <table id="the-track-table" class="table table-responsive">
             <col width="5%">
-            <col width="45%">
-            <col width="45%">
+            <col width="37%">
+            <col width="33%">
+            <col width="25%">
             <thead>
                 <tr>
                     <th> # </th>
                     <th> title </th>
                     <th> artist </th>
+                    <th id='tbl-param'>  </th>
                 </tr>
             </thead>
             <tbody id='track-table'> </tbody>
@@ -151,48 +153,218 @@ var curArtists = {};
 var curAlbums = {};
 
 var skipGenrePhrases = ['christmas'];
-var theWorld = null;
 var audio = $("<audio>");
 var nowPlaying = null;
-var curSpool = null;
+var curNode = null;
 var curType = 'collection';
 var curName = 'Your';
+
+var theWorld = [
+    {
+        name: "Genres",
+        nodes: [ ],
+    },
+    {
+        name: "Moods",
+        nodes: [
+            makeNode("(unclassified)", "popularity", featMissingFilter('energy'), 
+                                        featGetterInt('popularity'), 
+                                        featSorter('popularity', true)),
+            makeNode("chill", "energy", featMusicFilter('energy', 0, .2), 
+                                        featGetterPercent('energy'), 
+                                        featSorter('energy', false)),
+            makeNode("amped", "energy", featMusicFilter('energy', .8, 1.0), 
+                                        featGetterPercent('energy'), 
+                                        featSorter('energy', true)),
+            makeNode("sad", "sadness", featMusicFilter('sadness', .8, 1.0), 
+                                        featGetterPercent('sadness'), 
+                                        featSorter('sadness', true)),
+            makeNode("anger", "anger", featMusicFilter('anger', .8, 1.0), 
+                                        featGetterPercent('anger'), 
+                                        featSorter('anger', true)),
+            makeNode("happy", "happiness", featMusicFilter('happiness', .8, 1.0), 
+                                        featGetterPercent('happiness'), 
+                                        featSorter('happiness', true)),
+            makeNode("danceable", "danceability", featMusicFilter('danceability', .8, 1.0), 
+                                        featGetterPercent('danceability'), 
+                                        featSorter('danceability', true)),
+        ]
+    },
+    {
+        name: "Styles",
+        nodes: [
+            makeNode("instrumental", "instrumentalness",
+                featMusicFilter('instrumentalness', .8, 1.0), 
+                featGetterPercent('instrumentalness'), 
+                featSorter('instrumentalness', true)),
+            makeNode("acoustic", "acousticness",
+                featMusicFilter('acousticness', .8, 1.0), 
+                featGetterPercent('acousticness'), 
+                featSorter('acousticness', true)),
+            makeNode("live", "liveness",
+                featMusicFilter('liveness', .85, 1.0), 
+                featGetterPercent('liveness'), 
+                featSorter('liveness', true)),
+            makeNode("spoken word", "speechiness",
+                featFilter('speechiness', .85, 1.0), 
+                featGetterPercent('speechiness'), 
+                featSorter('speechiness', true)),
+            makeNode("clean", "explicit",
+                featBoolFilter('explicit', false), 
+                featGetterBool('explicit', 'explicit', 'clean'), 
+                featSorter('explicit', true)),
+
+            makeNode("explicit", "explicit",
+                featBoolFilter('explicit', true), 
+                featGetterBool('explicit', 'explicit', 'clean'), 
+                featSorter('explicit', true)),
+            makeNode("loud", "loudness (dB)",
+                featMusicFilter('loudness', -5, 0), 
+                featGetterInt('loudness'), 
+                featSorter('loudness', true)),
+            makeNode("quiet", "loudness (dB)",
+                featMusicFilter('loudness', -60, -10), 
+                featGetterInt('loudness'), 
+                featSorter('loudness', false)),
+        ]
+    },
+    {
+        name: "Decades",
+        nodes: [
+            makeNode("Oldies", "year",
+                featFilter('year', 0, 1950), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("1950s", "year",
+                featFilter('year', 1950, 1959), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("1960s", "year",
+                featFilter('year', 1960, 1969), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("1970s", "year",
+                featFilter('year', 1970, 1979), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("1980s", "year",
+                featFilter('year', 1980, 1989), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("1990s", "year",
+                featFilter('year', 1990, 1999), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("2000s", "year",
+                featFilter('year', 2000, 2009), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("2010s", "year",
+                featFilter('year', 2010, 2019), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("Now", "year",
+                featFilter('year', 2016, 2020), 
+                featGetter('year'), 
+                featSorter('year', false)),
+            makeNode("(unclassified)", "year",
+                featFilter('year', -1, 0), 
+                featGetter('year'), 
+                featSorter('year', false)),
+        ]
+    },
+    {
+        name: "Added",
+        nodes: [
+            makeNode("Today", "age (days)",
+                featFilter('age', 0, 1), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+            makeNode("In the last week", "age (days)",
+                featFilter('age', 0, 7), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+            makeNode("In the last month", "age (days)",
+                featFilter('age', 0, 30), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+            makeNode("In the last year", "age (days)",
+                featFilter('age', 0, 365), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+            makeNode("Over a year ago", "age (days)",
+                featFilter('age', 356, 365 * 100), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+            makeNode("Over 2 years ago", "age (days)",
+                featFilter('age', 356 * 2, 365 * 100), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+            makeNode("Over 5 years ago", "age (days)",
+                featFilter('age', 356 * 5, 365 * 100), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+            makeNode("Whenever", "age (days)",
+                featFilter('age', 0, 365 * 100), 
+                featGetterInt('age'), 
+                featSorter('age', false)),
+        ]
+    },
+    {
+        name: "Popularity",
+        nodes: [
+            makeNode("popular", "Popularity",
+                featFilter('popularity', 60, 100), 
+                featGetter('popularity'), 
+                featSorter('popularity', true)),
+            makeNode("mainstream", "Popularity",
+                featFilter('popularity', 40, 60), 
+                featGetter('popularity'), 
+                featSorter('popularity', true)),
+            makeNode("hipster", "Popularity",
+                featFilter('popularity', 10, 40), 
+                featGetter('popularity'), 
+                featSorter('popularity', true)),
+            makeNode("deep", "Popularity",
+                featFilter('popularity', 0, 10), 
+                featGetter('popularity'), 
+                featSorter('popularity', true)),
+        ]
+    }
+];
+
 
 function refreshTheWorld() {
     var ntracks = Object.keys(curTracks).length;
     var nArtists = numArtists(curTracks);
     info("Found " + ntracks + " tracks  by " + nArtists + " artists in your " + curType+ ".");
 
-    theWorld = {
-        genres:{ },
-        moods:{ },
-        decades:{ }
-    }
     refreshGenres();
-    refreshDecades();
-    refreshMoods();
-    refreshPopularity();
-
+    refreshReleaseYear();
+    _.each(theWorld, function(bin) {
+        _.each(bin.nodes, function(node) {
+           node.tracks = node.sorter(applyFilter(curTracks, node.filter));
+        });
+    });
     updateViewOfTheWorld();
 }
 
-function sorter(category, bin, tracks) {
-}
-
-function showPlaylist(spool) {
-    curSpool = spool;
-    var nTracks = spool.tracks.length;
-    var nArtists = numArtists(spool.tracks);
-    $("#playlist-title").text(curName + " " + uname(spool.name) );
+function showPlaylist(node) {
+    curNode = node;
+    var nTracks = node.tracks.length;
+    var nArtists = numArtists(node.tracks);
+    $("#playlist-title").text(curName + " " + uname(node.name) + " tracks" );
     $("#playlist-sub-title").text(nTracks + " tracks / " + nArtists + " artists");
 
     var tbl = $("#track-table");
     tbl.empty();
-    _.each(spool.tracks, function(track, i) {
+    $("#tbl-param").text(node.label);
+    _.each(node.tracks, function(track, i) {
         var tr = $("<tr>");
         tr.append($("<td>").text(i + 1));
-        tr.append($("<td>").text(track.name));
-        tr.append($("<td>").text(track.artists[0].name));
+        tr.append($("<td>").text(track.details.name));
+        tr.append($("<td>").text(track.details.artists[0].name));
+        tr.append($("<td>").text(node.getter(track)));
         tr.on("click", function() {
             playTrack(track);
         });
@@ -207,7 +379,7 @@ function saveTracksToPlaylist(playlist, tracks) {
 
         while (tracks.length > 0 && uris.length < 100) {
             var track = tracks.shift();
-            uris.push(track.uri);
+            uris.push(track.details.uri);
         }
 
         var url = "https://api.spotify.com/v1/users/" + curUserID 
@@ -230,13 +402,25 @@ function saveTracksToPlaylist(playlist, tracks) {
     saveTracks();
 }
 
+function makeNode(name, label, filter, getter, sorter) {
+    var node = {
+        name:name,
+        label:label,
+        tracks:[],
+        filter:filter,
+        getter:getter,
+        sorter:sorter
+    };
+    return node;
+}
+
 function savePlaylist() {
-    if (curSpool != null) {
-        info("saving " + uname(curSpool.name));
+    if (curNode != null) {
+        info("saving " + uname(curNode.name));
         var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists"
-        callSpotify("POST", url, {name:"Your " + uname(curSpool.name) }, function(ok, results) {
+        callSpotify("POST", url, {name:"Your " + uname(curNode.name) + " tracks" }, function(ok, results) {
             if (ok) {
-                saveTracksToPlaylist(results, curSpool.tracks);
+                saveTracksToPlaylist(results, curNode.tracks);
             } else {
                 error("Trouble creating playlist");
             }
@@ -250,31 +434,30 @@ function updateViewOfTheWorld() {
     sidebar.empty();
     var first = true;
 
-    _.each(theWorld, function(pool, name) {
-        var spool = sortedPool(pool);
-        var head = $("<h4>").text(uname(name));
+    _.each(theWorld, function(bin) {
+        var nodes = sortedNodes(bin.nodes);
+        var head = $("<h4>").text(uname(bin.name));
         head.attr("data-toggle", "collapse");
-        head.attr("data-target", "#" + nname(name));
+        head.attr("data-target", "#" + nname(bin.name));
         sidebar.append(head);
         var ul = $("<ul class='playlist-list collapse in'>");
-        ul.attr("id", nname(name));
+        ul.attr("id", nname(bin.name));
         sidebar.append(ul);
-        _.each(spool, function(spoolItem) {
-            var tracks = spoolItem.tracks;
-            var name = spoolItem.name;
+        _.each(nodes, function(node) {
+            var tracks = node.tracks;
             if (tracks.length >= minTracksForSection) {
-                var nArtists = numArtists(spoolItem.tracks);
-                var header = $("<li>").text(uname(name));
+                var nArtists = numArtists(node.tracks);
+                var header = $("<li>").text(uname(node.name));
                 var stats = $("<span class='stats'>").text("(" + tracks.length +
                 " tracks / " + nArtists + " artists)");
                 header.append(stats);
                 ul.append(header);
                 header.on("click", function() {
-                    showPlaylist(spoolItem);
+                    showPlaylist(node);
                 });
                 if (first) {
                     first = false;
-                    showPlaylist(spoolItem);
+                    showPlaylist(node);
                 }
             }
         });
@@ -285,8 +468,8 @@ function numArtists(tracks) {
     var sartists = new Set();
 
     _.each(tracks, function(track) {
-        if (track.artists.length > 0) {
-            sartists.add(track.artists[0].id);
+        if (track.details.artists.length > 0) {
+            sartists.add(track.details.artists[0].id);
         }
     });
     return sartists.size;
@@ -300,13 +483,8 @@ function uname(s) {
     return s.replace(/_/g, ' ');
 }
 
-function sortedPool(pool) {
-    var out = [];
-    _.each(pool, function(tracks, name) {
-        out.push( {tracks:tracks, name:name });
-    });
-
-    out.sort(function(a,b) {
+function sortedNodes(nodes) {
+    nodes.sort(function(a,b) {
         if (a.tracks.length > b.tracks.length) {
             return -1;
         } else if (a.tracks.length < b.tracks.length) {
@@ -315,166 +493,146 @@ function sortedPool(pool) {
             return 0;
         }
     });
-    return out;
+    return nodes;
 }
 
 function refreshGenres() {
-    theWorld.genres = {};
+    var allGenres = new Set();
     _.each(curTracks, function(track) {
         var genres = getGenresForTrack(track);
+        track.feats.genres = new Set();
         _.each(genres, function(genre) {
             if (isGoodGenre(genre)) {
-                if (! (genre in theWorld.genres)) {
-                    theWorld.genres[genre] = [];
-                }
-                theWorld.genres[genre].push(track);
+                allGenres.add(genre);
+                track.feats.genres.add(genre);
             }
         });
     });
-}
-
-function refreshMoods() {
-    theWorld.moods = {
-        chill:[],
-        sad:[],
-        angry:[],
-        happy:[],
-        amped:[],
-        danceable:[],
-    };
-
-    theWorld.styles = {
-        acoustic:[],
-        instrumental:[],
-        live:[],
-        spoken_word:[],
-        explicit:[],
-        clean:[],
-        loud:[],
-        quiet:[]
-    };
-
-    theWorld.added = {
-        today : [],
-        this_week : [],
-        this_month : [],
-        last_month : [],
-        in_the_last_six_months : [],
-        in_the_last_year : [],
-        over_a_year_ago : [],
-        over_two_years_ago : [],
-        over_five_years_ago : [],
-    };
-    _.each(curTracks, function(track) {
-
-        if (track.age < 1.5) {
-            theWorld.added.today.push(track);
-        }
-
-        if (track.age < 8) {
-            theWorld.added.this_week.push(track);
-        }
-
-        if (track.age  < 30) {
-            theWorld.added.this_month.push(track);
-        } else if (track.age < 60) {
-            theWorld.added.last_month.push(track);
-        }
-
-        if (track.age < 30 * 6) {
-            theWorld.added.in_the_last_six_months.push(track);
-        }
-
-        if (track.age < 365) {
-            theWorld.added.in_the_last_year.push(track);
-        }
-
-        if (track.age > 365) {
-            theWorld.added.over_a_year_ago.push(track);
-        }
-
-        if (track.age > 365 * 2) {
-            theWorld.added.over_two_years_ago.push(track);
-        }
-
-        if (track.age > 365 * 5) {
-            theWorld.added.over_five_years_ago.push(track);
-        }
-
-        if ('audio_feature' in track) {
-            var feats = track.audio_feature;
-
-            // if the track looks like spoken word, then bail after
-            // we add it to the speech bucket
-            if (feats.speechiness > .8) {
-                theWorld.styles.spoken_word.push(track);
-                return;
-            }
-
-            if (feats.acousticness > .8) {
-                theWorld.styles.acoustic.push(track);
-            }
-
-            if (feats.energy < .2) {
-                theWorld.moods.chill.push(track);
-            }
-
-            if (feats.energy > .95) {
-                theWorld.moods.amped.push(track);
-            }
-            
-            if (feats.sadness > .8) {
-                theWorld.moods.sad.push(track);
-            }
-
-            if (feats.happiness > .8) {
-                theWorld.moods.happy.push(track);
-            }
-
-            if (feats.anger > .8) {
-                theWorld.moods.angry.push(track);
-            }
-
-            if (feats.danceabilty > .8) {
-                theWorld.moods.danceable.push(track);
-            }
-
-            if (feats.instrumentalness > .9) {
-                theWorld.styles.instrumental.push(track);
-            }
-
-            if (feats.liveness > .85) {
-                theWorld.styles.live.push(track);
-            }
-
-            if (feats.loudness > -5) {
-                theWorld.styles.loud.push(track);
-            }
-            if (feats.loudness < -15) {
-                theWorld.styles.quiet.push(track);
-            }
-        }
-
-        if (track.explicit) {
-            theWorld.styles.explicit.push(track);
-        } else {
-            theWorld.styles.clean.push(track);
-        }
+    var gnodes = [];
+    theWorld[0].nodes = gnodes;
+    _.each(Array.from(allGenres), function(genre) {
+        var node = makeNode(genre, "Genre",
+                featGenreFilter(genre),
+                featGenreGetter(genre), 
+                featGenreSorter(genre));
+        gnodes.push(node); 
     });
 }
 
-function refreshDecades() {
-    theWorld.decades = {};
-    _.each(curTracks, function(track) {
-        var decade = getDecadeForTrack(track);
-        if (decade != null) {
-            if (! (decade in theWorld.decades)) {
-                theWorld.decades[decade] = [];
+function featGenreFilter(genre) {
+    return function(track) {
+        return track.feats.genres.has(genre);
+    };
+}
+
+function featGenreGetter(genre) {
+    return function(track) {
+        var glist = Array.from(track.feats.genres);
+        return glist.join(', ');
+    };
+}
+
+function featGenreSorter(genre) {
+    return function(tracks) {
+        tracks.sort(function(a,b) {
+            if (a.feats.genres.size > b.feats.genres.size) {
+                return 1;
+            } else if (a.feats.genres.size < b.feats.genres.size) {
+                return -1;
+            } else {
+                return b.feats.popularity - a.feats.popularity;
             }
-            theWorld.decades[decade].push(track);
+        });
+        return tracks;
+    };
+}
+
+function featSorter(param, reverse) {
+    return function(tracks) {
+        tracks.sort(function(a,b) {
+            if (a.feats[param] > b.feats[param]) {
+                return 1;
+            } else if (a.feats[param] < b.feats[param]) {
+                return -1;
+            } else {
+                return 0;
+            }
+        });
+        if (reverse) {
+            tracks.reverse();
+        }
+        return tracks;
+    };
+}
+
+function featGetter(param) {
+    return function(track) {
+        return track.feats[param];
+    };
+}
+
+function featGetterInt(param) {
+    return function(track) {
+        return Math.round(track.feats[param]);
+    };
+}
+
+function featGetterPercent(param) {
+    return function(track) {
+        return Math.round(100 * track.feats[param]);
+    };
+}
+
+function featGetterBool(param, true_val, false_val) {
+    return function(track) {
+        return track.feats[param] ? true_val : false_val;
+    };
+}
+
+function featBoolFilter(param, state) {
+    return function(track) {
+        return 'feats' in track &&
+                track.feats[param] == state;
+    };
+}
+function featMusicFilter(param, low, high) {
+    return function(track) {
+        return 'feats' in track &&
+                track.feats.speechiness < .8 && 
+                track.feats[param] >= low &&  
+                track.feats[param] <= high;
+    };
+}
+
+function featMissingFilter(param) {
+    return function(track) {
+        return (! ('energy' in track.feats));
+    };
+}
+
+function featFilter(param, low, high) {
+    return function(track) {
+        return 'feats' in track &&
+                track.feats[param] >= low &&  
+                track.feats[param] <= high;
+    };
+}
+
+function applyFilter(tracks, filt) {
+    var out = [];
+    _.each(tracks, function(track) {
+        if (filt(track)) {
+            out.push(track);
         }
     });
-    refreshNewMusic();
+    return out;
+}
+
+
+function refreshReleaseYear() {
+    _.each(curTracks, function(track) {
+        track.feats.year = getYearForTrack(track);
+    });
 }
 
 function refreshPopularity() {
@@ -501,32 +659,11 @@ function refreshPopularity() {
 }
 
 
-function refreshNewMusic() {
-    var newYear = 2016; // TBD fix  me
-    theWorld.decades.now = [];
-    _.each(curTracks, function(track) {
-        var year = getYearForTrack(track);
-        if (year != null) {
-            if (year >= newYear) {
-                theWorld.decades.now.push(track);
-            }
-        }
-    });
-}
-
-function getDecadeForTrack(track) {
-    var year = getYearForTrack(track);
-    var decade = null;
-    if (year != null) {
-        decade =  Math.floor(year / 10) * 10
-    } 
-    return decade;
-}
 
 function getYearForTrack(track) {
-    var year = null;
-    if (track.album.id in curAlbums) {
-        var album = curAlbums[track.album.id];
+    var year = -1;
+    if (track.details.album.id in curAlbums) {
+        var album = curAlbums[track.details.album.id];
         if ('release_date' in album) {
             var date = album.release_date;
             if (date.length >=4) {
@@ -540,7 +677,7 @@ function getYearForTrack(track) {
 
 function getGenresForTrack(track) {
     var genres = [];
-    var albumId = track.album.id;
+    var albumId = track.details.album.id;
     if (albumId in curAlbums) {
         var album = curAlbums[albumId];
         _.each(album.genres, function(g) {
@@ -548,7 +685,7 @@ function getGenresForTrack(track) {
         });
     }
 
-    _.each(track.artists, function(artist) {
+    _.each(track.details.artists, function(artist) {
         if (artist.id in curArtists) {
             var detailedArtist = curArtists[artist.id];
             _.each(detailedArtist.genres, function(genre) {
@@ -556,6 +693,9 @@ function getGenresForTrack(track) {
             });
         }
     });
+    if (genres.length == 0) {
+        genres.push('(unclassified)');
+    }
     return genres;
 }
 
@@ -699,7 +839,7 @@ function fetchCurrentUserProfile(callback) {
 
 function playTrack(track) {
     if (track != nowPlaying) {
-        audio.attr('src', track.preview_url);
+        audio.attr('src', track.details.preview_url);
         audio.get(0).play();
         nowPlaying = track;
     } else {
@@ -722,10 +862,14 @@ function collectAudioAttributes(tracks, isLast) {
         { ids: trackIds.join(',')}, function(results) {
         _.each(results.audio_features, function(audio_feature) {
             if (audio_feature) {
-                curTracks[audio_feature.id].audio_feature = audio_feature;
-                audio_feature.sadness=  (1 - audio_feature.energy) * (1 - audio_feature.valence);
-                audio_feature.happiness = audio_feature.energy * audio_feature.valence;
-                audio_feature.anger = audio_feature.energy * (1 - audio_feature.valence);
+                var track = curTracks[audio_feature.id];
+                //track.audio_feature = audio_feature;
+                _.each(audio_feature, function(val, name) {
+                    track.feats[name] = val;
+                });
+                track.feats.sadness=  (1 - audio_feature.energy) * (1 - audio_feature.valence);
+                track.feats.happiness = audio_feature.energy * audio_feature.valence;
+                track.feats.anger = audio_feature.energy * (1 - audio_feature.valence);
             }
         });
         if (isLast) {
@@ -751,7 +895,7 @@ function collectArtistAttributes(tracks, isLast) {
     var aids = [];
     var maxArtistsPerCall = 50;
     _.each(tracks, function(track) {
-        _.each(track.artists, function(artist) {
+        _.each(track.details.artists, function(artist) {
             if (! (artist.id in curArtists)) {
                 aids.push(artist.id);
                 if (aids.length >= maxArtistsPerCall) {
@@ -784,8 +928,8 @@ function collectAlbumAttributes(tracks, isLast) {
     var aids = [];
     var maxAlbumsPerCall = 20;
     _.each(tracks, function(track) {
-        if (! (track.album.id in curAlbums)) {
-            aids.push(track.album.id);
+        if (! (track.details.album.id in curAlbums)) {
+            aids.push(track.details.album.id);
             if (aids.length >= maxAlbumsPerCall) {
                 getAlbumInfo(aids);
                 aids = [];
@@ -808,7 +952,7 @@ function showTracks(tracks) {
     function scheduleUpdate() {
         if (trackTextQueue.length > 0) {
             var track = trackTextQueue.shift();
-            var text = track.artists[0].name + " - " +  track.name;
+            var text = track.details.artists[0].name + " - " +  track.details.name;
             tt.text(text);
             if (trackTextQueue.length > 0) {
                 setTimeout(scheduleUpdate, 10);
@@ -838,7 +982,18 @@ function getTracksFromAPI(uri, offset) {
                         item.track.added_at = item.added_at;
                         item.track.date_added = moment(item.added_at);
                         item.track.age = moment.duration(now.diff(item.track.date_added)).asDays();
-                        tracks.push(item.track);
+                        var track = {
+                            id:item.track.id,
+                            feats: {
+                                date_added:moment(item.added_at),
+                                age:moment.duration(now.diff(item.track.date_added)).asDays(),
+                                explicit:item.track.explicit,
+                                duration_ms:item.track.duration_ms,
+                                popularity:item.track.popularity,
+                            },
+                            details:item.track
+                        }
+                        tracks.push(track);
                     }
                 });
                 showTracks(tracks);
@@ -935,7 +1090,6 @@ function normalizeUri(uri) {
     uri = uri.replace("https://open.spotify.com", 'spotify');
     uri = uri.replace("https://play.spotify.com", 'spotify');
     uri = uri.replace(/\//g, ':');
-    console.log("norm uri", uri);
     return uri;
 }
 
