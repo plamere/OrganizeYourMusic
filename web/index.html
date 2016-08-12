@@ -8,6 +8,7 @@
     <meta name="author" content="">
     <link type="text/css" href="styles.css" rel="stylesheet" />
     <link href="dist/sp-bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
     <link rel="shortcut icon" href="images/favicon.png">
     <title>Organize Your Music</title>
@@ -40,8 +41,14 @@
                 by any of a wide range of musical attributes including
                 genre, mood, decade of release and more.
             </p>
-            <p><a class="btn btn-primary btn-lg" id='go' role="button">Organize
-            your saved music</a></p>
+            <p>
+            <a class="btn btn-primary btn-lg go" id='go' role="button">Organize
+            your saved music</a>
+            <!--
+            <a class="btn btn-primary btn-lg go" id='go-all' role="button">Organize
+            all your music</a> -->
+            </p>
+            <p> </p>
             <p> Or enter a playlist URI to organize the music in a particular playlist </p>
             <div class="row">
                 <div class="col-md-offset-3 col-md-6">
@@ -98,6 +105,11 @@
       <div class="work" id="main-area">
           <div id='info' class="text-center"></div>
           <div id='tiny-track'> </div>
+          <div class="progress">
+            <div id="progress-bar" class="progress-bar" role="progressbar" 
+                aria-valuenow="00" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+            <span class="sr-only">00% Complete</span> </div>
+          </div>
           <h3 id="playlist-title"> </h3> 
           <div id="playlist-sub-title"> </div>
           <div>
@@ -107,14 +119,18 @@
           <br>
           <table id="the-track-table" class="table table-responsive">
             <col width="5%">
-            <col width="37%">
-            <col width="33%">
-            <col width="25%">
+            <col width="5%">
+            <col width="5%">
+            <col width="35%">
+            <col width="35%">
+            <col width="15%">
             <thead>
                 <tr>
                     <th> # </th>
-                    <th> title </th>
+                    <th> Count </th>
+                    <th> Pop </th>
                     <th> artist </th>
+                    <th> title </th>
                     <th id='tbl-param'>  </th>
                 </tr>
             </thead>
@@ -140,6 +156,7 @@
     <script src="lib/moment.min.js"></script>
     <script src="lib/bootstrap.min.js"></script>
     <script src="lib/underscore-min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript" charset="utf-8"
         src="//cdnjs.cloudflare.com/ajax/libs/q.js/1.4.1/q.min.js"></script>
     <script src="config.js"></script>
@@ -158,6 +175,12 @@ var nowPlaying = null;
 var curNode = null;
 var curType = 'collection';
 var curName = 'Your';
+var totalPlaylists = 0;
+var processedPlaylists = 0;
+var curPlaylistName = "";
+var needsRefresh = false;
+var progressBar = $("#progress-bar");
+var totalTracks = 0;
 
 var theWorld = [
     {
@@ -333,43 +356,83 @@ var theWorld = [
     }
 ];
 
+function now() {
+    return new Date().getTime();
+}
 
-function refreshTheWorld() {
+function refreshHeader() {
     var ntracks = Object.keys(curTracks).length;
     var nArtists = numArtists(curTracks);
-    info("Found " + ntracks + " tracks  by " + nArtists + " artists in your " + curType+ ".");
+    if (curType == 'all') {
+        info("Found " + ntracks + " unique tracks  by " + nArtists 
+        + " artists in " + processedPlaylists + " of " 
+        + totalPlaylists + " playlists");
+        if (totalPlaylists > 0) {
+            var progress =  processedPlaylists * 100 / totalPlaylists;
+            setProgress(progress);
+        }
+    } else {
+        if (totalTracks > 0) {
+            var progress =  ntracks * 100 / totalTracks;
+            setProgress(progress);
+        }
+        info("Found " + ntracks + " tracks  by " 
+        + nArtists + " artists in your " + curType+ ".");
+    }
+}
 
-    refreshGenres();
-    refreshReleaseYear();
-    _.each(theWorld, function(bin) {
-        _.each(bin.nodes, function(node) {
-           node.tracks = node.sorter(applyFilter(curTracks, node.filter));
+function refreshTheWorld() {
+    if (needsRefresh) {
+        var start = now();
+        refreshHeader();
+        refreshGenres();
+        refreshReleaseYear();
+        _.each(theWorld, function(bin) {
+            _.each(bin.nodes, function(node) {
+               node.tracks = node.sorter(applyFilter(curTracks, node.filter));
+            });
         });
-    });
-    updateViewOfTheWorld();
+        updateViewOfTheWorld();
+        console.log('refresh too', now() - start, 'ms');
+        needsRefresh = false;
+    }
+}
+
+function subtitle(s) {
+    $("#playlist-sub-title").text(s);
 }
 
 function showPlaylist(node) {
+    var maxVisibleTracks = 400;
     curNode = node;
     var nTracks = node.tracks.length;
     var nArtists = numArtists(node.tracks);
     $("#playlist-title").text(curName + " " + uname(node.name) + " tracks" );
-    $("#playlist-sub-title").text(nTracks + " tracks / " + nArtists + " artists");
+    subtitle(nTracks + " tracks / " + nArtists + " artists");
 
     var tbl = $("#track-table");
     tbl.empty();
     $("#tbl-param").text(node.label);
     _.each(node.tracks, function(track, i) {
+        if (i > maxVisibleTracks) {
+            return ;
+        }
         var tr = $("<tr>");
+        tr.addClass("playable");
         tr.append($("<td>").text(i + 1));
+        tr.append($("<td>").text(track.feats.count));
+        tr.append($("<td>").text(track.feats.popularity));
         tr.append($("<td>").text(track.details.name));
         tr.append($("<td>").text(track.details.artists[0].name));
         tr.append($("<td>").text(node.getter(track)));
         tr.on("click", function() {
+            $(".playing").removeClass("playing");
+            tr.addClass("playing");
             playTrack(track);
         });
         tbl.append(tr);
     });
+    //$("#the-track-table").DataTable();
 }
 
 function saveTracksToPlaylist(playlist, tracks) {
@@ -485,12 +548,18 @@ function uname(s) {
 
 function sortedNodes(nodes) {
     nodes.sort(function(a,b) {
-        if (a.tracks.length > b.tracks.length) {
-            return -1;
-        } else if (a.tracks.length < b.tracks.length) {
+        if (a.name == '(unclassified)') {
             return 1;
+        } else if (b.name == '(unclassified)') {
+            return -1;
         } else {
-            return 0;
+            if (a.tracks.length > b.tracks.length) {
+                return -1;
+            } else if (a.tracks.length < b.tracks.length) {
+                return 1;
+            } else {
+                return 0;
+            }
         }
     });
     return nodes;
@@ -514,7 +583,7 @@ function refreshGenres() {
         var node = makeNode(genre, "Genre",
                 featGenreFilter(genre),
                 featGenreGetter(genre), 
-                featGenreSorter(genre));
+                featSorter('popularity', true));
         gnodes.push(node); 
     });
 }
@@ -662,8 +731,8 @@ function refreshPopularity() {
 
 function getYearForTrack(track) {
     var year = -1;
-    if (track.details.album.id in curAlbums) {
-        var album = curAlbums[track.details.album.id];
+    if (track.details.album_id in curAlbums) {
+        var album = curAlbums[track.details.album_id];
         if ('release_date' in album) {
             var date = album.release_date;
             if (date.length >=4) {
@@ -677,7 +746,7 @@ function getYearForTrack(track) {
 
 function getGenresForTrack(track) {
     var genres = [];
-    var albumId = track.details.album.id;
+    var albumId = track.details.album_id;
     if (albumId in curAlbums) {
         var album = curAlbums[albumId];
         _.each(album.genres, function(g) {
@@ -809,9 +878,21 @@ function getSpotifyWithRetries(url, data, callback) {
                         callback(null);
                     }
                 } else if (r.status == 429) {
+                    console.log("429 status", r);
+                    var retry = 2000;
+                    var retryAfter = r.getResponseHeader("Retry-After");
+                    console.log("retryAfter is", retryAfter);
+
+                    if (retryAfter) {
+                        retry = parseInt(retryAfter, 10) * 1000;
+                    }
+                    if (retry < 1000) {
+                        retry = 1000;
+                    }
+                    console.log("retry", retry);
                     if (curRetry++ < maxRetries) {
                         console.log('429 retry', curRetry);
-                        setTimeout(go, curRetry * 1000);
+                        setTimeout(go, retry + curRetry * retry);
                     } else {
                         console.log('429 error', r);
                         callback(null);
@@ -852,6 +933,19 @@ function stopTrack() {
     nowPlaying = null;
 }
 
+function autoRefresh() {
+    var minRefreshTime = 2000;
+    function refresher() {
+        var start = now();
+        refreshTheWorld();
+        var delta = now() - start;
+        var nextRefresh = Math.max(delta * 10, minRefreshTime);
+        console.log('next refresh in', nextRefresh);
+        setTimeout(refresher, nextRefresh);
+    }
+    setTimeout(refresher, minRefreshTime);
+}
+
 function collectAudioAttributes(tracks, isLast) {
     var trackIds = [];
     _.each(tracks, function(track) {
@@ -872,87 +966,96 @@ function collectAudioAttributes(tracks, isLast) {
                 track.feats.anger = audio_feature.energy * (1 - audio_feature.valence);
             }
         });
-        if (isLast) {
-            refreshTheWorld();
-        }
+        needsRefresh = true;
     });
 }
 
 function collectArtistAttributes(tracks, isLast) {
-    function getArtistInfo(aids) {
-        getSpotify("https://api.spotify.com/v1/artists", 
-            { ids: aids.join(',')}, function(results) {
-            _.each(results.artists, function(artist) {
-                curArtists[artist.id] = artist;
-            });
-            refreshTheWorld();
-            if (isLast) {
-                refreshTheWorld();
-            }
-        });
-    }
-
     var aids = [];
     var maxArtistsPerCall = 50;
+
+    function getNextArtists() {
+        var nextAids = getNextBatch(aids, maxArtistsPerCall);
+        if (nextAids.length > 0) {
+            getSpotify("https://api.spotify.com/v1/artists", 
+                { ids: nextAids.join(',')}, function(results) {
+                _.each(results.artists, function(artist) {
+                    curArtists[artist.id] = {
+                        genres:artist.genres
+                    }
+                });
+                getNextArtists();
+            });
+        } else {
+            needsRefresh = true;
+        }
+    }
+
+    var aidsSet = new Set();
     _.each(tracks, function(track) {
         _.each(track.details.artists, function(artist) {
             if (! (artist.id in curArtists)) {
-                aids.push(artist.id);
-                if (aids.length >= maxArtistsPerCall) {
-                    getArtistInfo(aids);
-                    aids = [];
-                }
+                aidsSet.add(artist.id);
             }
         });
     });
-
-    if (aids.length > 0) {
-        getArtistInfo(aids);
-    }
+    aids = Array.from(aidsSet);
+    getNextArtists();
 }
 
 
 function collectAlbumAttributes(tracks, isLast) {
-    function getAlbumInfo(aids) {
-        getSpotify("https://api.spotify.com/v1/albums", 
-            { ids: aids.join(',')}, function(results) {
-            _.each(results.albums, function(album) {
-                curAlbums[album.id] = album;
+    var maxAlbumsPerCall = 20;
+    var aids = [];
+
+    function getNextAlbums() {
+        var nextAids = getNextBatch(aids, maxAlbumsPerCall);
+        if (nextAids.length > 0) {
+            getSpotify("https://api.spotify.com/v1/albums", 
+                { ids: nextAids.join(',')}, function(results) {
+                _.each(results.albums, function(album) {
+                    curAlbums[album.id] = {
+                        release_date:album.release_date,
+                        genres:album.genres,
+                    };
+                });
+                getNextAlbums();
             });
-            if (isLast)  {
-                refreshTheWorld();
-            }
-        });
+        } else {
+            needsRefresh = true;
+        }
     }
 
-    var aids = [];
-    var maxAlbumsPerCall = 20;
+    var aidSet = new Set();
     _.each(tracks, function(track) {
-        if (! (track.details.album.id in curAlbums)) {
-            aids.push(track.details.album.id);
-            if (aids.length >= maxAlbumsPerCall) {
-                getAlbumInfo(aids);
-                aids = [];
-            }
+        if (! (track.details.album_id in curAlbums)) {
+            aidSet.add(track.details.album_id);
         }
     });
+    aids = Array.from(aidSet);
+    getNextAlbums();
+}
 
-    if (aids.length > 0) {
-        getAlbumInfo(aids);
+function getNextBatch(list, nitems) {
+    var out = [];
+    while (list.length > 0 && out.length  < nitems) {
+        out.push(list.shift());
     }
+    return out;
 }
 
 
 var trackTextQueue = [];
 
-function showTracks(tracks) {
+function showTracks(prefix, tracks) {
     var tt = $("#tiny-track");
     trackTextQueue = tracks.slice();
 
     function scheduleUpdate() {
         if (trackTextQueue.length > 0) {
             var track = trackTextQueue.shift();
-            var text = track.details.artists[0].name + " - " +  track.details.name;
+            var text = prefix + " - " + track.details.artists[0].name 
+                + " - " +  track.details.name;
             tt.text(text);
             if (trackTextQueue.length > 0) {
                 setTimeout(scheduleUpdate, 10);
@@ -964,7 +1067,7 @@ function showTracks(tracks) {
     setTimeout(scheduleUpdate, 20);
 }
 
-function getTracksFromAPI(uri, offset) {
+function getTracksFromAPI(uri, offset, callback) {
     var params = {
         limit:50,
         market:'from_token',
@@ -974,11 +1077,12 @@ function getTracksFromAPI(uri, offset) {
         function(results) {
             if (results == null) {
                 error("Trouble getting your tracks");
+                callback(null);
             } else {
                 var now = moment();
                 var tracks = [];
                 _.each(results.items, function(item) {
-                    if (!item.is_local && ('id' in item.track)) {
+                    if (!item.is_local && item.track && ('id' in item.track)) {
                         item.track.added_at = item.added_at;
                         item.track.date_added = moment(item.added_at);
                         item.track.age = moment.duration(now.diff(item.track.date_added)).asDays();
@@ -990,35 +1094,125 @@ function getTracksFromAPI(uri, offset) {
                                 explicit:item.track.explicit,
                                 duration_ms:item.track.duration_ms,
                                 popularity:item.track.popularity,
+                                count:1,
                             },
-                            details:item.track
+                            // details:item.track
+                            details: {
+                                name:item.track.name,
+                                album_id:item.track.album.id,
+                                uri:item.track.uri,
+                                preview_url:item.track.preview_url,
+                                artists:tinyArtists(item.track.artists),
+                            }
                         }
-                        tracks.push(track);
+                        if (track.id in curTracks) {
+                            curTracks[track.id].feats.count += 1;
+                        } else {
+                            tracks.push(track);
+                            curTracks[track.id] = track;
+                        }
                     }
                 });
-                showTracks(tracks);
-                _.each(tracks, function(track) {
-                    curTracks[track.id] = track;
-                });
+                showTracks(curPlaylistName, tracks);
+                refreshHeader();
 
                 var isLast = results.offset + results.items.length >= results.total;
+                totalTracks = results.total;
 
                 collectAudioAttributes(tracks, isLast);
                 collectArtistAttributes(tracks, isLast);
                 collectAlbumAttributes(tracks, isLast);
 
                 if (!isLast) {
-                    getTracksFromAPI(uri, results.offset + results.items.length);
+                    getTracksFromAPI(uri, results.offset + results.items.length, callback);
                 } else {
-                    refreshTheWorld();
+                    needsRefresh = true;
+                    if (callback !== undefined) {
+                        callback();
+                    }
                 }
             }
         }
     );
 }
 
+function tinyArtists(artists) {
+    var tartists = [];
+    _.each(artists, function(artist) {
+        var tartist = {
+            id:artist.id,
+            name:artist.name,
+        }
+        tartists.push(tartist);
+    });
+    return tartists;
+}
+
 function getSavedTracks() {
     return getTracksFromAPI("https://api.spotify.com/v1/me/tracks", 0);
+}
+
+var outstandingPlaylists = [];
+var fetchingInProgress = false;
+
+function getAllMusic() {
+    // get all the tracks from all the 'own'
+    // playlists of the user, up to a maximum amount
+    function getMyPlaylists(offset) {
+        var params = { limit:50, offset:offset };
+        getSpotify("https://api.spotify.com/v1/me/playlists", params, function(results) {
+            if (results) {
+                var count = results.offset + results.items.length;
+                if (count < results.total) {
+                    _.each(results.items, function(playlist) {
+                        if (isGoodPlaylist(playlist)) {
+                            totalPlaylists += 1;
+                            outstandingPlaylists.push(playlist);
+                            loadPlaylists();
+                            subtitle("Loading playlist: " 
+                                + playlist.name + " (" + playlist.tracks.total +
+                                " tracks)");
+                        }
+                    });
+                    getMyPlaylists(count);
+                }
+            } else {
+                error("Can't get your playlists");
+            }
+        });
+    }
+    getMyPlaylists(0);
+}
+
+var fetchingInProgress = false;
+
+function loadPlaylists() {
+    function fetchNextPlaylist() {
+        if (outstandingPlaylists.length > 0) {
+            fetchingInProgress = true;
+            var playlist = outstandingPlaylists.shift();
+            processedPlaylists += 1;
+            // console.log("loading " + playlist.name + " tracks " + playlist.tracks.total);
+            curPlaylistName = playlist.name;
+            getPlaylistTracks(playlist.uri, function() {
+                fetchNextPlaylist();
+            });
+        } else {
+            fetchingInProgress = false;
+        }
+    }
+    if (!fetchingInProgress) {
+        fetchNextPlaylist();
+    }
+}
+
+function isGoodPlaylist(playlist) {
+    if (playlist.owner.id == curUserID) {
+        if (playlist.tracks.total > 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function getPlaylistTitleAndTracks(uri) {
@@ -1040,14 +1234,14 @@ function getPlaylistTitleAndTracks(uri) {
     }
 }
 
-function getPlaylistTracks(uri) {
+function getPlaylistTracks(uri, callback) {
     if (isValidPlaylistUri(uri)) {
         var fields = uri.split(':');
         var userID = fields[2];
         var playlistID = fields[4];
         var url = "https://api.spotify.com/v1/users/" 
             + userID + "/playlists/" + playlistID + "/tracks";
-        return getTracksFromAPI(url, 0);
+        return getTracksFromAPI(url, 0, callback);
     } else {
         error("bad playlist URI");
     }
@@ -1086,6 +1280,15 @@ function goCollection() {
     authorizeUser();
 }
 
+function goAll() {
+    $('.err-txt').text("");
+    var params = {
+        "type": "all",
+    }
+    saveInfo(params);
+    authorizeUser();
+}
+
 function normalizeUri(uri) {
     uri = uri.replace("https://open.spotify.com", 'spotify');
     uri = uri.replace("https://play.spotify.com", 'spotify');
@@ -1106,6 +1309,11 @@ function goPlaylist() {
     } else {
         $('.err-txt').text("That's not a playlist URI");
     }
+}
+
+function setProgress(percent) {
+  progressBar.css('width', percent+'%').attr('aria-valuenow', percent);    
+
 }
 
 $(document).ready(
@@ -1139,9 +1347,12 @@ $(document).ready(
                     curType = info.type;
                     if (info.type == "collection") {
                         getSavedTracks();
+                    } else if (info.type == "all") {
+                        getAllMusic();
                     } else if (info.type == "playlist") {
                         getPlaylistTitleAndTracks(info.uri);
                     }
+                    autoRefresh();
                 } else {
                     error("Trouble getting the user profile");
                 }
@@ -1150,6 +1361,10 @@ $(document).ready(
             $("#go").show();
             $("#go").on('click', function() {
                 goCollection();
+            });
+
+            $("#go-all").on('click', function() {
+                goAll();
             });
 
             $("#uri-go").on('click', goPlaylist);

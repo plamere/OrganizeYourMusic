@@ -167,8 +167,17 @@ view) */
   margin-bottom: 30px; /* (@padding-base-vertical * 5) */
 }
 
-#go {
+.go {
     margin-bottom:20px;
+}
+
+.playable:hover {
+    font-weight:bolder;
+}
+
+.playing {
+    color:#2ebd59;
+    font-weight:bolder;
 }
 
 
@@ -233,6 +242,7 @@ view) */
 #tiny-track {
     font-size:10px;
     height:10px;
+    margin-bottom:8px;
 }
 
 .stats {
