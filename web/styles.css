@@ -27,6 +27,10 @@ body {
   line-height: 2.0em;
 }
 
+h3 {
+    margin:0px !important;
+}
+
 .playlist-list li {
     cursor:pointer;
 }
@@ -95,6 +99,19 @@ body {
     font-size:18px;
 }
 
+#loaded {
+    display:none;
+}
+
+#loading {
+}
+
+#loading-header {
+    width:100%;
+    overflow:hidden;
+    white-space:nowrap;
+}
+
 #single-playlist {
     display:none;
 }
@@ -138,7 +155,13 @@ view) */
 
 #info {
     font-size:18px;
-    height:22px;
+    height:32px;
+    text-align:left;
+}
+
+#linfo {
+    font-size:18px;
+    height:32px;
     text-align:left;
 }
 
@@ -172,12 +195,16 @@ view) */
 }
 
 .playable:hover {
-    font-weight:bolder;
+    color:#2ebd59;
 }
 
 .playing {
     color:#2ebd59;
     font-weight:bolder;
+}
+
+#save-button {
+    margin-right:20px;
 }
 
 
@@ -272,3 +299,22 @@ view) */
     height:32px;
 }
 
+#favs {
+    display:none;
+}
+
+.fav-text {
+    text-transform:capitalize;
+    font-weight:bolder;
+}
+
+.loading-text {
+    margin:20px;
+}
+
+#what-label {
+    text-align:left;
+    color:#EEEEEE;
+    font-size:28px;
+
+}
