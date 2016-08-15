@@ -50,7 +50,15 @@
                     <option value='added'> Songs you've added to a playlist</option>
                     <option value='follow'> Songs in playlists you follow </option>
                     <option value='all'> All of your music</option>
+                    <option value='playlist'> A specific playlist</option>
                 </select>
+
+                <div id="uri-prompt" class="input-group align-center">
+                    <span for="uri-text"> Enter the URI for your playlist:</span>
+                    <input id="uri-text" type="text" class='form-control' 
+                        placeholder="spotify:user:spotify:playlist:5FJXhjdILmRA2z5bvz4nzf">
+                </div>
+
                 <br>
                 <a class="btn btn-primary btn-lg go" id='go' role="button">Organize your music</a>
                 <p> </p>
@@ -167,11 +175,13 @@
                       </div>
                    </div>
                     <div class="tab-pane" id="the-plots">
+
                         <br>
-                        <p>
-                            Sweet, sweet plots, charts and graphs coming soon.
-                        </p>
-                        <div id="the-plot" style="width:800px;height:550px;"></div>
+                        <i>Some experimental plots </i>
+                        <div id="the-plot"></div>
+                        <div>
+                            <button id='plot-clear' class='btn btn-sm'> clear </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -212,9 +222,11 @@ var curUserID = null;
 var curTracks = {};
 var curArtists = {};
 var curAlbums = {};
+var curTypeName = null;
 var nodeMap = { }
 var genreIndex = 0;
 var sourceIndex = 6;
+var thePlot = null;
 
 var skipGenrePhrases = ['christmas'];
 var audio = $("<audio>");
@@ -475,7 +487,9 @@ function addTracks(tracks) {
 
         track.feats.year = getYearForTrack(track);
     });
+}
 
+function filterTracks(tracks) {
     _.each(theWorld, function(bin) {
         _.each(bin.nodes, function(node) {
             _.each(applyFilter(tracks, node.filter), function(track) {
@@ -483,6 +497,10 @@ function addTracks(tracks) {
                 node.artists.add(track.details.artists[0].id);
             });
         });
+    });
+
+    _.each(tracks, function(track) {
+        saveTrack(track);
     });
 }
 
@@ -539,8 +557,77 @@ function playlistTitle(s) {
     $("#playlist-title").text(s);
 }
 
+
+
 function plotPlaylist(node) {
-    drawTestPlot();
+    var xdata = 'popularity';
+    var ydata = 'energy';
+    var trace1 = {
+        x:[],
+        y:[],
+        mode: 'markers',
+        name: node.name,
+        text: [],
+        node:node,
+        marker: {
+            sizemode:'area',
+            size:[],
+            //color:[],
+            sizeref:1
+        }
+    };
+
+    _.each(node.tracks, function(track) {
+        trace1.x.push(track.feats.loudness);
+        trace1.y.push(track.feats.energy);
+        trace1.marker.size.push(track.feats[xdata]);
+        //trace1.marker.color.push(track.feats[ydata];
+        var name = track.details.name + " - " + track.details.artists[0].name;
+        trace1.text.push(name);
+    });
+
+    Plotly.plot(thePlot, [trace1], getLayout());
+}
+
+function getLayout() {
+    var xMargin = 300;
+    var yMargin = 200;
+    var yFooter = 150;
+    var minHeight = 300;
+    var minWidth = 600;
+
+    var width =   $(window).width() - xMargin;
+    if (width < minWidth) {
+        width = minWidth;
+    }
+    var height =   $(window).height() - yMargin - yFooter;
+    if (height < minHeight) {
+        height = minHeight;
+    }
+    var layout = {
+        title:curTypeName,
+        hovermode:'closest',
+        xaxis: { title: 'loudness' },
+        yaxis: { title: 'energy' },
+        autosize:false,
+        width:width,
+        height:height,
+    };
+    return layout;
+}
+
+function clearPlot() {
+    var layout = getLayout();
+    Plotly.newPlot(thePlot, [], layout);
+    thePlot.on('plotly_click', function(data) {
+        console.log('pclick', data);
+        if (data.points.length > 0) {
+            var idx = data.points[0].pointNumber;
+            var track = data.points[0].data.node.tracks[idx];
+            playTrack(track);
+            console.log('track', track);
+        }
+    });
 }
 
 function showPlaylist(node) {
@@ -644,7 +731,7 @@ function savePlaylist() {
 }
 
 function updateViewOfTheWorld(quick) {
-    var minTracksForSection = 0;
+    var minTracksForSection = 3;
     var sidebar = $("#sidebar");
     sidebar.empty();
     var first = true;
@@ -1012,7 +1099,9 @@ function fetchCurrentUserProfile() {
 
 
 function playTrack(track) {
+    console.log('play', track.details.name);
     if (track != nowPlaying) {
+        audio.get(0).pause();
         audio.attr('src', track.details.preview_url);
         audio.get(0).play();
         nowPlaying = track;
@@ -1022,6 +1111,7 @@ function playTrack(track) {
 }
 
 function stopTrack() {
+    console.log('stop');
     audio.get(0).pause();
     nowPlaying = null;
     $(".playing").removeClass("playing");
@@ -1199,6 +1289,7 @@ function getTracksFromAPI(source, uri) {
           function(results) {
             var now = moment();
             var tracks = [];
+            var loadedTracks = [];
             _.each(results.items, function(item) {
                 if (!item.is_local && item.track && ('id' in item.track)) {
                     item.track.added_at = item.added_at;
@@ -1231,9 +1322,17 @@ function getTracksFromAPI(source, uri) {
                             topTrackName = item.track.name;
                         }
                     } else {
-                        tracks.push(track);
-                        curTracks[track.id] = track;
-                    }
+                        var ntrack = loadTrack(track.id);
+                        if (ntrack != null) {
+                            console.log('track', track);
+                            curTracks[track.id] = ntrack;
+                            curTracks[track.id].feats.count = 1;
+                            loadedTracks.push(ntrack);
+                        } else {
+                            tracks.push(track);
+                            curTracks[track.id] = track;
+                        }
+                    } 
                 }
             });
             showTracks(source, tracks);
@@ -1249,6 +1348,8 @@ function getTracksFromAPI(source, uri) {
             })
             .then(function() {
               addTracks(tracks);
+              filterTracks(tracks);
+              filterTracks(loadedTracks);
               if (!abortLoading && results.offset + results.items.length < results.total) {
                 go(results.offset + results.items.length);
               } else {
@@ -1411,6 +1512,21 @@ function getPlaylistTracks(playlist) {
     }
 }
 
+function getPlaylistFromURI(name, uri) {
+    startShowingTracks();
+    var playlist = {
+        name:name,
+        uri:uri
+    };
+    getPlaylistTracks(playlist)
+    .finally(function() {
+        stopShowingTracks();
+        refreshTheWorld(false);
+        $("#loaded").show();
+        $("#loading").hide();
+    });
+}
+
 function isLocalHost() {
     return window.location.host.indexOf('localhost') >= 0;
 }
@@ -1440,6 +1556,10 @@ function go() {
     var type = $("#collection-type").val();
     var params = {
         "type": type,
+    }
+
+    if (type == "playlist") {
+        params.uri = $("#uri-text").val();
     }
     saveInfo(params);
     authorizeUser();
@@ -1502,6 +1622,16 @@ $(document).ready(
         }
         var args = parseArgs();
         window.location.hash = "";
+
+        $("#collection-type").on("change", function() {
+            var type = $("#collection-type").val();
+            if (type == 'playlist') {
+                $("#uri-prompt").show(200);
+            } else {
+                $("#uri-prompt").hide(200);
+            }
+        });
+
         $(".work").hide();
         if ('error' in args) {
             error("Sorry, I can't read your music collection from Spotify without authorization");
@@ -1510,6 +1640,7 @@ $(document).ready(
                 go();
             });
         } else if ('access_token' in args) {
+            thePlot = $("#the-plot").get(0);
             $(".work").show();
             $("#intro").hide();
             accessToken = args['access_token'];
@@ -1519,6 +1650,13 @@ $(document).ready(
             $("#save-button").on("click", function() {
                 savePlaylist();
             });
+
+            $("#plot-clear").on("click", function() {
+                clearPlot();
+            });
+
+            clearPlot();
+
             fetchCurrentUserProfile()
             .then(function(user) {
                 if (user) {
@@ -1526,12 +1664,14 @@ $(document).ready(
                     $("#who").text(user.id);
                     var info = getInfo();
                     var curType = info.type;
-                    var curTypeName = $("#collection-type option[value='" + curType +"']").text()
+                    curTypeName = $("#collection-type option[value='" + curType +"']").text()
                     $("#section-title").text(curTypeName);
                     if (info.type == "saved") {
                         getSavedTracks();
                     } else if (info.type == "added") {
                         getMusicFromPlaylists(false);
+                    } else if (info.type == "playlist") {
+                        getPlaylistFromURI("Your Playlist", info.uri);
                     } else if (info.type == "follow") {
                         getMusicFromPlaylists(true);
                     }  else if (info.type == "all") {
@@ -1551,6 +1691,25 @@ $(document).ready(
         }
     }
 );
+
+function saveTrack(track) {
+    return ;
+    var key = track.id;
+    localStorage.setItem(key, JSON.stringify(track));
+}
+
+function loadTrack(id) {
+    return null;
+    console.log('loadTrack',id);
+    var strack = localStorage.getItem(id);
+    if (strack) {
+        var track = JSON.parse(strack);
+        console.log("loaded", track);
+        return track;
+    }
+    console.log("loaded", strack);
+    return strack;
+}
 
 </script>
 <script type="text/javascript">

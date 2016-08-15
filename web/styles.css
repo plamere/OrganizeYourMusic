@@ -278,10 +278,14 @@ view) */
 }
 
 #uri-prompt {
+    margin-top:20px;
     margin-left:auto;
     margin-right:auto;
     width:100%;
     padding-bottom:40px;
+    color:#ffffff;
+    font-size:24px;
+    display:none;
 }
 
 #uri-go {
@@ -318,3 +322,12 @@ view) */
     font-size:28px;
 
 }
+
+#the-plots {
+}
+
+#the-plot {
+    width: 800px;
+    height: 400px;
+}
+
