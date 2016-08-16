@@ -331,3 +331,11 @@ view) */
     height: 400px;
 }
 
+
+#plot-controls label {
+    font-weight:normal;
+}
+
+#plot-clear {
+    margin-top:30px;
+}

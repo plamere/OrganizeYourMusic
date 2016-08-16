@@ -11,6 +11,8 @@
     href="https://sp-bootstrap.global.ssl.fastly.net/7.4.1/sp-bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/css/bootstrap-select.min.css">
+
     <link rel="shortcut icon" href="images/favicon.png">
     <title>Organize Your Music</title>
     <!-- Custom styles for this template -->
@@ -178,10 +180,27 @@
 
                         <br>
                         <i>Some experimental plots </i>
-                        <div id="the-plot"></div>
-                        <div>
-                            <button id='plot-clear' class='btn btn-sm'> clear </button>
+                        <div class="row" id="plot-controls">
+
+                            <div class="col-xs-3">
+                                <label for="select-size"> X axis: </label>
+                                <select id='select-xaxis' class="form-control nselectpicker"> </select>
+                            </div>
+
+                            <div class="col-xs-3">
+                                <label for="select-size"> Y axis:</label>
+                                <select id='select-yaxis' class="form-control nselectpicker"> </select>
+                            </div>
+
+                            <div class="col-xs-3">
+                                <label for="select-size"> Size: </label>
+                                <select id='select-size' class="form-control nselectpicker"> </select>
+                            </div>
+                            <div class="col-xs-2">
+                                <button id='plot-clear' class='btn btn-xs'> clear </button>
+                            </div>
                         </div>
+                        <div id="the-plot"></div>
                     </div>
                 </div>
             </div>
@@ -209,6 +228,8 @@
     <script src="https://sp-bootstrap.global.ssl.fastly.net/7.4.1/sp-bootstrap.min.js"></script>
     <script src="lib/underscore-min.js"></script>
     <script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/js/bootstrap-select.min.js"></script>
+
     <script type="text/javascript" charset="utf-8"
         src="lib/rsvp-latest.min.js"></script>
    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -259,25 +280,25 @@ var theWorld = [
         nodes: [
             makeNode("(unclassified mood)", "popularity", featMissingFilter('energy'),
                                         featGetterInt('popularity'),
-                                        featSorter('popularity', true)),
+                                        featSorter('popularity', true), true),
             makeNode("chill", "energy", featMusicFilter('energy', 0, .2),
                                         featGetterPercent('energy'),
-                                        featSorter('energy', false)),
+                                        featSorter('energy', false), true),
             makeNode("amped", "energy", featMusicFilter('energy', .8, 1.0),
                                         featGetterPercent('energy'),
-                                        featSorter('energy', true)),
+                                        featSorter('energy', true), true),
             makeNode("sad", "sadness", featMusicFilter('sadness', .8, 1.0),
                                         featGetterPercent('sadness'),
-                                        featSorter('sadness', true)),
+                                        featSorter('sadness', true), true),
             makeNode("anger", "anger", featMusicFilter('anger', .8, 1.0),
                                         featGetterPercent('anger'),
-                                        featSorter('anger', true)),
+                                        featSorter('anger', true), true),
             makeNode("happy", "happiness", featMusicFilter('happiness', .8, 1.0),
                                         featGetterPercent('happiness'),
-                                        featSorter('happiness', true)),
+                                        featSorter('happiness', true), true),
             makeNode("danceable", "danceability", featMusicFilter('danceability', .8, 1.0),
                                         featGetterPercent('danceability'),
-                                        featSorter('danceability', true)),
+                                        featSorter('danceability', true), true),
         ]
     },
     {
@@ -286,36 +307,36 @@ var theWorld = [
             makeNode("instrumental", "instrumentalness",
                 featMusicFilter('instrumentalness', .8, 1.0),
                 featGetterPercent('instrumentalness'),
-                featSorter('instrumentalness', true)),
+                featSorter('instrumentalness', true), true),
             makeNode("acoustic", "acousticness",
                 featMusicFilter('acousticness', .8, 1.0),
                 featGetterPercent('acousticness'),
-                featSorter('acousticness', true)),
+                featSorter('acousticness', true), true),
             makeNode("live", "liveness",
                 featMusicFilter('liveness', .85, 1.0),
                 featGetterPercent('liveness'),
-                featSorter('liveness', true)),
+                featSorter('liveness', true), true),
             makeNode("spoken word", "speechiness",
                 featFilter('speechiness', .85, 1.0),
                 featGetterPercent('speechiness'),
-                featSorter('speechiness', true)),
+                featSorter('speechiness', true), true),
             makeNode("clean", "explicit",
                 featBoolFilter('explicit', false),
                 featGetterBool('explicit', 'explicit', 'clean'),
-                featSorter('explicit', true)),
+                featSorter('explicit', true), false),
 
             makeNode("explicit", "explicit",
                 featBoolFilter('explicit', true),
                 featGetterBool('explicit', 'explicit', 'clean'),
-                featSorter('explicit', true)),
+                featSorter('explicit', true), false),
             makeNode("loud", "loudness (dB)",
                 featMusicFilter('loudness', -5, 0),
                 featGetterInt('loudness'),
-                featSorter('loudness', true)),
+                featSorter('loudness', true), true),
             makeNode("quiet", "loudness (dB)",
                 featMusicFilter('loudness', -60, -10),
                 featGetterInt('loudness'),
-                featSorter('loudness', false)),
+                featSorter('loudness', false), true),
         ]
     },
     {
@@ -324,43 +345,43 @@ var theWorld = [
             makeNode("Oldies", "year",
                 featFilter('year', 0, 1950),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("1950s", "year",
                 featFilter('year', 1950, 1959),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("1960s", "year",
                 featFilter('year', 1960, 1969),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("1970s", "year",
                 featFilter('year', 1970, 1979),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("1980s", "year",
                 featFilter('year', 1980, 1989),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("1990s", "year",
                 featFilter('year', 1990, 1999),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("2000s", "year",
                 featFilter('year', 2000, 2009),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("2010s", "year",
                 featFilter('year', 2010, 2019),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("Now", "year",
                 featFilter('year', 2016, 2020),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), true),
             makeNode("(unclassified year)", "year",
                 featFilter('year', -1, 0),
                 featGetter('year'),
-                featSorter('year', false)),
+                featSorter('year', false), false),
         ]
     },
     {
@@ -369,35 +390,35 @@ var theWorld = [
             makeNode("Today", "age (days)",
                 featFilter('age', 0, 1),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
             makeNode("In the last week", "age (days)",
                 featFilter('age', 0, 7),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
             makeNode("In the last month", "age (days)",
                 featFilter('age', 0, 30),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
             makeNode("In the last year", "age (days)",
                 featFilter('age', 0, 365),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
             makeNode("Over a year ago", "age (days)",
                 featFilter('age', 356, 365 * 100),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
             makeNode("Over 2 years ago", "age (days)",
                 featFilter('age', 356 * 2, 365 * 100),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
             makeNode("Over 5 years ago", "age (days)",
                 featFilter('age', 356 * 5, 365 * 100),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
             makeNode("Whenever", "age (days)",
                 featFilter('age', 0, 365 * 100),
                 featGetterInt('age'),
-                featSorter('age', false)),
+                featSorter('age', false), true),
         ]
     },
     {
@@ -406,19 +427,19 @@ var theWorld = [
             makeNode("popular", "Popularity",
                 featFilter('popularity', 60, 100),
                 featGetter('popularity'),
-                featSorter('popularity', true)),
+                featSorter('popularity', true), true),
             makeNode("mainstream", "Popularity",
                 featFilter('popularity', 40, 60),
                 featGetter('popularity'),
-                featSorter('popularity', true)),
+                featSorter('popularity', true), true),
             makeNode("hipster", "Popularity",
                 featFilter('popularity', 10, 40),
                 featGetter('popularity'),
-                featSorter('popularity', true)),
+                featSorter('popularity', true), true),
             makeNode("deep", "Popularity",
                 featFilter('popularity', 0, 10),
                 featGetter('popularity'),
-                featSorter('popularity', true)),
+                featSorter('popularity', true), true),
         ]
     },
     {
@@ -472,14 +493,14 @@ function addTracks(tracks) {
                     var node = makeNode(genre, "Genre",
                             featGenreFilter(genre),
                             featGenreGetter(genre),
-                            featSorter('popularity', true));
+                            featSorter('popularity', true), false);
                     theWorld[genreIndex].nodes.push(node);
                 }
                 if (!(track.feats.source in nodeMap)) {
                     var node = makeNode(track.feats.source, "Source",
                             featSourceFilter(track.feats.source),
                             featSourceGetter(track.feats.source),
-                            featSorter('popularity', true));
+                            featSorter('popularity', true), false);
                     theWorld[sourceIndex].nodes.push(node);
                 }
             }
@@ -514,7 +535,6 @@ function refreshTheWorld(quick) {
     updateViewOfTheWorld(quick);
     var delta = now() - start;
     totRefresh += delta;
-    //console.log('refresh:', delta, totRefresh);
 }
 
 // needs some more thought
@@ -559,10 +579,14 @@ function playlistTitle(s) {
 
 
 
-function plotPlaylist(node) {
-    var xdata = 'popularity';
-    var ydata = 'energy';
-    var trace1 = {
+var curPlottingNodes = {}
+var curPlottingNames = [];
+
+function getPlotData(node) {
+    var xDataName = $("#select-xaxis").val();
+    var yDataName = $("#select-yaxis").val();
+
+    var theDataTrace = {
         x:[],
         y:[],
         mode: 'markers',
@@ -570,29 +594,71 @@ function plotPlaylist(node) {
         text: [],
         node:node,
         marker: {
-            sizemode:'area',
+            sizemode:'diameter',
             size:[],
-            //color:[],
-            sizeref:1
+            sizeref:1,
+            sizemin:2,
         }
     };
+    var xGetter = plottableData[xDataName].getter;
+    var yGetter = plottableData[yDataName].getter;
 
+    var sizes = [];
     _.each(node.tracks, function(track) {
-        trace1.x.push(track.feats.loudness);
-        trace1.y.push(track.feats.energy);
-        trace1.marker.size.push(track.feats[xdata]);
-        //trace1.marker.color.push(track.feats[ydata];
+        theDataTrace.x.push(xGetter(track));
+        theDataTrace.y.push(yGetter(track));
         var name = track.details.name + " - " + track.details.artists[0].name;
-        trace1.text.push(name);
+        theDataTrace.text.push(name);
     });
 
-    Plotly.plot(thePlot, [trace1], getLayout());
+    var nsizes = normalizeSizes(node.tracks);
+    theDataTrace.marker.size = nsizes;
+    return theDataTrace;
+}
+
+function normalizeSizes(tracks) {
+    var sizeDataName = $("#select-size").val();
+    var sizeInfo = plottableData[sizeDataName];
+    var minWidth = 4;
+    var maxWidth = 30;
+    var minSize = sizeInfo.min;
+    var maxSize = sizeInfo.max;
+    var out = [];
+    var range = maxSize - minSize;
+    var orange = maxWidth - minWidth;
+    _.each(tracks, function(track) {
+        var val = sizeInfo.getter(track);
+        if (val < minSize) {
+            val = minSize;
+        }
+        if (val > maxSize) {
+            val = maxSize;
+        }
+        var nval = (val - minSize) / range;
+        var oval = nval * orange + minWidth;
+        out.push(oval);
+    });
+    return out;
+}
+
+function plotPlaylist(node) {
+    if ( (node.name in curPlottingNodes)) {
+        delete curPlottingNodes[node.name]; 
+        redrawPlot();
+    } else {
+        curPlottingNodes[node.name] = node;
+        curPlottingNames.push(node.name);
+        Plotly.plot(thePlot, [getPlotData(node)], getLayout());
+    }
 }
 
 function getLayout() {
+    var xDataName = $("#select-xaxis").val();
+    var yDataName = $("#select-yaxis").val();
+    var sizeDataName = $("#select-size").val();
     var xMargin = 300;
     var yMargin = 200;
-    var yFooter = 0;
+    var yFooter = 120;
     var minHeight = 300;
     var minWidth = 600;
 
@@ -605,10 +671,12 @@ function getLayout() {
         height = minHeight;
     }
     var layout = {
+        showlegend:true,
+        legend:{orientation: "h" },
         title:curTypeName,
         hovermode:'closest',
-        xaxis: { title: 'loudness' },
-        yaxis: { title: 'energy' },
+        xaxis: { title: plottableData[xDataName].name },
+        yaxis: { title: plottableData[yDataName].name },
         autosize:false,
         width:width,
         height:height,
@@ -616,17 +684,67 @@ function getLayout() {
     return layout;
 }
 
-function clearPlot() {
+function redrawPlot() {
     var layout = getLayout();
-    Plotly.newPlot(thePlot, [], layout);
+    var plotData = [];
+    curPlottingNames = []; // fixme
+    _.each(curPlottingNodes, function(node, name) {
+        curPlottingNames.push(name);
+        plotData.push(getPlotData(node));
+    });
+    Plotly.newPlot(thePlot, plotData, layout);
     thePlot.on('plotly_click', function(data) {
-        console.log('pclick', data);
         if (data.points.length > 0) {
             var idx = data.points[0].pointNumber;
             var track = data.points[0].data.node.tracks[idx];
             playTrack(track);
-            console.log('track', track);
         }
+    });
+}
+
+function clearPlot() {
+    curPlottingNodes = {};
+    var layout = getLayout();
+    Plotly.newPlot(thePlot, [], layout);
+    thePlot.on('plotly_click', function(data) {
+        if (data.points.length > 0) {
+            var idx = data.points[0].pointNumber;
+            var track = data.points[0].data.node.tracks[idx];
+            playTrack(track);
+        }
+    });
+    thePlot.on('plotly_selected', function(data) {
+        var trackList = [];
+        _.each(data.points, function(point) {
+            var plotName = curPlottingNames[point.curveNumber];
+            var track = curPlottingNodes[plotName].tracks[point.pointNumber];
+            trackList.push(track);
+        });
+        info("selected " + trackList.length + " tracks");
+        showTracksHack("Your selected tracks", trackList);
+    });
+}
+
+function showTracksHack(title, tracks) {
+    playlistTitle(title);
+    var tbl = $("#track-table");
+    tbl.empty();
+    $("#tbl-param").text('popularity');
+    var getter =featGetterInt('popularity');
+    _.each(tracks, function(track, i) {
+        var tr = $("<tr>");
+        tr.addClass("playable");
+        tr.append($("<td>").text(i + 1));
+        tr.append($("<td>").text(track.feats.count));
+        tr.append($("<td>").text(track.feats.popularity));
+        tr.append($("<td>").text(track.details.name));
+        tr.append($("<td>").text(track.details.artists[0].name));
+        tr.append($("<td>").text(getter(track)));
+        tr.on("click", function() {
+            tr.addClass("playing");
+            playTrack(track);
+        });
+        tbl.append(tr);
     });
 }
 
@@ -699,10 +817,11 @@ function saveTracksToPlaylist(playlist, inputTracks) {
     saveTracks();
 }
 
-function makeNode(name, label, filter, getter, sorter) {
+function makeNode(name, label, filter, getter, sorter, plottable) {
     var node = {
         name:name,
         label:label,
+        plottable:plottable,
         tracks:[],
         artists: new Set(),
         filter:filter,
@@ -747,6 +866,7 @@ function updateViewOfTheWorld(quick) {
         ul.attr("id", nname(bin.name));
         sidebar.append(ul);
         _.each(nodes, function(node) {
+            node.tracks = node.sorter(node.tracks);
             var tracks = node.tracks;
             if (tracks.length >= minTracksForSection) {
                 var header = $("<li>").text(uname(node.name));
@@ -768,6 +888,95 @@ function updateViewOfTheWorld(quick) {
             }
         });
     });
+
+}
+
+var plottableData = {
+    energy: {
+        name: "energy",
+        min:0, max:1,
+        getter:featGetterPercent('energy')
+    },
+    danceability: {
+        name: "danceability",
+        min:0, max:1,
+        getter:featGetterPercent('danceability')
+    },
+    valence: {
+        name: "valence",
+        min:0, max:1,
+        getter:featGetterPercent('valence')
+    },
+    duration: {
+        name: "duration",
+        min:0, max:1500,
+        getter:featGetter('duration')
+    },
+    tempo: {
+        name: "tempo",
+        min:40, max:240,
+        getter:featGetter('tempo')
+    },
+    anger: {
+        name: "anger",
+        min:0, max:1,
+        getter:featGetterPercent('anger')
+    },
+    happiness:{
+        name: "happiness",
+        min:0, max:1,
+        getter:featGetterPercent('happiness')
+    },
+    loudness:{
+        name: "loudness",
+        min:-30, max:0,
+        getter:featGetter('loudness')
+    },
+    acousticness: {
+        name: "acousticness",
+        min:0, max:1,
+        getter:featGetterPercent('acousticness')
+    },
+    liveness: {
+        name: "live",
+        min:0, max:1,
+        getter:featGetterPercent('liveness')
+    },
+    speechiness: {
+        name: "speechiness",
+        min:0, max:1,
+        getter:featGetterPercent('speechiness')
+    },
+    popularity: {
+        name: "popularity",
+        min:0, max:100,
+        getter:featGetter('popularity')
+    },
+    age: {
+        min:0, max:5000,
+        name: "days-since-added",
+        getter:featGetter('age')
+    },
+    year: {
+        min:1950, max:2020,
+        name: "release-year",
+        getter:featGetter('year')
+    },
+};
+
+function addPlotSelect(elem, defaultValue) {
+    elem.empty();
+    var keys = Object.keys(plottableData);
+    keys.sort();
+    _.each(keys, function(key) {
+        var param = plottableData[key];
+        var option = $("<option>");
+        option.text(param.name);
+        option.attr('value', key);
+        elem.append(option);
+    });
+    elem.val(defaultValue);
+    elem.on('change', redrawPlot);
 }
 
 function nname(s) {
@@ -843,6 +1052,7 @@ function featSorter(param, reverse) {
         tracks.sort(function(a,b) {
             if (a.feats[param] > b.feats[param]) {
                 return 1;
+                curPlottingNames.push(node.name);
             } else if (a.feats[param] < b.feats[param]) {
                 return -1;
             } else {
@@ -1606,13 +1816,20 @@ function setProgress(percent) {
   progressBar.css('width', percent+'%').attr('aria-valuenow', percent);
 }
 
-function drawTestPlot() {
-    return;
-    var TESTER = $("#the-plot").get(0);
-    Plotly.plot( TESTER, [{
-        x: [1, 2, 3, 4, 5],
-        y: [1, 2, 4, 8, 16] }], {
-        margin: { t: 0 } } );
+function initPlot() {
+    addPlotSelect($("#select-xaxis"), "energy");
+    addPlotSelect($("#select-yaxis"), "loudness");
+    addPlotSelect($("#select-size"), "popularity");
+
+    $("#plot-clear").on("click", function() {
+        clearPlot();
+    });
+
+    window.onresize = function() {
+        redrawPlot();
+    };
+
+    clearPlot();
 }
 
 $(document).ready(
@@ -1651,11 +1868,7 @@ $(document).ready(
                 savePlaylist();
             });
 
-            $("#plot-clear").on("click", function() {
-                clearPlot();
-            });
-
-            clearPlot();
+            initPlot();
 
             fetchCurrentUserProfile()
             .then(function(user) {
@@ -1700,14 +1913,11 @@ function saveTrack(track) {
 
 function loadTrack(id) {
     return null;
-    console.log('loadTrack',id);
     var strack = localStorage.getItem(id);
     if (strack) {
         var track = JSON.parse(strack);
-        console.log("loaded", track);
         return track;
     }
-    console.log("loaded", strack);
     return strack;
 }
 
