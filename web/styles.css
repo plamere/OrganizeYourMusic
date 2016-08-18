@@ -178,6 +178,10 @@ view) */
     background-color:#81b71a;
 }
 
+.selected {
+    background-color:#C3F0C8;
+}
+
 #song-table th {
     font-size:14px !important;
 }
@@ -336,6 +340,33 @@ view) */
     font-weight:normal;
 }
 
-#plot-clear {
+
+#plot-buttons {
     margin-top:30px;
 }
+
+.nbtn {
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 5px;
+    padding: 11px 11px 11px;
+    transition: background-color .15s ease,border-color .15s ease,color .15s
+ease;
+    border-width: 0;
+    letter-spacing: 1.2px;
+    //min-width: 130px;
+    //text-transform: uppercase;
+    white-space: normal;
+}
+
+a#the-track-table_previous.paginate_button {
+    padding-right:10px !important;
+    margin-right:10px !important;
+}
+
+a#the-track-table_next.paginate_button {
+    padding-right:10px !important;
+    margin-right:10px !important;
+
+}
+
