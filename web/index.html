@@ -8,15 +8,9 @@
     <meta name="author" content="">
     <link type="text/css" href="styles.css" rel="stylesheet" />
     <link href="https://sp-bootstrap.global.ssl.fastly.net/7.4.1/sp-bootstrap.min.css" rel="stylesheet">
-    <!--
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-    -->
-    <link href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet" media="screen">
-    <!--
-    <link href="https://cdn.datatables.net/1.10.12/css/dataTables.min.css" rel="stylesheet" media="screen">
-    -->
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/css/bootstrap-select.min.css">
+    <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
 
     <link rel="shortcut icon" href="images/favicon.png">
     <title>Organize Your Music</title>
@@ -28,7 +22,7 @@
     <![endif]-->
 </head>
   <body >
-    <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div id="navbar" class="navbar navbar-default navbar-fixed-top" role="navigation">
       <div class="container">
         <div class="navbar-header">
           <a class="navbar-brand" href="index.html">
@@ -36,6 +30,9 @@
             <span class="navbar-title">Organize Your Music</span>
           </a>
         </div>
+           <div class="nav navbar-nav navbar-right">
+               <span id="info" class="navbar-title navbar-right"></span>
+            </div>
       </div>
     </div>
 
@@ -110,13 +107,13 @@
         </div>
         </div>
 
-  <div class="row ">
+  <div class="row">
   <div id="sidebar" class="sidebar work"> </div>
 
   <div id="main-wrapper">
       <div class="work" id="main-area">
-        <h3 id="section-title" class="ntext-center"></h3>
           <div id="loading">
+            <h3 id="section-title" class="ntext-center"></h3>
             <div id="loading-header">
                 <h4 id="lplaylist-name" class="ntext-center"></h4>
                 <div id="linfo"> </div>
@@ -142,13 +139,12 @@
             </div>
           </div>
           <div id="loaded">
-            <div id="info"> </div>
             <div id="exTab3" class="ccontainer">    
-                <ul  class="nav nav-tabs">
-                    <li class="active"> <a  href="#the-track-list" 
+                <ul  class="nav nav-tabs"> 
+                    <li class="active"> <a  id='the-track-list-tab' href="#the-track-list" 
                             data-toggle="tab">The Track list</a> </li>
                     <li><a href="#the-plots" data-toggle="tab">The Plots</a> </li>
-                    <li><a href="#staging" data-toggle="tab">Staging Playlist</a> </li>
+                    <li><a href="#staging" id='staging-tab' data-toggle="tab">Staging Playlist</a> </li>
                 </ul>
 
                 <div class="tab-content clearfix">
@@ -161,29 +157,10 @@
                           Save as playlist </button>
                       </div>
                       -->
-                      <table id="the-track-table" class="table ntable-striped table-responsive">
-                        <col width="5%">
-                        <col width="5%">
-                        <col width="5%">
-                        <col width="35%">
-                        <col width="35%">
-                        <col width="15%">
-                        <thead>
-                            <tr>
-                                <th> # </th>
-                                <th> Count </th>
-                                <th> Pop </th>
-                                <th> artist </th>
-                                <th> title </th>
-                                <th id='tbl-param'>  </th>
-                            </tr>
-                        </thead>
-                        <tbody id='track-table'> </tbody>
-                      </table>
+                      <table id="gthe-track-table" class="table ntable-striped table-responsive"> </table>
                    </div>
 
                     <div class="tab-pane" id="the-plots">
-                        <br>
                         <div class="row" id="plot-controls">
                             <div class="col-xs-2">
                                 <label for="select-size"> X axis: </label>
@@ -212,31 +189,12 @@
                     </div>
 
                   <div class="tab-pane" id="staging">
-                    <h4 id="playlist-title" class="ntext-center"> The Staging Playlist</h4>
-                      <div>
-                          <br>
-                          <button id="save-button" class="btn btn-xs pull-right btn-primary">
-                          Save as playlist </button>
-                      </div>
-                      <table id="the-staging-track-table" class="table table-responsive">
-                        <col width="5%">
-                        <col width="5%">
-                        <col width="5%">
-                        <col width="35%">
-                        <col width="35%">
-                        <col width="15%">
-                        <thead>
-                            <tr>
-                                <th> # </th>
-                                <th> Count </th>
-                                <th> Pop </th>
-                                <th> artist </th>
-                                <th> title </th>
-                                <th id='tbl-param'>  </th>
-                            </tr>
-                        </thead>
-                        <tbody id='staging-track-table'> </tbody>
-                      </table>
+                    <a href="#" id="staging-playlist-name" data-type="text" data-pk="1" 
+                         data-title="Enter the staging playlist name">Your saved playlist</a> 
+                        <h4 id="save-button" class="pull-right"><a><span  
+                        class="glyphicon glyphicon-save"></span>Save Playlist</a></h4>
+                      <div> </div>
+                      <table id="gthe-staging-table" class="table table-responsive"> </table>
                    </div>
                 </div>
             </div>
@@ -266,8 +224,9 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     -->
     <script src="lib/underscore-min.js"></script>
-    <script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/js/bootstrap-select.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
+   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
     <script type="text/javascript" charset="utf-8"
         src="lib/rsvp-latest.min.js"></script>
@@ -283,6 +242,8 @@ var curTracks = {};
 var curArtists = {};
 var curAlbums = {};
 var curTypeName = null;
+var curSelected = new Set();
+var curSelectedTracks = [];
 var nodeMap = { }
 var genreIndex = 0;
 var sourceIndex = 6;
@@ -303,8 +264,9 @@ var topTrackName = null;
 var topTrackCount = 0;
 var totalPlaylists = 0;
 var processedPlaylists = 0;
-
 var theTrackTable =  null;
+var theStagingTable =  null;
+var stagingIsVisible = false;
 
 
 
@@ -664,7 +626,7 @@ function normalizeSizes(tracks) {
     var sizeDataName = $("#select-size").val();
     var sizeInfo = plottableData[sizeDataName];
     var minWidth = 4;
-    var maxWidth = 30;
+    var maxWidth = 12;
     var minSize = sizeInfo.min;
     var maxSize = sizeInfo.max;
     var out = [];
@@ -700,7 +662,7 @@ function getLayout() {
     var xDataName = $("#select-xaxis").val();
     var yDataName = $("#select-yaxis").val();
     var sizeDataName = $("#select-size").val();
-    var xMargin = 300;
+    var xMargin = 250;
     var yMargin = 200;
     var yFooter = 120;
     var minHeight = 300;
@@ -717,7 +679,6 @@ function getLayout() {
     var layout = {
         showlegend:true,
         legend:{orientation: "h" },
-        title:curTypeName,
         hovermode:'closest',
         xaxis: { title: plottableData[xDataName].name },
         yaxis: { title: plottableData[yDataName].name },
@@ -751,11 +712,11 @@ function redrawPlot() {
             var plotName = curPlottingNames[point.curveNumber];
             var track = curPlottingNodes[plotName].tracks[point.pointNumber];
             trackList.push(track);
+            curSelected.add(track.id);
         });
         info("selected " + trackList.length + " tracks");
         console.log("selected " + trackList.length + " tracks");
         $("#add-to-wip").enable();
-        showTracksHack("Your selected tracks", trackList);
     });
 }
 
@@ -764,60 +725,225 @@ function clearPlot() {
     redrawPlot();
 }
 
-function showTracksHack(title, tracks) {
-    playlistTitle(title);
-    var tbl = $("#track-table");
-    tbl.empty();
-    $("#tbl-param").text('popularity');
-    var getter =featGetterInt('popularity');
-    _.each(tracks, function(track, i) {
-        var tr = $("<tr>");
-        tr.addClass("playable");
-        tr.append($("<td>").text(i + 1));
-        tr.append($("<td>").text(track.feats.count));
-        tr.append($("<td>").text(track.feats.popularity));
-        tr.append($("<td>").text(track.details.name));
-        tr.append($("<td>").text(track.details.artists[0].name));
-        tr.append($("<td>").text(getter(track)));
-        tr.on("click", function() {
-            tr.addClass("playing");
-            playTrack(track);
-        });
-        tbl.append(tr);
-    });
+function getDisplayType(getter, tracks) {
+    if (tracks.length > 0) {
+        var type =  typeof getter(tracks[0]);
+        return type;
+    } else {
+        return "string";
+    }
 }
 
 function showPlaylist(node) {
-    plotPlaylist(node);
+    if (theTrackTable == null) {
+        console.log('table not ready yet');
+        return;
+    }
+    if (stagingIsVisible) {
+        $('#the-track-list-tab').tab('show');
+    }
     curNode = node;
     var nTracks = node.tracks.length;
     var nArtists = node.artists.size;
     playlistTitle("Your " + uname(node.name) + " tracks" );
     playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
 
-    console.log('ttt', theTrackTable);
-    theTrackTable.clear();
     $("#tbl-param").text(node.label);
-    _.each(node.tracks, function(track, i) {
+    showTracksInTable(theTrackTable, node.tracks, node.getter, node.label, false);
+}
+
+function showStagingList() {
+    if (theStagingTable == null) {
+        console.log('table not ready yet');
+        return;
+    }
+    curSelected.forEach(function(tid) {
+        curSelectedTracks.push(curTracks[tid]);
+    });
+    showTracksInTable(theStagingTable, curSelectedTracks, featGetter('popularity'), 'popularity', true);
+}
+
+function getStagingTracks() {
+    var sortInfo = theStagingTable.getSortInfo();
+    var out = [];
+
+    if (sortInfo.sortedIndexes) {
+        _.each(sortInfo.sortedIndexes, function(idx) {
+            var track = curSelectedTracks[idx];
+            if (curSelected.has(track.id)) {
+                out.push(track);
+            }
+        });
+    } else {
+        _.each(curSelectedTracks, function(track) {
+            if (curSelected.has(track.id)) {
+                out.push(track);
+            }
+        });
+    }
+    return out;
+}
+
+function getInt(val) {
+    return Math.round(val);
+}
+
+function getString(val) {
+    return val.toString();
+}
+
+function getPercent(val) {
+    return getInt(val * 100);
+}
+
+function getDuration(val) {
+    return getInt(val / 1000);
+}
+
+function showTracksInTable(table, tracks, getter, label, isStagingList) {
+    var data = new google.visualization.DataTable();
+    data.addColumn('string', '');
+    data.addColumn('string', '');
+    data.addColumn('string', 'title');
+    data.addColumn('string', 'artist');
+    data.addColumn('string', 'year');
+    data.addColumn('number', 'bpm');
+    data.addColumn('number', 'nrgy');
+    data.addColumn('number', 'dnce');
+    data.addColumn('number', 'dB');
+    data.addColumn('number', 'live');
+    data.addColumn('number', 'val');
+    data.addColumn('number', 'dur');
+    data.addColumn('number', 'acous');
+    data.addColumn('number', 'spch');
+    data.addColumn('number', 'pop');
+
+    data.setColumnProperty(0, {allowHTML: true});
+    data.setColumnProperty(1, {allowHTML: true});
+
+
+    // lets show:
+    //  energy, loudness, acoustic, speech,
+    // #    TITLE    ARTIST    RELEASE    BPM    ENERGY    DANCE    LOUD
+    // VALENCE    LENGTH    ACOUSTIC    POP.
+
+    var rows = [];
+    _.each(tracks, function(track, i) {
+        var sel = $("<input class='track-select'>")
+            .attr('type', 'checkbox')
+            .attr('id', 'sel-' + track.id);
+
+        if (curSelected.has(track.id )) {
+            sel.prop('checked', true);
+        }
+
+        var play;
+
+        if (track.details.preview_url  != null) {
+            play = $("<span class='track-play glyphicon glyphicon-play'>");
+            play.attr('id', 'play-' + track.id);
+        } else {
+            play = $("<span>");
+        }
+
         var row = [];
-        row.push(i+1);
-        row.push(track.feats.count);
-        row.push(track.feats.popularity);
+        row.push(sel.prop('outerHTML'));
+        row.push(play.prop('outerHTML'));
         row.push(track.details.name);
         row.push(track.details.artists[0].name);
-        row.push(node.getter(track));
-        theTrackTable.row.add(row);
-
-        /*
-        tr.on("click", function() {
-            tr.addClass("playing");
-            playTrack(track);
-        });
-        tbl.append(tr);
-        */
+        row.push(getString(track.feats.year));
+        row.push(getInt(track.feats.tempo));
+        row.push(getPercent(track.feats.energy));
+        row.push(getPercent(track.feats.danceability));
+        row.push(getInt(track.feats.loudness));
+        row.push(getPercent(track.feats.liveness));
+        row.push(getPercent(track.feats.valence));
+        row.push(getDuration(track.feats.duration_ms));
+        row.push(getPercent(track.feats.acousticness));
+        row.push(getPercent(track.feats.speechiness));
+        row.push(getInt(track.feats.popularity));
+        rows.push(row);
     });
-    theTrackTable.draw();
+    data.addRows(rows);
+
+    /*
+    _.each(tracks, function(track, i) {
+        data.setProperties(i, 0, {style: 'background-color:red;'});
+    });
+    */
+
+    table.draw(data, {
+        showRowNumber: true, 
+        width: '100%', 
+        page: 'disable', 
+        allowHtml:true,
+        cssClassNames: {
+            headerRow: 'headerRow'
+        },
+    });
+
+
+    addEventHandlers($(table));
 }
+
+function addEventHandlers(table) {
+    console.log('aeh');
+
+    $('.track-select').off('change');
+    $('.track-play').off('click');
+
+    $('.track-select').each(function() {
+        console.log('aeh sel c1');
+        var tid = getTidFromElemId($(this).attr('id'));
+        if (curSelected.has(tid)) {
+            $(this).prop('checked', true);
+        }
+    });
+
+    $('.track-select').on('change', function(e) {
+        console.log('aeh sel c2');
+        var tid = getTidFromElemId(e.target.id);
+        if ($(e.target).is(':checked')) {
+            curSelected.add(tid);
+        } else {
+            curSelected.delete(tid);
+        }
+        var track = curTracks[tid];
+        e.stopPropagation();
+        return false;
+    });
+
+    $('.track-play').each(function() {
+        var tid = getTidFromElemId($(this).attr('id'));
+        var track = curTracks[tid];
+        if (isPlaying(track)) {
+            $(this).addClass('glyphicon-pause').removeClass('glyphicon-play');
+        }
+    });
+
+    $('.track-play').on('click', function(e) {
+        console.log('aeh ply c1');
+        var tid = getTidFromElemId(e.target.id);
+        var elem = $(e.target);
+        var track = curTracks[tid];
+
+        console.log('play track', tid);
+        $(".track-play").removeClass('glyphicon-pause').addClass('glyphicon-play');
+        if  (isPlaying(track)) {
+            stopTrack(track);
+        } else {
+            elem.removeClass('glyphicon-play').addClass('glyphicon-pause');
+            playTrack(track);
+        }
+        e.stopPropagation();
+        return false;
+    });
+}
+
+function getTidFromElemId(elemId) {
+    return elemId.split('-')[1];
+}
+
 
 function saveTracksToPlaylist(playlist, inputTracks) {
     var tracks = inputTracks.slice();
@@ -868,16 +994,20 @@ function makeNode(name, label, filter, getter, sorter, plottable) {
 }
 
 function savePlaylist() {
-    if (curNode != null) {
-        info("saving " + uname(curNode.name));
+    var curTracks = getStagingTracks();
+    if (curTracks.length > 0) {
+        var name = $("#staging-playlist-name").text();
+        info("saving " + name);
         var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists"
-        callSpotify("POST", url, {name:"Your " + uname(curNode.name) + " tracks" }, function(ok, results) {
+        callSpotify("POST", url, {name:name }, function(ok, results) {
             if (ok) {
-                saveTracksToPlaylist(results, curNode.tracks);
+                saveTracksToPlaylist(results, curTracks);
             } else {
                 error("Trouble creating playlist");
             }
         })
+    } else {
+        info("no tracks to save");
     }
 }
 
@@ -908,11 +1038,13 @@ function updateViewOfTheWorld(quick) {
                 header.append(stats);
                 if (!quick) {
                     header.on("click", function() {
+                        plotPlaylist(node);
                         showPlaylist(node);
                     });
                     if (first) {
                         first = false;
                         showPlaylist(node);
+                        plotPlaylist(node);
                     }
                 } else {
                 }
@@ -1339,6 +1471,10 @@ function fetchCurrentUserProfile() {
     return getSpotifyP(url, null);
 }
 
+
+function isPlaying(track) {
+    return (track === nowPlaying) && !audio.get(0).paused;
+}
 
 function playTrack(track) {
     console.log('play', track.details.name);
@@ -1849,21 +1985,22 @@ function setProgress(percent) {
 }
 
 function initTables() {
-    theTrackTable = $("#the-track-table").DataTable(
-    { 
-        pageLength : 100,
-        pagingType: "simple",
-        select: {
-            style:'multi'
-        },
-        //dom: '<"top"ifp>rt<"bottom"lp><"clear">'
-
+    theTrackTable = new google.visualization.Table(document.getElementById('gthe-track-table'));
+    google.visualization.events.addListener(theTrackTable, 'ready', function(e) {
+        console.log('table ready');
     });
 
-    $('#the-track-table tbody').on( 'click', 'tr', function () {
-        $(this).toggleClass('selected');
-        console.log('selected');
-    } );
+    google.visualization.events.addListener(theTrackTable, 'select', function(e) {
+        console.log('selected', theTrackTable.getSelection());
+    });
+
+    google.visualization.events.addListener(theTrackTable, 'sort', function(e) {
+        addEventHandlers($(theTrackTable));
+    });
+    theStagingTable = new google.visualization.Table(document.getElementById('gthe-staging-table'));
+    google.visualization.events.addListener(theStagingTable, 'sort', function(e) {
+        addEventHandlers($(theStagingTable));
+    });
 }
 
 function initPlot() {
@@ -1914,12 +2051,27 @@ $(document).ready(
             $("#stop-loading").on('click', function() {
                 stopLoading();
             });
+            $('#staging-playlist-name').editable({
+                mode:'popup',
+                placement:'right'
+            });
+
             $("#save-button").on("click", function() {
                 savePlaylist();
             });
+            $("#staging-tab").on('shown.bs.tab', function() {
+                stagingIsVisible = true;
+                showStagingList();
+            });
+            $("#staging-tab").on('hidden.bs.tab', function() {
+                stagingIsVisible = false;
+                showStagingList();
+            });
+            google.charts.load('current', {'packages':['table']});
+            google.charts.setOnLoadCallback(initTables);
+
 
             initPlot();
-            initTables();
 
             fetchCurrentUserProfile()
             .then(function(user) {

@@ -8,14 +8,20 @@ body {
   /* Margin bottom by footer height */
   margin-bottom: 28px;
   padding-top: 0;
+  overflow-x: hidden;
   /*background:rgb(129,175,177) !important;*/
+}
+
+#navbar {
+    height:70px !important;
+    min-height:70px !important;
 }
 
 .sidebar {
   overflow-x: hidden;
   width:240px;
   position: absolute;
-  top: 80px;
+  top: 70px;
   bottom: 4px;
   left: 0;
   z-index: 1000;
@@ -40,12 +46,11 @@ h3 {
 }
 
 #main-wrapper {
-    width:100%;
+    width:95%;
 }
 
-#the-track-table {
-    font-size: 14px;
-    width:100%;
+#the-track-list {
+    height:600px;
 }
 
 .sidebar h4 {
@@ -60,11 +65,12 @@ h3 {
 
 #main-area {
   position:absolute;
-  top: 100px;
+  top: 75px;
   left:250px;
-  right:2px;
   bottom: 5px;
+  right:15px;
   overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 .playlist-list {
@@ -78,7 +84,7 @@ h3 {
 
 #footer {
   margin-top:10px;
-  width: 100%;
+  width: 90%;
   height: 18px;
 }
 
@@ -154,6 +160,10 @@ view) */
 }
 
 #info {
+    color:white;
+}
+
+#oldinfo {
     font-size:18px;
     height:32px;
     text-align:left;
@@ -190,6 +200,11 @@ view) */
     font-size:10px !important;
 }
 
+.nav-bar {
+    height:72px !important;
+    min-height:72px !important;
+}
+
 .fine-print {
   margin-bottom: 30px; /* (@padding-base-vertical * 5) */
 }
@@ -209,6 +224,8 @@ view) */
 
 #save-button {
     margin-right:20px;
+    font-size:24px;
+    cursor:pointer;
 }
 
 
@@ -331,8 +348,6 @@ view) */
 }
 
 #the-plot {
-    width: 800px;
-    height: 400px;
 }
 
 
@@ -370,3 +385,29 @@ a#the-track-table_next.paginate_button {
 
 }
 
+.goog-custom-button {
+}
+
+#staging-playlist-name {
+    font-size:32px;
+}
+
+.track-play {
+    font-size:24px;
+    visibility:hidden;
+}
+
+.google-visualization-table-tr-over .track-play {
+    color: rgba(59, 153, 252, 1.0);
+    visibility:visible;
+}
+
+.track-select {
+    text-align: center;
+    transform:scale(1.5);
+}
+
+.google-visualization-table-table tr td .glyphicon-pause {
+    visibility:visible;
+    color: rgba(59, 153, 252, 1.0);
+}
