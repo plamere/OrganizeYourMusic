@@ -9,6 +9,7 @@ body {
   margin-bottom: 28px;
   padding-top: 0;
   overflow-x: hidden;
+
   /*background:rgb(129,175,177) !important;*/
 }
 
@@ -161,6 +162,8 @@ view) */
 
 #info {
     color:white;
+    margin-top:20px;
+    font-size:24px;
 }
 
 #oldinfo {
@@ -348,6 +351,7 @@ view) */
 }
 
 #the-plot {
+    margin-top:20px;
 }
 
 
@@ -357,14 +361,14 @@ view) */
 
 
 #plot-buttons {
-    margin-top:30px;
+    margin-top:10px;
 }
 
 .nbtn {
-    font-size: 12px;
+    font-size: 10px;
     line-height: 1.5;
     border-radius: 5px;
-    padding: 11px 11px 11px;
+    padding: 6px 6px 6px;
     transition: background-color .15s ease,border-color .15s ease,color .15s
 ease;
     border-width: 0;
@@ -410,4 +414,15 @@ a#the-track-table_next.paginate_button {
 .google-visualization-table-table tr td .glyphicon-pause {
     visibility:visible;
     color: rgba(59, 153, 252, 1.0);
+}
+
+.axis-select {
+}
+
+.track-header-cell, .track-table-cell {
+    font-size:10px;
+}
+
+#staging-empty {
+    margin-top:20px;
 }

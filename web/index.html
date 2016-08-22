@@ -9,7 +9,6 @@
     <link type="text/css" href="styles.css" rel="stylesheet" />
     <link href="https://sp-bootstrap.global.ssl.fastly.net/7.4.1/sp-bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/css/bootstrap-select.min.css">
     <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
 
     <link rel="shortcut icon" href="images/favicon.png">
@@ -30,9 +29,9 @@
             <span class="navbar-title">Organize Your Music</span>
           </a>
         </div>
-           <div class="nav navbar-nav navbar-right">
-               <span id="info" class="navbar-title navbar-right"></span>
-            </div>
+       <div class="nav  navbar-nav navbar-right">
+           <span id="info" class="navbar-info navbar-right"></span>
+        </div>
       </div>
     </div>
 
@@ -47,7 +46,7 @@
                 genre, mood, decade of release and more.
             </p>
 
-            <div class='col-md-offset-3 col-md-6 form-group'>
+            <div class='col-xs-offset-3 col-xs-6 form-group'>
                 <label id="what-label" for="collection-type"> What do you want to organize: </label>
                 <select id="collection-type" class="form-control">
                     <option value='saved'> Songs you've saved to Your Music</option>
@@ -150,37 +149,32 @@
                 <div class="tab-content clearfix">
                   <div class="tab-pane active" id="the-track-list">
                     <h4 id="playlist-title" class="ntext-center"></h4>
-                      <!--
-                      <div>
-                          <br>
-                          <button id="save-button" class="btn btn-xs pull-right btn-primary">
-                          Save as playlist </button>
-                      </div>
-                      -->
                       <table id="gthe-track-table" class="table ntable-striped table-responsive"> </table>
                    </div>
 
                     <div class="tab-pane" id="the-plots">
                         <div class="row" id="plot-controls">
-                            <div class="col-xs-2">
-                                <label for="select-size"> X axis: </label>
-                                <select id='select-xaxis' class="form-control nselectpicker"> </select>
+                            <div class="col-xs-3">
+                                <span for="select-size"> X axis: </span> <br>
+                                <select id='select-xaxis' class="axis-select nform-control nselectpicker"> </select>
                             </div>
 
-                            <div class="col-xs-2">
-                                <label for="select-size"> Y axis:</label>
-                                <select id='select-yaxis' class="form-control nselectpicker"> </select>
+                            <div class="col-xs-3">
+                                <span for="select-size"> Y axis:</span> <br>
+                                <select id='select-yaxis' class="axis-select nform-control nselectpicker"> </select>
                             </div>
 
-                            <div class="col-xs-2">
-                                <label for="select-size"> Size: </label>
-                                <select id='select-size' class="form-control nselectpicker"> </select>
+                            <div class="col-xs-3">
+                                <span for="select-size"> Size: </span> <br>
+                                <select id='select-size' class="axis-select nform-control nselectpicker"> </select>
                             </div>
-                            <div id='plot-buttons' class="col-xs-6">
-                                <a href="#" title="add lassod tracks to the WIP
-                                List" class="nbtn btn-success"><span
-                                class="glyphicon glyphicon-ok"></span></a>
-                                <a href="#" title="clear all tracks from the plot"
+                            <div id='plot-buttons' class="col-xs-3">
+                                <!--
+                                <a id="plot-select" title="add selected tracks to staging" 
+                                class="nbtn btn-success">
+                                <span class="glyphicon glyphicon-ok"></span></a>
+                                -->
+                                <a id="plot-clear" title="clear all tracks from the plot"
                                 class="nbtn btn-danger"><span
                                 class="glyphicon glyphicon-trash"></span></a>
                             </div>
@@ -189,12 +183,47 @@
                     </div>
 
                   <div class="tab-pane" id="staging">
-                    <a href="#" id="staging-playlist-name" data-type="text" data-pk="1" 
-                         data-title="Enter the staging playlist name">Your saved playlist</a> 
-                        <h4 id="save-button" class="pull-right"><a><span  
-                        class="glyphicon glyphicon-save"></span>Save Playlist</a></h4>
-                      <div> </div>
-                      <table id="gthe-staging-table" class="table table-responsive"> </table>
+                    <div id="staging-empty">
+                        <div>
+                            <h3> The Staging Playlist </h3>
+                            This is the <b> Staging Playlist </b>.  This is
+                            where you collect the tracks that you want to save
+                            to a particular playlist. There's nothing here yet.
+                            To add tracks to this staging playlist head back to
+                            <b>The Track List </b> or <b> The Plots </b> and
+                            select some tracks. Selected tracks will
+                            automatically be added here.
+                            <h4> Adding tracks via The Track list </h4>
+                            To add tracks from the track list, click on the
+                            track list tab to show the track list, and then
+                            click on categories of interest in the left sidebar.
+                            Tracks in the category will be displayed in the
+                            track list.  To add tracks of interest to the staging
+                            list, click on the <i>sel</i> checkbox for those
+                            tracks.
+                            <br>
+                            <img width="400" src='images/select-example.png'>
+
+                            <h4> Adding tracks via The Plots </h4>
+                            To add tracks from the plot list, click on the The
+                            Plots tab to show the plots. Add tracks to the plot
+                            by clicking on categories of interest in the left
+                            sidebar. Tracks in the category will be displayed in
+                            the plot.  You can then use one of the plot select
+                            tools to select particular tracks from the plot to
+                            add to the staging list.
+                            <br>
+                            <img width="800" src='images/plot-select.png'>
+                        </div>
+                    </div>
+                    <div id="staging-full">
+                        <a href="#" id="staging-playlist-name" data-type="text" data-pk="1" 
+                             data-title="Enter the staging playlist name">Your saved playlist</a> 
+                            <h4 id="save-button" class="pull-right"><a><span  
+                            class="glyphicon glyphicon-save"></span>Save Playlist</a></h4>
+                          <div> </div>
+                          <table id="gthe-staging-table" class="table table-responsive"> </table>
+                     </div>
                    </div>
                 </div>
             </div>
@@ -220,18 +249,11 @@
     <script src="lib/jquery-1.11.1.min.js"></script>
     <script src="lib/moment.min.js"></script>
     <script src="https://sp-bootstrap.global.ssl.fastly.net/7.4.1/sp-bootstrap.min.js"></script>
-    <!--
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    -->
     <script src="lib/underscore-min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.10.0/js/bootstrap-select.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
-   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
-    <script type="text/javascript" charset="utf-8"
-        src="lib/rsvp-latest.min.js"></script>
-   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" charset="utf-8" src="lib/rsvp-latest.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="config.js"></script>
 
 <script>
@@ -430,20 +452,20 @@ var theWorld = [
     {
         name: "Popularity",
         nodes: [
-            makeNode("popular", "Popularity",
-                featFilter('popularity', 60, 100),
+            makeNode("top popular", "Popularity",
+                featFilter('popularity', 75, 100),
                 featGetter('popularity'),
                 featSorter('popularity', true), true),
-            makeNode("mainstream", "Popularity",
-                featFilter('popularity', 40, 60),
+            makeNode("very popular", "Popularity",
+                featFilter('popularity', 50, 75),
                 featGetter('popularity'),
                 featSorter('popularity', true), true),
-            makeNode("hipster", "Popularity",
-                featFilter('popularity', 10, 40),
+            makeNode("somewhat popular", "Popularity",
+                featFilter('popularity', 20, 50),
                 featGetter('popularity'),
                 featSorter('popularity', true), true),
             makeNode("deep", "Popularity",
-                featFilter('popularity', 0, 10),
+                featFilter('popularity', 0, 20),
                 featGetter('popularity'),
                 featSorter('popularity', true), true),
         ]
@@ -492,9 +514,13 @@ function addTracks(tracks) {
     _.each(tracks, function(track) {
         var genres = getGenresForTrack(track);
         track.feats.genres = new Set();
+        track.feats.topGenre = "";
         _.each(genres, function(genre) {
             if (isGoodGenre(genre)) {
                 track.feats.genres.add(genre);
+                if (track.feats.topGenre.length == 0 && genre !== '(unclassified genre)') {
+                    track.feats.topGenre = genre;
+                }
                 if (!(genre in nodeMap) ) {
                     var node = makeNode(genre, "Genre",
                             featGenreFilter(genre),
@@ -662,9 +688,9 @@ function getLayout() {
     var xDataName = $("#select-xaxis").val();
     var yDataName = $("#select-yaxis").val();
     var sizeDataName = $("#select-size").val();
-    var xMargin = 250;
+    var xMargin = 300;
     var yMargin = 200;
-    var yFooter = 120;
+    var yFooter = 20;
     var minHeight = 300;
     var minWidth = 600;
 
@@ -678,11 +704,12 @@ function getLayout() {
     }
     var layout = {
         showlegend:true,
-        legend:{orientation: "h" },
+        legend:{orientation: "v" },
         hovermode:'closest',
         xaxis: { title: plottableData[xDataName].name },
         yaxis: { title: plottableData[yDataName].name },
-        autosize:false,
+        autosize:true,
+        margin:20,
         width:width,
         height:height,
     };
@@ -697,7 +724,8 @@ function redrawPlot() {
         curPlottingNames.push(name);
         plotData.push(getPlotData(node));
     });
-    Plotly.newPlot(thePlot, plotData, layout);
+    Plotly.newPlot(thePlot, plotData, layout, 
+        {displayLogo:false, displayModeBar: true});
     thePlot.on('plotly_click', function(data) {
         if (data.points.length > 0) {
             var idx = data.points[0].pointNumber;
@@ -721,6 +749,7 @@ function redrawPlot() {
 }
 
 function clearPlot() {
+    console.log('clear plot');
     curPlottingNodes = {};
     redrawPlot();
 }
@@ -757,9 +786,17 @@ function showStagingList() {
         console.log('table not ready yet');
         return;
     }
+    curSelectedTracks = [];
     curSelected.forEach(function(tid) {
         curSelectedTracks.push(curTracks[tid]);
     });
+    if (curSelectedTracks.length > 0) {
+        $("#staging-full").show();
+        $("#staging-empty").hide();
+    } else {
+        $("#staging-full").hide();
+        $("#staging-empty").show();
+    }
     showTracksInTable(theStagingTable, curSelectedTracks, featGetter('popularity'), 'popularity', true);
 }
 
@@ -792,6 +829,10 @@ function getString(val) {
     return val.toString();
 }
 
+function getDate(val) {
+    return val.format("YYYY&#8209;MM&#8209;DD");
+}
+
 function getPercent(val) {
     return getInt(val * 100);
 }
@@ -802,11 +843,13 @@ function getDuration(val) {
 
 function showTracksInTable(table, tracks, getter, label, isStagingList) {
     var data = new google.visualization.DataTable();
-    data.addColumn('string', '');
+    data.addColumn('string', 'sel');
     data.addColumn('string', '');
     data.addColumn('string', 'title');
     data.addColumn('string', 'artist');
+    data.addColumn('string', 'top genre');
     data.addColumn('string', 'year');
+    data.addColumn('string', 'added');
     data.addColumn('number', 'bpm');
     data.addColumn('number', 'nrgy');
     data.addColumn('number', 'dnce');
@@ -831,7 +874,8 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
     _.each(tracks, function(track, i) {
         var sel = $("<input class='track-select'>")
             .attr('type', 'checkbox')
-            .attr('id', 'sel-' + track.id);
+            .attr('id', 'sel-' + track.id)
+            .attr('title', 'select to add this track to the staging list');
 
         if (curSelected.has(track.id )) {
             sel.prop('checked', true);
@@ -851,7 +895,9 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
         row.push(play.prop('outerHTML'));
         row.push(track.details.name);
         row.push(track.details.artists[0].name);
+        row.push(track.feats.topGenre);
         row.push(getString(track.feats.year));
+        row.push(getDate(track.feats.date_added));
         row.push(getInt(track.feats.tempo));
         row.push(getPercent(track.feats.energy));
         row.push(getPercent(track.feats.danceability));
@@ -878,11 +924,12 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
         page: 'disable', 
         allowHtml:true,
         cssClassNames: {
-            headerRow: 'headerRow'
+            headerRow: 'headerRow',
+            tableCell: 'track-table-cell',
+            headerCell: 'track-header-cell',
         },
     });
-
-
+    table.data = data; // TBD hackity hack
     addEventHandlers($(table));
 }
 
@@ -1994,11 +2041,29 @@ function initTables() {
         console.log('selected', theTrackTable.getSelection());
     });
 
-    google.visualization.events.addListener(theTrackTable, 'sort', function(e) {
+    function selectAllHandler(table, props) {
+        if (props.column == 0) {
+            $(table).find(".track-select").each(function() {
+                console.log('sah', $(this));
+                $(this).prop('checked', props.ascending);
+                var id = $(this).attr('id');
+                var tid = getTidFromElemId(id);
+                if (props.ascending) {
+                    curSelected.add(tid);
+                } else {
+                    curSelected.delete(tid);
+                }
+            });
+        } 
+    }
+
+    google.visualization.events.addListener(theTrackTable, 'sort', function(props) {
+        selectAllHandler("#gthe-track-table", props);
         addEventHandlers($(theTrackTable));
     });
     theStagingTable = new google.visualization.Table(document.getElementById('gthe-staging-table'));
-    google.visualization.events.addListener(theStagingTable, 'sort', function(e) {
+    google.visualization.events.addListener(theStagingTable, 'sort', function(props) {
+        selectAllHandler("#gthe-staging-table", props);
         addEventHandlers($(theStagingTable));
     });
 }
