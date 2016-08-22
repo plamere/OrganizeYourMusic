@@ -88,18 +88,55 @@
                         <li>  <b> Login </b> with your Spotify
                         credentials. <b> Organize Your Music</b> will place all
                         of your tracks into a number of bins. There are Genres,
-                        Moods, Decades, Popularity and more, bins with more 
-                        being added all the time.
-                        <li>  <b> Pick </b> one of the bins. You can listen
-                        to previews of the songs in the bin. If you like it you
-                        can ...
-                        <li>  <b> Save </b> the bin to Spotify as a playlist
+                        Moods, Decades, Popularity and more.
+                        <li>  <b> Pick </b> one of the bins. You can view
+                        all the properties of the tracks in that bin. You can
+                        plot the tracks.  You can listen
+                        to previews of the songs in the bin. 
+                        <li>  <b> Select </b> tracks that you want to add to a
+                        playlist. Selected tracks will be added to
+                        your <b> Staging Playlist</b>. When you are happy with
+                        the staging playlist you can 
+                        <li>  <b> Save </b> the staging playlist to Spotify.
                     </ol>
                     <p> Don't worry. <b> Organize Your Music </b> will never modify any of
                     the songs in your saved music or playlists. It will only save
                     new playlists for you, and only when you explictly click on
                     the <b> save </b> button.
 
+                    <h2> The  Track Properties </h2>
+                    Organize Your Music can help you slice and dice your music
+                    collection by a wide range of properties:
+
+                    <ol>
+                        <li> <b> Genre </b> - the genre of the track
+                        <li> <b> Year </b> - the release year of the recording.
+                        Note that due to vagaries of releases, re-releases,
+                        re-issues and general madness, sometimes the release
+                        years are not what you'd expect.
+                        <li> <b> Added </b> - the earliest date you added 
+                        the track to your collection.
+                        <li> <b> Beats Per Minute (BPM)</b> - The tempo of the
+                        song.
+                        <li> <b> Energy</b> - The energy of a song - the higher
+                        the value, the more energtic.
+                        song
+                        <li> <b> Danceability</b> - The higher the value, the
+                        easier it is to dance to this song.
+                        <li> <b> Loudness (dB)</b> - The higher the value, the
+                        louder the song.
+                        <li> <b> Liveness </b> - The higher the value, the
+                        more likely the song is a live recording.
+                        <li> <b> Valence </b> - The higher the value, the
+                        more positive mood for the song.
+                        <li> <b> Length </b> - The duration of the song.
+                        <li> <b> Acousticness </b> - The higher the value the more
+                        acoustic the song is.
+                        <li> <b> Speechiness </b> - The higher the value the more
+                        spoken word the song contains.
+                        <li> <b> Popularity </b> - The higher the value the more
+                        popular the song is.
+                    </ol>
                     </p>
               </div>
           </div>
@@ -136,6 +173,15 @@
                 and <span class="fav-text" id="fav-artist"> </span>.  It seems like one of your
                 favorite songs is <span class="fav-text" id="fav-song"></span>.
             </div>
+
+            <!--
+            <div id="recency" class='loading-text'>
+                One of the first traks you ever added to your music is
+                <span class="fav-text" id='fav-oldest-song'> </span>.
+                One of the most recent tracks you've added to your music is
+                <span class="fav-text" id='fav-newest-song'> </span>.
+            </div>
+            -->
           </div>
           <div id="loaded">
             <div id="exTab3" class="ccontainer">    
@@ -143,13 +189,17 @@
                     <li class="active"> <a  id='the-track-list-tab' href="#the-track-list" 
                             data-toggle="tab">The Track list</a> </li>
                     <li><a href="#the-plots" data-toggle="tab">The Plots</a> </li>
-                    <li><a href="#staging" id='staging-tab' data-toggle="tab">Staging Playlist</a> </li>
+                    <li><a href="#staging" id='staging-tab'
+                    data-toggle="tab">Staging Playlist (<span
+                    class='nstaging-tracks'>0</span>)</a> </li>
                 </ul>
+
 
                 <div class="tab-content clearfix">
                   <div class="tab-pane active" id="the-track-list">
                     <h4 id="playlist-title" class="ntext-center"></h4>
                       <table id="gthe-track-table" class="table ntable-striped table-responsive"> </table>
+                      <div id="gthe-track-table-truncated"> Showing the first 400 matching tracks. </div>
                    </div>
 
                     <div class="tab-pane" id="the-plots">
@@ -168,7 +218,7 @@
                                 <span for="select-size"> Size: </span> <br>
                                 <select id='select-size' class="axis-select nform-control nselectpicker"> </select>
                             </div>
-                            <div id='plot-buttons' class="col-xs-3">
+                            <div id='plot-buttons' class="col-xs-1">
                                 <!--
                                 <a id="plot-select" title="add selected tracks to staging" 
                                 class="nbtn btn-success">
@@ -185,7 +235,8 @@
                   <div class="tab-pane" id="staging">
                     <div id="staging-empty">
                         <div>
-                            <h3> The Staging Playlist </h3>
+                            <h3> The Staging Playlist (<span
+                            class='nstaging-tracks'>0</span>)</h3>
                             This is the <b> Staging Playlist </b>.  This is
                             where you collect the tracks that you want to save
                             to a particular playlist. There's nothing here yet.
@@ -218,11 +269,12 @@
                     </div>
                     <div id="staging-full">
                         <a href="#" id="staging-playlist-name" data-type="text" data-pk="1" 
-                             data-title="Enter the staging playlist name">Your saved playlist</a> 
+                             data-title="Enter the staging playlist name">Your new playlist</a> 
                             <h4 id="save-button" class="pull-right"><a><span  
                             class="glyphicon glyphicon-save"></span>Save Playlist</a></h4>
                           <div> </div>
                           <table id="gthe-staging-table" class="table table-responsive"> </table>
+                          <div id="gthe-staging-table-truncated"> Showing the first 400 matching tracks. </div>
                      </div>
                    </div>
                 </div>
@@ -289,6 +341,7 @@ var processedPlaylists = 0;
 var theTrackTable =  null;
 var theStagingTable =  null;
 var stagingIsVisible = false;
+var maxTracksShown = 400;
 
 
 
@@ -742,6 +795,7 @@ function redrawPlot() {
             trackList.push(track);
             curSelected.add(track.id);
         });
+        $(".nstaging-tracks").text(curSelected.size);
         info("selected " + trackList.length + " tracks");
         console.log("selected " + trackList.length + " tracks");
         $("#add-to-wip").enable();
@@ -778,6 +832,11 @@ function showPlaylist(node) {
     playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
 
     $("#tbl-param").text(node.label);
+    if (node.tracks.length > maxTracksShown) {
+        $("#gthe-track-table-truncated").show();
+    } else {
+        $("#gthe-track-table-truncated").hide();
+    }
     showTracksInTable(theTrackTable, node.tracks, node.getter, node.label, false);
 }
 
@@ -796,6 +855,11 @@ function showStagingList() {
     } else {
         $("#staging-full").hide();
         $("#staging-empty").show();
+    }
+    if (curSelectedTracks > maxTracksShown) {
+        $("#gthe-staging-table-truncated").show();
+    } else {
+        $("#gthe-staging-table-truncated").hide();
     }
     showTracksInTable(theStagingTable, curSelectedTracks, featGetter('popularity'), 'popularity', true);
 }
@@ -864,6 +928,12 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
     data.setColumnProperty(0, {allowHTML: true});
     data.setColumnProperty(1, {allowHTML: true});
 
+    if (tracks.length > maxTracksShown) {
+        $(".truncated").show();
+    } else {
+        $(".truncated").hide();
+    }
+
 
     // lets show:
     //  energy, loudness, acoustic, speech,
@@ -872,6 +942,9 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
 
     var rows = [];
     _.each(tracks, function(track, i) {
+        if (i >= maxTracksShown) {
+            return;
+        }
         var sel = $("<input class='track-select'>")
             .attr('type', 'checkbox')
             .attr('id', 'sel-' + track.id)
@@ -944,6 +1017,8 @@ function addEventHandlers(table) {
         var tid = getTidFromElemId($(this).attr('id'));
         if (curSelected.has(tid)) {
             $(this).prop('checked', true);
+        } else {
+            $(this).prop('checked', false);
         }
     });
 
@@ -957,6 +1032,7 @@ function addEventHandlers(table) {
         }
         var track = curTracks[tid];
         e.stopPropagation();
+        $(".nstaging-tracks").text(curSelected.size);
         return false;
     });
 
@@ -2054,6 +2130,7 @@ function initTables() {
                     curSelected.delete(tid);
                 }
             });
+            $(".nstaging-tracks").text(curSelected.size);
         } 
     }
 

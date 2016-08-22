@@ -354,14 +354,17 @@ view) */
     margin-top:20px;
 }
 
-
+#plot-controls {
+    margin-top:5px;
+    margin-left:10px;
+}
 #plot-controls label {
     font-weight:normal;
 }
 
 
 #plot-buttons {
-    margin-top:10px;
+    margin-top:20px;
 }
 
 .nbtn {
