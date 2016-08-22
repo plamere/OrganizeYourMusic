@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-    <link type="text/css" href="styles.css" rel="stylesheet" />
     <link href="https://sp-bootstrap.global.ssl.fastly.net/7.4.1/sp-bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
     <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="styles2.css" rel="stylesheet" />
 
     <link rel="shortcut icon" href="images/favicon.png">
     <title>Organize Your Music</title>
@@ -138,7 +138,17 @@
                         popular the song is.
                     </ol>
                     </p>
+                    <h2> See it in Action</h2>
+                    Here's a demo of how I use Organize Your Music to make
+                    a playlist of my most energtic gothic metal.
+
+                    <p>
+                    <iframe width="640" height="360"
+                    src="https://www.youtube.com/embed/NGY1cthhr5g"
+                    frameborder="0" allowfullscreen></iframe>
+                     
               </div>
+
           </div>
         </div>
         </div>
@@ -639,12 +649,9 @@ function collapseGenres() {
         });
         if (count > 0) {
             keep.push(node);
-            console.log('keeping ', node.name);
         } else {
-            console.log('dropping ', node.name);
         }
     });
-    console.log('keeping', keep.length, 'orginal was', nodes.length);
     theWorld.push( 
         {
             name:"Collapsed Genres",
@@ -797,13 +804,11 @@ function redrawPlot() {
         });
         $(".nstaging-tracks").text(curSelected.size);
         info("selected " + trackList.length + " tracks");
-        console.log("selected " + trackList.length + " tracks");
         $("#add-to-wip").enable();
     });
 }
 
 function clearPlot() {
-    console.log('clear plot');
     curPlottingNodes = {};
     redrawPlot();
 }
@@ -819,7 +824,6 @@ function getDisplayType(getter, tracks) {
 
 function showPlaylist(node) {
     if (theTrackTable == null) {
-        console.log('table not ready yet');
         return;
     }
     if (stagingIsVisible) {
@@ -842,7 +846,6 @@ function showPlaylist(node) {
 
 function showStagingList() {
     if (theStagingTable == null) {
-        console.log('table not ready yet');
         return;
     }
     curSelectedTracks = [];
@@ -1007,13 +1010,11 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
 }
 
 function addEventHandlers(table) {
-    console.log('aeh');
 
     $('.track-select').off('change');
     $('.track-play').off('click');
 
     $('.track-select').each(function() {
-        console.log('aeh sel c1');
         var tid = getTidFromElemId($(this).attr('id'));
         if (curSelected.has(tid)) {
             $(this).prop('checked', true);
@@ -1023,7 +1024,6 @@ function addEventHandlers(table) {
     });
 
     $('.track-select').on('change', function(e) {
-        console.log('aeh sel c2');
         var tid = getTidFromElemId(e.target.id);
         if ($(e.target).is(':checked')) {
             curSelected.add(tid);
@@ -1045,12 +1045,10 @@ function addEventHandlers(table) {
     });
 
     $('.track-play').on('click', function(e) {
-        console.log('aeh ply c1');
         var tid = getTidFromElemId(e.target.id);
         var elem = $(e.target);
         var track = curTracks[tid];
 
-        console.log('play track', tid);
         $(".track-play").removeClass('glyphicon-pause').addClass('glyphicon-play');
         if  (isPlaying(track)) {
             stopTrack(track);
@@ -1600,7 +1598,6 @@ function isPlaying(track) {
 }
 
 function playTrack(track) {
-    console.log('play', track.details.name);
     if (track != nowPlaying) {
         audio.get(0).pause();
         audio.attr('src', track.details.preview_url);
@@ -1612,7 +1609,6 @@ function playTrack(track) {
 }
 
 function stopTrack() {
-    console.log('stop');
     audio.get(0).pause();
     nowPlaying = null;
     $(".playing").removeClass("playing");
@@ -1825,7 +1821,6 @@ function getTracksFromAPI(source, uri) {
                     } else {
                         var ntrack = loadTrack(track.id);
                         if (ntrack != null) {
-                            console.log('track', track);
                             curTracks[track.id] = ntrack;
                             curTracks[track.id].feats.count = 1;
                             loadedTracks.push(ntrack);
@@ -2110,17 +2105,14 @@ function setProgress(percent) {
 function initTables() {
     theTrackTable = new google.visualization.Table(document.getElementById('gthe-track-table'));
     google.visualization.events.addListener(theTrackTable, 'ready', function(e) {
-        console.log('table ready');
     });
 
     google.visualization.events.addListener(theTrackTable, 'select', function(e) {
-        console.log('selected', theTrackTable.getSelection());
     });
 
     function selectAllHandler(table, props) {
         if (props.column == 0) {
             $(table).find(".track-select").each(function() {
-                console.log('sah', $(this));
                 $(this).prop('checked', props.ascending);
                 var id = $(this).attr('id');
                 var tid = getTidFromElemId(id);
