@@ -317,6 +317,7 @@
     <script type="text/javascript" charset="utf-8" src="lib/rsvp-latest.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="config.js"></script>
+    <script src="genres.js"></script>
 
 <script>
 "use strict";
@@ -573,6 +574,16 @@ function refreshHeader() {
     }
 }
 
+function getParentGenre(genre) {
+    var parentGenre;
+    for (parentGenre in genres) {
+        if (genres[parentGenre].includes(genre)) {
+            return parentGenre;
+        }
+    }
+    return genre;
+}
+
 function addTracks(tracks) {
     _.each(tracks, function(track) {
         var genres = getGenresForTrack(track);
@@ -580,13 +591,14 @@ function addTracks(tracks) {
         track.feats.topGenre = "";
         _.each(genres, function(genre) {
             if (isGoodGenre(genre)) {
+                genre = getParentGenre(genre);
                 track.feats.genres.add(genre);
                 if (track.feats.topGenre.length == 0 && genre !== '(unclassified genre)') {
                     track.feats.topGenre = genre;
                 }
                 if (!(genre in nodeMap) ) {
                     var node = makeNode(genre, "Genre",
-                            featGenreFilter(genre),
+                            topGenreFilter(genre),
                             featGenreGetter(genre),
                             featSorter('popularity', true), false);
                     theWorld[genreIndex].nodes.push(node);
@@ -1289,6 +1301,12 @@ function sortedNodes(nodes) {
         }
     });
     return nodes;
+}
+
+function topGenreFilter(genre) {
+    return function(track) {
+        return String(track.feats.topGenre).toLowerCase() === String(genre).toLowerCase();
+    };
 }
 
 function featGenreFilter(genre) {
