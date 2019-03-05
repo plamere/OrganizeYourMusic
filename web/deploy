@@ -1,1 +1,2 @@
-s3cmd sync --acl-public *  s3://static.echonest.com/OrganizeYourMusic/
+rsync -azv . plamere@playlistmachinery.com:/home/www/organizeyourmusic
+#s3cmd sync --acl-public *  s3://static.echonest.com/OrganizeYourMusic/
