@@ -2032,7 +2032,7 @@ function isValidPlaylistUri(uri) {
         if (fields[0] != 'spotify' || fields[1] != 'playlist') {
             return false;
         }
-    } elif (fields.length == 5) {
+    } else if (fields.length == 5) {
         if (fields[0] != 'spotify' || fields[3] != 'playlist') {
             return false;
         }
@@ -2046,7 +2046,7 @@ function getPlaylistPid(uri) {
     var fields = uri.split(':');
     if (fields.length == 3) {
         return fields[2];
-    } elif (fields.length == 5) {
+    } else if (fields.length == 5) {
         return fields[4];
     } 
     return null;
