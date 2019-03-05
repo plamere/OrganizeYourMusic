@@ -316,7 +316,7 @@
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" charset="utf-8" src="lib/rsvp-latest.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="config.js"></script>
+    <script src="config.js?v3"></script>
 
 <script>
 "use strict";
@@ -1995,11 +1995,10 @@ function isGoodPlaylist(playlist, allPlaylists) {
 function getPlaylistTracks(playlist) {
     var uri = playlist.uri;
     if (isValidPlaylistUri(uri)) {
-        var fields = uri.split(':');
-        var userID = fields[2];
-        var playlistID = fields[4];
-        var url = "https://api.spotify.com/v1/users/"
-            + userID + "/playlists/" + playlistID + "/tracks";
+        var playlistID = getPlaylistPid(uri);
+        //var url = "https://api.spotify.com/v1/users/"
+        //    + userID + "/playlists/" + playlistID + "/tracks";
+        var url = "https://api.spotify.com/v1/playlists/" + playlistID + "/tracks";
         return getTracksFromAPI(playlist.name, url);
     } else {
         var deferred = RSVP.defer();
@@ -2029,14 +2028,30 @@ function isLocalHost() {
 
 function isValidPlaylistUri(uri) {
     var fields = uri.split(':');
-    if (fields.length != 5) {
-        return false;
-    }
-    if (fields[0] != 'spotify' || fields[3] != 'playlist') {
-        return false;
+    if (fields.length == 3) {
+        if (fields[0] != 'spotify' || fields[1] != 'playlist') {
+            return false;
+        }
+    } elif (fields.length == 5) {
+        if (fields[0] != 'spotify' || fields[3] != 'playlist') {
+            return false;
+        }
+    } else {
+        return False;
     }
     return true;
 }
+
+function getPlaylistPid(uri) {
+    var fields = uri.split(':');
+    if (fields.length == 3) {
+        return fields[2];
+    } elif (fields.length == 5) {
+        return fields[4];
+    } 
+    return null;
+}
+
 
 function saveInfo(params) {
     localStorage.setItem("info", JSON.stringify(params));
