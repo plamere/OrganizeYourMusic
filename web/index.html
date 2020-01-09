@@ -136,6 +136,7 @@
                         spoken word the song contains.
                         <li> <b> Popularity </b> - The higher the value the more
                         popular the song is.
+                        <li> <b> Duration </b> - The length of the song.
                     </ol>
                     </p>
                     <h2> See it in Action</h2>
@@ -537,6 +538,7 @@ var theWorld = [
     {
         name: "Duration",
         nodes:[
+            /*
             makeNode("0 to 1 minute", "Duration",
                 featFilter('duration_ms', mins(0), mins(1)),
                 featGetter('duration_ms'),
@@ -560,6 +562,26 @@ var theWorld = [
                 featFilter('duration_ms', mins(4), mins(8)),
                 featGetter('duration_ms'),
                 featSorter('duration_ms', false), true),
+            */
+            makeNode("Very very short", "Duration",
+                featFilter('duration_ms', mins(0), mins(.5)),
+                featGetter('duration_ms'),
+                featSorter('duration_ms', false), true),
+
+            makeNode("Very short", "Duration",
+                featFilter('duration_ms', mins(0), mins(1.5)),
+                featGetter('duration_ms'),
+                featSorter('duration_ms', false), true),
+
+            makeNode("Short", "Duration",
+                featFilter('duration_ms', mins(0), mins(3)),
+                featGetter('duration_ms'),
+                featSorter('duration_ms', false), true),
+
+            makeNode("Medium", "Duration",
+                featFilter('duration_ms', mins(3), mins(6)),
+                featGetter('duration_ms'),
+                featSorter('duration_ms', false), true),
 
             makeNode("Long", "Duration",
                 featFilter('duration_ms', mins(6), mins(1000)),
@@ -567,17 +589,12 @@ var theWorld = [
                 featSorter('duration_ms', false), true),
 
             makeNode("Very long", "Duration",
-                featFilter('duration_ms', mins(10), mins(1000)),
+                featFilter('duration_ms', mins(12), mins(1000)),
                 featGetter('duration_ms'),
                 featSorter('duration_ms', false), true),
 
-            makeNode("Short", "Duration",
-                featFilter('duration_ms', mins(0), mins(2)),
-                featGetter('duration_ms'),
-                featSorter('duration_ms', false), true),
-
-            makeNode("Very short", "Duration",
-                featFilter('duration_ms', mins(0), mins(1)),
+            makeNode("Very very long", "Duration",
+                featFilter('duration_ms', mins(30), mins(1000)),
                 featGetter('duration_ms'),
                 featSorter('duration_ms', false), true),
         ]
