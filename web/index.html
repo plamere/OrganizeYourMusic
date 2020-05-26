@@ -1723,11 +1723,13 @@ function collectArtistAttributes(tracks) {
             return getSpotifyP("https://api.spotify.com/v1/artists", { ids: nextAids.join(',')})
               .then(function(results) {
                 _.each(results.artists, function(artist) {
+                    if (artist != null  && 'id' in artist) {
                     curArtists[artist.id] = {
                         genres:artist.genres,
                         name:artist.name,
                         count: 1
                     }
+                  }
                 });
                 getNextArtists();
             })
@@ -1771,10 +1773,12 @@ function collectAlbumAttributes(tracks) {
             getSpotifyP("https://api.spotify.com/v1/albums", { ids: nextAids.join(',')})
             .then(function(results) {
                 _.each(results.albums, function(album) {
+                    if (album != null && 'id' in album) {
                     curAlbums[album.id] = {
                         release_date:album.release_date,
                         genres:album.genres,
                     };
+                  }
                 });
                 getNextAlbums();
             })
