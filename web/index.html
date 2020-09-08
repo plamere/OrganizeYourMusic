@@ -210,7 +210,7 @@
                   <div class="tab-pane active" id="the-track-list">
                     <h4 id="playlist-title" class="ntext-center"></h4>
                       <table id="gthe-track-table" class="table ntable-striped table-responsive"> </table>
-                      <div id="gthe-track-table-truncated"> Showing the first 400 matching tracks. </div>
+                      <div id="gthe-track-table-truncated"> Showing the first <span class="max-shown"> </span> matching tracks. </div>
                    </div>
 
                     <div class="tab-pane" id="the-plots">
@@ -352,8 +352,7 @@ var processedPlaylists = 0;
 var theTrackTable =  null;
 var theStagingTable =  null;
 var stagingIsVisible = false;
-var maxTracksShown = 400;
-
+var maxTracksShown = 5000;
 
 
 
@@ -2261,6 +2260,7 @@ $(document).ready(
             }
         });
 
+        $(".max-shown").text(maxTracksShown);
         $(".work").hide();
         if ('error' in args) {
             error("Sorry, I can't read your music collection from Spotify without authorization");
