@@ -463,6 +463,10 @@ var theWorld = [
                 featFilter('year', 2010, 2019),
                 featGetter('year'),
                 featSorter('year', false), true),
+            makeNode("2020s", "year",
+                featFilter('year', 2020, 2029),
+                featGetter('year'),
+                featSorter('year', false), true),
             makeNode("Now", "year",
                 featFilter('year', 2016, 2020),
                 featGetter('year'),
@@ -1546,27 +1550,75 @@ function linfo(msg) {
     $("#linfo").text(msg);
 }
 
-function authorizeUser() {
-    var scopes = 'user-library-read playlist-modify-public';
-    var url = 'https://accounts.spotify.com/authorize?client_id=' + SPOTIFY_CLIENT_ID +
-        '&response_type=token' +
-        '&show_dialog=false' +
-        '&scope=' + encodeURIComponent(scopes) +
-        '&redirect_uri=' + encodeURIComponent(SPOTIFY_REDIRECT_URI);
-    document.location = url;
+// PKCE helpers
+function generateRandomString(length) {
+    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var values = crypto.getRandomValues(new Uint8Array(length));
+    return Array.from(values).reduce(function(acc, x) { return acc + possible[x % possible.length]; }, "");
 }
 
-function parseArgs() {
-    var hash = location.hash.replace(/#/g, '');
-    var all = hash.split('&');
-    var args = {};
-    _.each(all, function(keyvalue) {
-        var kv = keyvalue.split('=');
-        var key = kv[0];
-        var val = kv[1];
-        args[key] = val;
+function sha256(plain) {
+    var encoder = new TextEncoder();
+    var data = encoder.encode(plain);
+    return window.crypto.subtle.digest('SHA-256', data);
+}
+
+function base64encode(input) {
+    return btoa(String.fromCharCode.apply(null, new Uint8Array(input)))
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+}
+
+async function authorizeUser() {
+    var scopes = 'user-library-read playlist-modify-public';
+    var codeVerifier = generateRandomString(64);
+    window.localStorage.setItem('code_verifier', codeVerifier);
+
+    var hashed = await sha256(codeVerifier);
+    var codeChallenge = base64encode(hashed);
+
+    var authUrl = 'https://accounts.spotify.com/authorize?' +
+        'client_id=' + encodeURIComponent(SPOTIFY_CLIENT_ID) +
+        '&response_type=code' +
+        '&show_dialog=false' +
+        '&scope=' + encodeURIComponent(scopes) +
+        '&redirect_uri=' + encodeURIComponent(SPOTIFY_REDIRECT_URI) +
+        '&code_challenge_method=S256' +
+        '&code_challenge=' + encodeURIComponent(codeChallenge);
+
+    document.location = authUrl;
+}
+
+function exchangeCodeForToken(code) {
+    var codeVerifier = window.localStorage.getItem('code_verifier');
+    return $.ajax('https://accounts.spotify.com/api/token', {
+        type: 'POST',
+        data: $.param({
+            client_id: SPOTIFY_CLIENT_ID,
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: SPOTIFY_REDIRECT_URI,
+            code_verifier: codeVerifier
+        }),
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
     });
-    return args;
+}
+
+function refreshAccessToken(refreshToken) {
+    return $.ajax('https://accounts.spotify.com/api/token', {
+        type: 'POST',
+        data: $.param({
+            client_id: SPOTIFY_CLIENT_ID,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken
+        }),
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    });
 }
 
 function callSpotify(type, url, json, callback) {
@@ -2095,10 +2147,6 @@ function getPlaylistFromURI(name, uri) {
     });
 }
 
-function isLocalHost() {
-    return window.location.host.indexOf('localhost') >= 0;
-}
-
 function isValidPlaylistUri(uri) {
     var fields = uri.split(':');
     if (fields.length == 3) {
@@ -2243,11 +2291,9 @@ function initPlot() {
 
 $(document).ready(
     function() {
-        if (isLocalHost()) {
-            SPOTIFY_REDIRECT_URI = LOCAL_SPOTIFY_REDIRECT_URI;
-        }
-        var args = parseArgs();
-        window.location.hash = "";
+        var urlParams = new URLSearchParams(window.location.search);
+        var code = urlParams.get('code');
+        var authError = urlParams.get('error');
 
         $("#collection-type").on("change", function() {
             var type = $("#collection-type").val();
@@ -2260,67 +2306,80 @@ $(document).ready(
 
         $(".max-shown").text(maxTracksShown);
         $(".work").hide();
-        if ('error' in args) {
+        if (authError) {
             error("Sorry, I can't read your music collection from Spotify without authorization");
             $("#go").show();
             $("#go").on('click', function() {
                 go();
             });
-        } else if ('access_token' in args) {
-            thePlot = $("#the-plot").get(0);
-            $(".work").show();
-            $("#intro").hide();
-            accessToken = args['access_token'];
-            $("#stop-loading").on('click', function() {
-                stopLoading();
-            });
-            $('#staging-playlist-name').editable({
-                mode:'popup',
-                placement:'right'
-            });
-
-            $("#save-button").on("click", function() {
-                savePlaylist();
-            });
-            $("#staging-tab").on('shown.bs.tab', function() {
-                stagingIsVisible = true;
-                showStagingList();
-            });
-            $("#staging-tab").on('hidden.bs.tab', function() {
-                stagingIsVisible = false;
-                showStagingList();
-            });
-            google.charts.load('current', {'packages':['table']});
-            google.charts.setOnLoadCallback(initTables);
-
-
-            initPlot();
-
-            fetchCurrentUserProfile()
-            .then(function(user) {
-                if (user) {
-                    curUserID = user.id;
-                    $("#who").text(user.id);
-                    var info = getInfo();
-                    var curType = info.type;
-                    curTypeName = $("#collection-type option[value='" + curType +"']").text()
-                    $("#section-title").text(curTypeName);
-                    if (info.type == "saved") {
-                        getSavedTracks();
-                    } else if (info.type == "added") {
-                        getMusicFromPlaylists(false);
-                    } else if (info.type == "playlist") {
-                        getPlaylistFromURI("Your Playlist", info.uri);
-                    } else if (info.type == "follow") {
-                        getMusicFromPlaylists(true);
-                    }  else if (info.type == "all") {
-                        getAllMusic();
-                    } else {
-                        console.log("unexpected type", info.type);
-                    }
-                } else {
-                    error("Trouble getting the user profile");
+        } else if (code) {
+            // Clean the URL so the code isn't visible/reusable
+            window.history.replaceState({}, document.title, window.location.pathname);
+            exchangeCodeForToken(code).then(function(response) {
+                accessToken = response.access_token;
+                if (response.refresh_token) {
+                    window.localStorage.setItem('refresh_token', response.refresh_token);
                 }
+
+                thePlot = $("#the-plot").get(0);
+                $(".work").show();
+                $("#intro").hide();
+                $("#stop-loading").on('click', function() {
+                    stopLoading();
+                });
+                $('#staging-playlist-name').editable({
+                    mode:'popup',
+                    placement:'right'
+                });
+
+                $("#save-button").on("click", function() {
+                    savePlaylist();
+                });
+                $("#staging-tab").on('shown.bs.tab', function() {
+                    stagingIsVisible = true;
+                    showStagingList();
+                });
+                $("#staging-tab").on('hidden.bs.tab', function() {
+                    stagingIsVisible = false;
+                    showStagingList();
+                });
+                google.charts.load('current', {'packages':['table']});
+                google.charts.setOnLoadCallback(initTables);
+
+                initPlot();
+
+                fetchCurrentUserProfile()
+                .then(function(user) {
+                    if (user) {
+                        curUserID = user.id;
+                        $("#who").text(user.id);
+                        var info = getInfo();
+                        var curType = info.type;
+                        curTypeName = $("#collection-type option[value='" + curType +"']").text()
+                        $("#section-title").text(curTypeName);
+                        if (info.type == "saved") {
+                            getSavedTracks();
+                        } else if (info.type == "added") {
+                            getMusicFromPlaylists(false);
+                        } else if (info.type == "playlist") {
+                            getPlaylistFromURI("Your Playlist", info.uri);
+                        } else if (info.type == "follow") {
+                            getMusicFromPlaylists(true);
+                        }  else if (info.type == "all") {
+                            getAllMusic();
+                        } else {
+                            console.log("unexpected type", info.type);
+                        }
+                    } else {
+                        error("Trouble getting the user profile");
+                    }
+                });
+            }).fail(function() {
+                error("Failed to exchange authorization code for token");
+                $("#go").show();
+                $("#go").on('click', function() {
+                    go();
+                });
             });
         } else {
             $("#go").show();
