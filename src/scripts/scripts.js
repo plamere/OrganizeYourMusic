@@ -31,6 +31,8 @@ var theTrackTable = null;
 var theStagingTable = null;
 var stagingIsVisible = false;
 var maxTracksShown = 5000;
+var defaultTablePageSize = 50;
+var cachePrefix = "omy-cache-v2:";
 var pendingRestoreInfo = null;
 var pendingFetchStarter = null;
 var sidebarExpanded = true;
@@ -596,10 +598,16 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
     });
     data.addRows(rows);
 
+    var currentPage = table.currentPage || 0;
+    var maxPage = Math.max(Math.ceil(rows.length / defaultTablePageSize) - 1, 0);
+    if (currentPage > maxPage) currentPage = maxPage;
+
     table.draw(data, {
         showRowNumber: true,
         width: "100%",
-        page: "disable",
+        page: "enable",
+        pageSize: defaultTablePageSize,
+        startPage: currentPage,
         allowHtml: true,
         cssClassNames: {
             headerRow: "headerRow",
@@ -607,8 +615,40 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
             headerCell: "track-header-cell",
         },
     });
+    table.currentPage = currentPage;
     table.data = data;
+    enhancePagerUI(table);
     addEventHandlers($(table.getContainer()));
+}
+
+function enhancePagerUI(table) {
+    var container = $(table.getContainer());
+    var pager = container.find(".google-visualization-table-div-page");
+    if (pager.length === 0) return;
+
+    function iconize(selector, iconClass, label) {
+        pager.find(selector).each(function () {
+            var elem = $(this);
+            var control = elem;
+            if (!elem.is("a,button,input,[role='button']")) {
+                var inner = elem.find("a,button,input,[role='button']").first();
+                if (inner.length > 0) {
+                    control = inner;
+                }
+            }
+
+            elem.addClass("pager-shell");
+            control.attr("title", label);
+            control.attr("aria-label", label);
+            control.addClass("pager-arrow pager-control");
+            control.html("<i class='fa " + iconClass + "' aria-hidden='true'></i>");
+        });
+    }
+
+    iconize(".google-visualization-table-first-page, .google-visualization-table-page-first", "fa-angle-double-left", "First page");
+    iconize(".google-visualization-table-prev-page, .google-visualization-table-page-prev", "fa-angle-left", "Previous page");
+    iconize(".google-visualization-table-next-page, .google-visualization-table-page-next", "fa-angle-right", "Next page");
+    iconize(".google-visualization-table-last-page, .google-visualization-table-page-last", "fa-angle-double-right", "Last page");
 }
 
 function addEventHandlers(tableContainer) {
@@ -1557,10 +1597,36 @@ function getInfo() { var item = localStorage.getItem("info"); return JSON.parse(
 function getCollectionCacheKey(info) {
     var type = info && info.type ? info.type : "unknown";
     var uri = info && info.uri ? info.uri : "";
+    return cachePrefix + type + ":" + uri;
+}
+
+function getLegacyCollectionCacheKey(info) {
+    var type = info && info.type ? info.type : "unknown";
+    var uri = info && info.uri ? info.uri : "";
     return "omy-cache-v1:" + type + ":" + uri;
 }
 
+function getCollectionCacheKeyForRestore(info) {
+    var primaryKey = getCollectionCacheKey(info);
+    if (localStorage.getItem(primaryKey)) return primaryKey;
+
+    var legacyKey = getLegacyCollectionCacheKey(info);
+    if (localStorage.getItem(legacyKey)) return legacyKey;
+
+    return null;
+}
+
+function compactTrackArtists(artists) {
+    return _.map(artists || [], function (artist) {
+        return {
+            id: artist && artist.id ? artist.id : "",
+            name: artist && artist.name ? artist.name : "",
+        };
+    });
+}
+
 function serializeTrack(track) {
+    var albumInfo = curAlbums[track.details.album_id] || {};
     return {
         id: track.id,
         feats: {
@@ -1589,9 +1655,10 @@ function serializeTrack(track) {
         details: {
             name: track.details.name,
             album_id: track.details.album_id,
+            album_name: albumInfo.name || track.details.album_name || "",
             uri: track.details.uri,
             preview_url: track.details.preview_url,
-            artists: track.details.artists,
+            artists: compactTrackArtists(track.details.artists),
         },
     };
 }
@@ -1625,11 +1692,75 @@ function deserializeTrack(rawTrack) {
         details: {
             name: rawTrack.details.name,
             album_id: rawTrack.details.album_id,
+            album_name: rawTrack.details.album_name || "",
             uri: rawTrack.details.uri,
             preview_url: rawTrack.details.preview_url,
-            artists: rawTrack.details.artists,
+            artists: compactTrackArtists(rawTrack.details.artists),
         },
     };
+}
+
+function compactArtistsForCache(artists) {
+    var out = {};
+    _.each(artists, function (artist, artistId) {
+        if (!artist) return;
+        out[artistId] = {
+            genres: artist.genres || [],
+        };
+    });
+    return out;
+}
+
+function compactAlbumsForCache(albums) {
+    var out = {};
+    _.each(albums, function (album, albumId) {
+        if (!album) return;
+        out[albumId] = {
+            name: album.name || "",
+            genres: album.genres || [],
+            release_date: album.release_date || "",
+        };
+    });
+    return out;
+}
+
+function isStorageQuotaError(error) {
+    if (!error) return false;
+    return error.name === "QuotaExceededError" || error.code === 22 || error.code === 1014;
+}
+
+function removeOtherCollectionCaches(activeKey) {
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf(cachePrefix) === 0 && key !== activeKey) {
+            localStorage.removeItem(key);
+        }
+    }
+}
+
+function tryPersistSnapshot(cacheKey, snapshot) {
+    try {
+        localStorage.setItem(cacheKey, JSON.stringify(snapshot));
+        return true;
+    } catch (error) {
+        if (!isStorageQuotaError(error)) {
+            console.log("Unable to persist collection cache", error);
+        }
+        return false;
+    }
+}
+
+function downsampleTracksForCache(serializedTracks, maxTracks) {
+    if (!serializedTracks || serializedTracks.length <= maxTracks) return serializedTracks;
+    if (maxTracks <= 0) return [];
+
+    var step = serializedTracks.length / maxTracks;
+    var sampled = [];
+    for (var i = 0; i < maxTracks; i++) {
+        var sourceIndex = Math.floor(i * step);
+        sampled.push(serializedTracks[sourceIndex]);
+    }
+    return sampled;
 }
 
 function clearWorldState() {
@@ -1674,31 +1805,67 @@ function persistCurrentCollection() {
     var info = getInfo();
     if (!info || !info.type) return;
     try {
+        var cacheKey = getCollectionCacheKey(info);
         var tracks = [];
         _.each(curTracks, function (track) {
             tracks.push(serializeTrack(track));
         });
-        localStorage.setItem(
-            getCollectionCacheKey(info),
-            JSON.stringify({
-                tracks: tracks,
-                artists: curArtists,
-                albums: curAlbums,
-                topArtistCount: topArtistCount,
-                topArtistName: topArtistName,
-                topTrackName: topTrackName,
-                topTrackCount: topTrackCount,
-                totalTracks: totalTracks,
-                totalPlaylists: totalPlaylists,
-                processedPlaylists: processedPlaylists,
-                curTypeName: curTypeName,
-            }),
-        );
+
+        var snapshot = {
+            version: 2,
+            tracks: tracks,
+            artists: compactArtistsForCache(curArtists),
+            albums: compactAlbumsForCache(curAlbums),
+            topArtistCount: topArtistCount,
+            topArtistName: topArtistName,
+            topTrackName: topTrackName,
+            topTrackCount: topTrackCount,
+            totalTracks: totalTracks,
+            totalPlaylists: totalPlaylists,
+            processedPlaylists: processedPlaylists,
+            curTypeName: curTypeName,
+        };
+
+        if (tryPersistSnapshot(cacheKey, snapshot)) {
+            localStorage.removeItem(getLegacyCollectionCacheKey(info));
+            return;
+        }
+
+        removeOtherCollectionCaches(cacheKey);
+        if (tryPersistSnapshot(cacheKey, snapshot)) {
+            localStorage.removeItem(getLegacyCollectionCacheKey(info));
+            return;
+        }
+
+        snapshot.artists = {};
+        snapshot.albums = {};
+        if (tryPersistSnapshot(cacheKey, snapshot)) {
+            localStorage.removeItem(getLegacyCollectionCacheKey(info));
+            console.log("Collection cache stored in compact mode to avoid storage limits");
+            return;
+        }
+
+        var reducedTrackCount = Math.floor(tracks.length * 0.75);
+        while (reducedTrackCount >= 50) {
+            snapshot.tracks = downsampleTracksForCache(tracks, reducedTrackCount);
+            if (tryPersistSnapshot(cacheKey, snapshot)) {
+                localStorage.removeItem(getLegacyCollectionCacheKey(info));
+                console.log("Collection cache stored in reduced mode (" + reducedTrackCount + "/" + tracks.length + " tracks) to avoid storage limits");
+                return;
+            }
+            reducedTrackCount = Math.floor(reducedTrackCount * 0.7);
+        }
+
+        localStorage.removeItem(cacheKey);
+        console.log("Skipped collection cache due to localStorage size limits");
     } catch (error) { console.log("Unable to persist collection cache", error); }
 }
 
-function restoreCurrentCollection(info) {
-    var raw = localStorage.getItem(getCollectionCacheKey(info));
+function restoreCurrentCollection(info, cacheKey) {
+    var resolvedKey = cacheKey || getCollectionCacheKeyForRestore(info);
+    if (!resolvedKey) return false;
+
+    var raw = localStorage.getItem(resolvedKey);
     if (!raw) return false;
 
     try {
@@ -1746,11 +1913,11 @@ function startCollectionFetch(info) {
 }
 
 function queueRestoreOrFetch(info) {
-    var cacheKey = getCollectionCacheKey(info);
-    if (localStorage.getItem(cacheKey)) {
+    var cacheKey = getCollectionCacheKeyForRestore(info);
+    if (cacheKey) {
         pendingFetchStarter = function () { startCollectionFetch(info); };
         if (theTrackTable != null && theStagingTable != null) {
-            if (!restoreCurrentCollection(info) && pendingFetchStarter) {
+            if (!restoreCurrentCollection(info, cacheKey) && pendingFetchStarter) {
                 var fallbackFetch = pendingFetchStarter;
                 pendingFetchStarter = null;
                 fallbackFetch();
@@ -1769,6 +1936,7 @@ function refetchCurrentCollection() {
     var info = getInfo();
     if (!info || !info.type) return;
     localStorage.removeItem(getCollectionCacheKey(info));
+    localStorage.removeItem(getLegacyCollectionCacheKey(info));
     pendingRestoreInfo = null;
     pendingFetchStarter = null;
     abortLoading = false;
@@ -1824,7 +1992,9 @@ function setProgress(percent) {
 
 function initTables() {
     theTrackTable = new google.visualization.Table(document.getElementById("gthe-track-table"));
-    google.visualization.events.addListener(theTrackTable, "ready", function () { });
+    google.visualization.events.addListener(theTrackTable, "ready", function () {
+        enhancePagerUI(theTrackTable);
+    });
     google.visualization.events.addListener(theTrackTable, "select", function () { });
 
     // FIX 3: Master "Select All" function applies selection against the table's raw data
@@ -1848,10 +2018,27 @@ function initTables() {
         selectAllHandler("#gthe-track-table", props, theTrackTable);
         addEventHandlers($(theTrackTable.getContainer()));
     });
+    google.visualization.events.addListener(theTrackTable, "page", function (props) {
+        if (props && typeof props.page === "number") {
+            theTrackTable.currentPage = props.page;
+        }
+        enhancePagerUI(theTrackTable);
+        addEventHandlers($(theTrackTable.getContainer()));
+    });
 
     theStagingTable = new google.visualization.Table(document.getElementById("gthe-staging-table"));
+    google.visualization.events.addListener(theStagingTable, "ready", function () {
+        enhancePagerUI(theStagingTable);
+    });
     google.visualization.events.addListener(theStagingTable, "sort", function (props) {
         selectAllHandler("#gthe-staging-table", props, theStagingTable);
+        addEventHandlers($(theStagingTable.getContainer()));
+    });
+    google.visualization.events.addListener(theStagingTable, "page", function (props) {
+        if (props && typeof props.page === "number") {
+            theStagingTable.currentPage = props.page;
+        }
+        enhancePagerUI(theStagingTable);
         addEventHandlers($(theStagingTable.getContainer()));
     });
 
