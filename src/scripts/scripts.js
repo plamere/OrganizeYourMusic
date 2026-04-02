@@ -39,8 +39,41 @@ var sidebarExpanded = true;
 var currentSearchQuery = "";
 
 RSVP.on("error", function (reason) {
-    console.assert(false, reason);
+    console.error("Unhandled RSVP error:", reason);
 });
+
+function isSpotifyScopeError(resp) {
+    var payload = resp && resp.responseJSON;
+    if (!payload && resp && resp.responseText) {
+        try {
+            payload = JSON.parse(resp.responseText);
+        } catch (e) {
+            payload = null;
+        }
+    }
+
+    var msg = payload && payload.error && payload.error.message;
+    if (!msg && payload && typeof payload.error === "string") {
+        msg = payload.error;
+    }
+
+    if (!msg) {
+        return false;
+    }
+
+    var lower = String(msg).toLowerCase();
+    return lower.indexOf("insufficient") !== -1 && lower.indexOf("scope") !== -1;
+}
+
+function restartAuthorization(message) {
+    if (message) {
+        error(message);
+    }
+
+    accessToken = null;
+    window.localStorage.removeItem("refresh_token");
+    go();
+}
 
 var theWorld = [
     { name: "Genres", nodes: [] },
@@ -365,27 +398,18 @@ function showPlaylist(node) {
     }
     curNode = node;
 
-    var displayTracks = node.tracks;
-    if (currentSearchQuery.trim() !== "") {
-        var searchQuery = currentSearchQuery.trim().toLowerCase();
-        displayTracks = displayTracks.filter(function (track) {
-            var trackName = (track.details.name || "").toLowerCase();
-            var artistName = track.details.artists.length > 0 ? (track.details.artists[0].name || "").toLowerCase() : "";
-            var nameMatch = trackName.includes(searchQuery);
-            var artistMatch = artistName.includes(searchQuery);
-            return nameMatch || artistMatch;
-        });
-    }
+    var displayTracks = currentSearchQuery.trim() !== "" ? getGlobalSearchTracks(currentSearchQuery) : node.tracks;
+    var isSearching = currentSearchQuery.trim() !== "";
 
     var nTracks = displayTracks.length;
     var nArtists = new Set(displayTracks.map(function (t) { return t.details.artists[0].id; })).size;
 
-    if (node.name == "All results") playlistTitle("All results in this collection");
-    else playlistTitle("Your " + uname(node.name) + " tracks");
-
-    if (currentSearchQuery.trim() !== "") {
+    if (isSearching) {
+        playlistTitle("Search results");
         playlistSubtitle("Search Results: " + nTracks + " tracks / " + nArtists + " artists");
     } else {
+        if (node.name == "All results") playlistTitle("All results in this collection");
+        else playlistTitle("Your " + uname(node.name) + " tracks");
         playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
     }
 
@@ -412,6 +436,42 @@ function showPlaylist(node) {
         node.label,
         false,
     );
+}
+
+function getGlobalSearchTracks(query) {
+    var searchQuery = query.trim().toLowerCase();
+    if (searchQuery === "") return [];
+
+    return _.filter(curTracks, function (track) {
+        var trackName = (track.details.name || "").toLowerCase();
+        var artistNames = _.map(track.details.artists || [], function (artist) {
+            return (artist.name || "").toLowerCase();
+        });
+        var artistGenres = _.map(track.details.artists || [], function (artist) {
+            var artistInfo = curArtists[artist.id];
+            return artistInfo && artistInfo.genres ? artistInfo.genres : [];
+        });
+        var albumInfo = curAlbums[track.details.album_id] || {};
+        var albumName = (albumInfo.name || "").toLowerCase();
+        var albumGenres = _.map(albumInfo.genres || [], function (genre) {
+            return (genre || "").toLowerCase();
+        });
+        var trackGenres = _.map(Array.from(track.feats.genres || []), function (genre) {
+            return (genre || "").toLowerCase();
+        });
+        var sourceName = (track.feats.source || "").toLowerCase();
+        var topGenre = (track.feats.topGenre || "").toLowerCase();
+        if (trackName.includes(searchQuery) || albumName.includes(searchQuery) || sourceName.includes(searchQuery) || topGenre.includes(searchQuery)) return true;
+        return _.some(artistNames, function (artistName) {
+            return artistName.includes(searchQuery);
+        }) || _.some(albumGenres, function (genre) {
+            return genre.includes(searchQuery);
+        }) || _.some(trackGenres, function (genre) {
+            return genre.includes(searchQuery);
+        }) || _.some(_.flatten(artistGenres), function (genre) {
+            return (genre || "").toLowerCase().includes(searchQuery);
+        });
+    });
 }
 
 function showStagingList() {
@@ -921,7 +981,7 @@ function base64encode(input) {
 }
 
 async function authorizeUser() {
-    var scopes = "user-library-read playlist-modify-public";
+    var scopes = "user-library-read playlist-read-private playlist-read-collaborative playlist-modify-public";
     var codeVerifier = generateRandomString(64);
     window.localStorage.setItem("code_verifier", codeVerifier);
 
@@ -994,12 +1054,17 @@ function callSpotify(type, url, json, callback) {
             contentType: "application/json",
             success: function (r) { callback(true, r); },
             error: function (r) {
+                if (r.status === 401 || (r.status === 403 && isSpotifyScopeError(r))) {
+                    restartAuthorization("Your Spotify authorization expired or is missing permissions. Please connect again.");
+                    return;
+                }
+
                 if ((r.status === 401 || r.status === 403) && !refreshed) {
                     refreshed = true;
                     refreshAccessToken().then(function () {
                         doCall();
                     }, function () {
-                        callback(false, r);
+                        restartAuthorization("Your Spotify session expired. Please connect again.");
                     });
                 } else if (r.status >= 200 && r.status < 300) callback(true, r);
                 else callback(false, r);
@@ -1032,11 +1097,16 @@ function getSpotifyP(url, data) {
                 success: function (data) { resolve(data); },
                 error: function (jqXHR, textStatus) {
                     if (jqXHR.status >= 200 && jqXHR.status < 300) resolve(jqXHR);
+                    else if (jqXHR.status === 401 || (jqXHR.status === 403 && isSpotifyScopeError(jqXHR))) {
+                        restartAuthorization("Your Spotify authorization expired or is missing permissions. Please connect again.");
+                        reject(textStatus);
+                    }
                     else if ((jqXHR.status === 401 || jqXHR.status === 403) && !refreshed) {
                         refreshed = true;
                         refreshAccessToken().then(function () {
                             go();
                         }, function () {
+                            restartAuthorization("Your Spotify session expired. Please connect again.");
                             reject(textStatus);
                         });
                     } else if (jqXHR.status == 401) window.location = "index.html";
@@ -1183,7 +1253,7 @@ function collectAlbumAttributes(tracks) {
                 .then(function (results) {
                     _.each(results.albums, function (album) {
                         if (album != null && "id" in album) {
-                            curAlbums[album.id] = { release_date: album.release_date, genres: album.genres };
+                            curAlbums[album.id] = { name: album.name, release_date: album.release_date, genres: album.genres };
                         }
                     });
                     getNextAlbums();
@@ -1569,6 +1639,8 @@ function clearWorldState() {
             node.artists = new Set();
         });
     });
+    theWorld[genreIndex].nodes = [];
+    theWorld[sourceIndex].nodes = [];
     curSelected = new Set();
     curSelectedTracks = [];
     curPlottingNodes = {};
