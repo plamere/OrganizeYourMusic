@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"node server.js\" \"vite\"",
+    "dev:frontend": "vite",
+    "dev:backend": "node server.js",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -12,11 +14,15 @@
     "@tailwindcss/postcss": "^4.2.2",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "concurrently": "^8.2.2",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "vite": "^8.0.1"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.2.2"
+    "@tailwindcss/vite": "^4.2.2",
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "node-fetch": "^3.3.2"
   }
 }

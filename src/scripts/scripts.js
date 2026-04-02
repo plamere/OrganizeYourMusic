@@ -33,6 +33,10 @@ var stagingIsVisible = false;
 var maxTracksShown = 5000;
 var pendingRestoreInfo = null;
 var pendingFetchStarter = null;
+var sidebarExpanded = true;
+
+// NEW: Global search state
+var currentSearchQuery = "";
 
 RSVP.on("error", function (reason) {
     console.assert(false, reason);
@@ -43,424 +47,92 @@ var theWorld = [
     {
         name: "Moods",
         nodes: [
-            makeNode(
-                "(unclassified mood)",
-                "popularity",
-                featMissingFilter("energy"),
-                featGetterInt("popularity"),
-                featSorter("popularity", true),
-                true,
-            ),
-            makeNode(
-                "chill",
-                "energy",
-                featMusicFilter("energy", 0, 0.2),
-                featGetterPercent("energy"),
-                featSorter("energy", false),
-                true,
-            ),
-            makeNode(
-                "amped",
-                "energy",
-                featMusicFilter("energy", 0.8, 1.0),
-                featGetterPercent("energy"),
-                featSorter("energy", true),
-                true,
-            ),
-            makeNode(
-                "sad",
-                "sadness",
-                featMusicFilter("sadness", 0.8, 1.0),
-                featGetterPercent("sadness"),
-                featSorter("sadness", true),
-                true,
-            ),
-            makeNode(
-                "anger",
-                "anger",
-                featMusicFilter("anger", 0.8, 1.0),
-                featGetterPercent("anger"),
-                featSorter("anger", true),
-                true,
-            ),
-            makeNode(
-                "happy",
-                "happiness",
-                featMusicFilter("happiness", 0.8, 1.0),
-                featGetterPercent("happiness"),
-                featSorter("happiness", true),
-                true,
-            ),
-            makeNode(
-                "danceable",
-                "danceability",
-                featMusicFilter("danceability", 0.8, 1.0),
-                featGetterPercent("danceability"),
-                featSorter("danceability", true),
-                true,
-            ),
+            makeNode("(unclassified mood)", "popularity", featMissingFilter("energy"), featGetterInt("popularity"), featSorter("popularity", true), true),
+            makeNode("chill", "energy", featMusicFilter("energy", 0, 0.2), featGetterPercent("energy"), featSorter("energy", false), true),
+            makeNode("amped", "energy", featMusicFilter("energy", 0.8, 1.0), featGetterPercent("energy"), featSorter("energy", true), true),
+            makeNode("sad", "sadness", featMusicFilter("sadness", 0.8, 1.0), featGetterPercent("sadness"), featSorter("sadness", true), true),
+            makeNode("anger", "anger", featMusicFilter("anger", 0.8, 1.0), featGetterPercent("anger"), featSorter("anger", true), true),
+            makeNode("happy", "happiness", featMusicFilter("happiness", 0.8, 1.0), featGetterPercent("happiness"), featSorter("happiness", true), true),
+            makeNode("danceable", "danceability", featMusicFilter("danceability", 0.8, 1.0), featGetterPercent("danceability"), featSorter("danceability", true), true),
         ],
     },
     {
         name: "Styles",
         nodes: [
-            makeNode(
-                "instrumental",
-                "instrumentalness",
-                featMusicFilter("instrumentalness", 0.8, 1.0),
-                featGetterPercent("instrumentalness"),
-                featSorter("instrumentalness", true),
-                true,
-            ),
-            makeNode(
-                "acoustic",
-                "acousticness",
-                featMusicFilter("acousticness", 0.8, 1.0),
-                featGetterPercent("acousticness"),
-                featSorter("acousticness", true),
-                true,
-            ),
-            makeNode(
-                "live",
-                "liveness",
-                featMusicFilter("liveness", 0.85, 1.0),
-                featGetterPercent("liveness"),
-                featSorter("liveness", true),
-                true,
-            ),
-            makeNode(
-                "spoken word",
-                "speechiness",
-                featFilter("speechiness", 0.85, 1.0),
-                featGetterPercent("speechiness"),
-                featSorter("speechiness", true),
-                true,
-            ),
-            makeNode(
-                "clean",
-                "explicit",
-                featBoolFilter("explicit", false),
-                featGetterBool("explicit", "explicit", "clean"),
-                featSorter("explicit", true),
-                false,
-            ),
-            makeNode(
-                "explicit",
-                "explicit",
-                featBoolFilter("explicit", true),
-                featGetterBool("explicit", "explicit", "clean"),
-                featSorter("explicit", true),
-                false,
-            ),
-            makeNode(
-                "loud",
-                "loudness (dB)",
-                featMusicFilter("loudness", -5, 0),
-                featGetterInt("loudness"),
-                featSorter("loudness", true),
-                true,
-            ),
-            makeNode(
-                "quiet",
-                "loudness (dB)",
-                featMusicFilter("loudness", -60, -10),
-                featGetterInt("loudness"),
-                featSorter("loudness", false),
-                true,
-            ),
+            makeNode("instrumental", "instrumentalness", featMusicFilter("instrumentalness", 0.8, 1.0), featGetterPercent("instrumentalness"), featSorter("instrumentalness", true), true),
+            makeNode("acoustic", "acousticness", featMusicFilter("acousticness", 0.8, 1.0), featGetterPercent("acousticness"), featSorter("acousticness", true), true),
+            makeNode("live", "liveness", featMusicFilter("liveness", 0.85, 1.0), featGetterPercent("liveness"), featSorter("liveness", true), true),
+            makeNode("spoken word", "speechiness", featFilter("speechiness", 0.85, 1.0), featGetterPercent("speechiness"), featSorter("speechiness", true), true),
+            makeNode("clean", "explicit", featBoolFilter("explicit", false), featGetterBool("explicit", "explicit", "clean"), featSorter("explicit", true), false),
+            makeNode("explicit", "explicit", featBoolFilter("explicit", true), featGetterBool("explicit", "explicit", "clean"), featSorter("explicit", true), false),
+            makeNode("loud", "loudness (dB)", featMusicFilter("loudness", -5, 0), featGetterInt("loudness"), featSorter("loudness", true), true),
+            makeNode("quiet", "loudness (dB)", featMusicFilter("loudness", -60, -10), featGetterInt("loudness"), featSorter("loudness", false), true),
         ],
     },
     {
         name: "Decades",
         nodes: [
-            makeNode(
-                "Oldies",
-                "year",
-                featFilter("year", 0, 1950),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "1950s",
-                "year",
-                featFilter("year", 1950, 1959),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "1960s",
-                "year",
-                featFilter("year", 1960, 1969),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "1970s",
-                "year",
-                featFilter("year", 1970, 1979),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "1980s",
-                "year",
-                featFilter("year", 1980, 1989),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "1990s",
-                "year",
-                featFilter("year", 1990, 1999),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "2000s",
-                "year",
-                featFilter("year", 2000, 2009),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "2010s",
-                "year",
-                featFilter("year", 2010, 2019),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "2020s",
-                "year",
-                featFilter("year", 2020, 2029),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "Now",
-                "year",
-                featFilter("year", 2016, 2020),
-                featGetter("year"),
-                featSorter("year", false),
-                true,
-            ),
-            makeNode(
-                "(unclassified year)",
-                "year",
-                featFilter("year", -1, 0),
-                featGetter("year"),
-                featSorter("year", false),
-                false,
-            ),
+            makeNode("Oldies", "year", featFilter("year", 0, 1950), featGetter("year"), featSorter("year", false), true),
+            makeNode("1950s", "year", featFilter("year", 1950, 1959), featGetter("year"), featSorter("year", false), true),
+            makeNode("1960s", "year", featFilter("year", 1960, 1969), featGetter("year"), featSorter("year", false), true),
+            makeNode("1970s", "year", featFilter("year", 1970, 1979), featGetter("year"), featSorter("year", false), true),
+            makeNode("1980s", "year", featFilter("year", 1980, 1989), featGetter("year"), featSorter("year", false), true),
+            makeNode("1990s", "year", featFilter("year", 1990, 1999), featGetter("year"), featSorter("year", false), true),
+            makeNode("2000s", "year", featFilter("year", 2000, 2009), featGetter("year"), featSorter("year", false), true),
+            makeNode("2010s", "year", featFilter("year", 2010, 2019), featGetter("year"), featSorter("year", false), true),
+            makeNode("2020s", "year", featFilter("year", 2020, 2029), featGetter("year"), featSorter("year", false), true),
+            makeNode("Now", "year", featFilter("year", 2016, 2020), featGetter("year"), featSorter("year", false), true),
+            makeNode("(unclassified year)", "year", featFilter("year", -1, 0), featGetter("year"), featSorter("year", false), false),
         ],
     },
     {
         name: "Added",
         nodes: [
-            makeNode(
-                "Today",
-                "age (days)",
-                featFilter("age", 0, 1),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
-            makeNode(
-                "In the last week",
-                "age (days)",
-                featFilter("age", 0, 7),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
-            makeNode(
-                "In the last month",
-                "age (days)",
-                featFilter("age", 0, 30),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
-            makeNode(
-                "In the last year",
-                "age (days)",
-                featFilter("age", 0, 365),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
-            makeNode(
-                "Over a year ago",
-                "age (days)",
-                featFilter("age", 356, 365 * 100),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
-            makeNode(
-                "Over 2 years ago",
-                "age (days)",
-                featFilter("age", 356 * 2, 365 * 100),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
-            makeNode(
-                "Over 5 years ago",
-                "age (days)",
-                featFilter("age", 356 * 5, 365 * 100),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
-            makeNode(
-                "Whenever",
-                "age (days)",
-                featFilter("age", 0, 365 * 100),
-                featGetterInt("age"),
-                featSorter("age", false),
-                true,
-            ),
+            makeNode("Today", "age (days)", featFilter("age", 0, 1), featGetterInt("age"), featSorter("age", false), true),
+            makeNode("In the last week", "age (days)", featFilter("age", 0, 7), featGetterInt("age"), featSorter("age", false), true),
+            makeNode("In the last month", "age (days)", featFilter("age", 0, 30), featGetterInt("age"), featSorter("age", false), true),
+            makeNode("In the last year", "age (days)", featFilter("age", 0, 365), featGetterInt("age"), featSorter("age", false), true),
+            makeNode("Over a year ago", "age (days)", featFilter("age", 356, 365 * 100), featGetterInt("age"), featSorter("age", false), true),
+            makeNode("Over 2 years ago", "age (days)", featFilter("age", 356 * 2, 365 * 100), featGetterInt("age"), featSorter("age", false), true),
+            makeNode("Over 5 years ago", "age (days)", featFilter("age", 356 * 5, 365 * 100), featGetterInt("age"), featSorter("age", false), true),
+            makeNode("Whenever", "age (days)", featFilter("age", 0, 365 * 100), featGetterInt("age"), featSorter("age", false), true),
         ],
     },
     {
         name: "Popularity",
         nodes: [
-            makeNode(
-                "top popular",
-                "Popularity",
-                featFilter("popularity", 75, 100),
-                featGetter("popularity"),
-                featSorter("popularity", true),
-                true,
-            ),
-            makeNode(
-                "very popular",
-                "Popularity",
-                featFilter("popularity", 50, 75),
-                featGetter("popularity"),
-                featSorter("popularity", true),
-                true,
-            ),
-            makeNode(
-                "somewhat popular",
-                "Popularity",
-                featFilter("popularity", 20, 50),
-                featGetter("popularity"),
-                featSorter("popularity", true),
-                true,
-            ),
-            makeNode(
-                "deep",
-                "Popularity",
-                featFilter("popularity", 0, 20),
-                featGetter("popularity"),
-                featSorter("popularity", true),
-                true,
-            ),
+            makeNode("top popular", "Popularity", featFilter("popularity", 75, 100), featGetter("popularity"), featSorter("popularity", true), true),
+            makeNode("very popular", "Popularity", featFilter("popularity", 50, 75), featGetter("popularity"), featSorter("popularity", true), true),
+            makeNode("somewhat popular", "Popularity", featFilter("popularity", 20, 50), featGetter("popularity"), featSorter("popularity", true), true),
+            makeNode("deep", "Popularity", featFilter("popularity", 0, 20), featGetter("popularity"), featSorter("popularity", true), true),
         ],
     },
     {
         name: "Duration",
         nodes: [
-            makeNode(
-                "Very very short",
-                "Duration",
-                featFilter("duration_ms", mins(0), mins(0.5)),
-                featGetter("duration_ms"),
-                featSorter("duration_ms", false),
-                true,
-            ),
-            makeNode(
-                "Very short",
-                "Duration",
-                featFilter("duration_ms", mins(0), mins(1.5)),
-                featGetter("duration_ms"),
-                featSorter("duration_ms", false),
-                true,
-            ),
-            makeNode(
-                "Short",
-                "Duration",
-                featFilter("duration_ms", mins(0), mins(3)),
-                featGetter("duration_ms"),
-                featSorter("duration_ms", false),
-                true,
-            ),
-            makeNode(
-                "Medium",
-                "Duration",
-                featFilter("duration_ms", mins(3), mins(6)),
-                featGetter("duration_ms"),
-                featSorter("duration_ms", false),
-                true,
-            ),
-            makeNode(
-                "Long",
-                "Duration",
-                featFilter("duration_ms", mins(6), mins(1000)),
-                featGetter("duration_ms"),
-                featSorter("duration_ms", false),
-                true,
-            ),
-            makeNode(
-                "Very long",
-                "Duration",
-                featFilter("duration_ms", mins(12), mins(1000)),
-                featGetter("duration_ms"),
-                featSorter("duration_ms", false),
-                true,
-            ),
-            makeNode(
-                "Very very long",
-                "Duration",
-                featFilter("duration_ms", mins(30), mins(1000)),
-                featGetter("duration_ms"),
-                featSorter("duration_ms", false),
-                true,
-            ),
+            makeNode("Very very short", "Duration", featFilter("duration_ms", mins(0), mins(0.5)), featGetter("duration_ms"), featSorter("duration_ms", false), true),
+            makeNode("Very short", "Duration", featFilter("duration_ms", mins(0), mins(1.5)), featGetter("duration_ms"), featSorter("duration_ms", false), true),
+            makeNode("Short", "Duration", featFilter("duration_ms", mins(0), mins(3)), featGetter("duration_ms"), featSorter("duration_ms", false), true),
+            makeNode("Medium", "Duration", featFilter("duration_ms", mins(3), mins(6)), featGetter("duration_ms"), featSorter("duration_ms", false), true),
+            makeNode("Long", "Duration", featFilter("duration_ms", mins(6), mins(1000)), featGetter("duration_ms"), featSorter("duration_ms", false), true),
+            makeNode("Very long", "Duration", featFilter("duration_ms", mins(12), mins(1000)), featGetter("duration_ms"), featSorter("duration_ms", false), true),
+            makeNode("Very very long", "Duration", featFilter("duration_ms", mins(30), mins(1000)), featGetter("duration_ms"), featSorter("duration_ms", false), true),
         ],
     },
     { name: "Sources", nodes: [] },
     {
-        name: "Combined",
+        name: "All Results",
         nodes: [
-            makeNode(
-                "All results",
-                "All results",
-                function (track) {
-                    return true;
-                },
-                featGetter("popularity"),
-                featSorter("popularity", true),
-                false,
-            ),
+            makeNode("All results", "All results", function (track) { return true; }, featGetter("popularity"), featSorter("popularity", true), false),
         ],
     },
 ];
 
-function mins(min) {
-    return min * 60 * 1000;
-}
-function now() {
-    return new Date().getTime();
-}
+function mins(min) { return min * 60 * 1000; }
+function now() { return new Date().getTime(); }
 
 function updateFavs() {
-    if (
-        theWorld[genreIndex].nodes.length > 0 &&
-        topArtistName &&
-        topTrackName
-    ) {
+    if (theWorld[genreIndex].nodes.length > 0 && topArtistName && topTrackName) {
         var favGenre = theWorld[genreIndex].nodes[0].name;
         $("#fav-genre").text(favGenre);
         $("#fav-artist").text(topArtistName);
@@ -473,17 +145,7 @@ function refreshHeader() {
     var ntracks = Object.keys(curTracks).length;
     var nArtists = Object.keys(curArtists).length;
     if (totalPlaylists > 0) {
-        linfo(
-            "Found " +
-            ntracks +
-            " unique tracks  by " +
-            nArtists +
-            " artists in " +
-            processedPlaylists +
-            " of " +
-            totalPlaylists +
-            " playlists",
-        );
+        linfo("Found " + ntracks + " unique tracks by " + nArtists + " artists in " + processedPlaylists + " of " + totalPlaylists + " playlists");
         var progress = (processedPlaylists * 100) / totalPlaylists;
         setProgress(progress);
     } else {
@@ -491,13 +153,7 @@ function refreshHeader() {
             var progress = (ntracks * 100) / totalTracks;
             setProgress(progress);
         }
-        linfo(
-            "Found " +
-            ntracks +
-            " tracks  by " +
-            nArtists +
-            " artists in your collection.",
-        );
+        linfo("Found " + ntracks + " tracks by " + nArtists + " artists in your collection.");
     }
 }
 
@@ -509,32 +165,15 @@ function addTracks(tracks) {
         _.each(genres, function (genre) {
             if (isGoodGenre(genre)) {
                 track.feats.genres.add(genre);
-                if (
-                    track.feats.topGenre.length == 0 &&
-                    genre !== "(unclassified genre)"
-                ) {
+                if (track.feats.topGenre.length == 0 && genre !== "(unclassified genre)") {
                     track.feats.topGenre = genre;
                 }
                 if (!(genre in nodeMap)) {
-                    var node = makeNode(
-                        genre,
-                        "Genre",
-                        featGenreFilter(genre),
-                        featGenreGetter(genre),
-                        featSorter("popularity", true),
-                        false,
-                    );
+                    var node = makeNode(genre, "Genre", featGenreFilter(genre), featGenreGetter(genre), featSorter("popularity", true), false);
                     theWorld[genreIndex].nodes.push(node);
                 }
                 if (!(track.feats.source in nodeMap)) {
-                    var node = makeNode(
-                        track.feats.source,
-                        "Source",
-                        featSourceFilter(track.feats.source),
-                        featSourceGetter(track.feats.source),
-                        featSorter("popularity", true),
-                        false,
-                    );
+                    var node = makeNode(track.feats.source, "Source", featSourceFilter(track.feats.source), featSourceGetter(track.feats.source), featSorter("popularity", true), false);
                     theWorld[sourceIndex].nodes.push(node);
                 }
             }
@@ -552,9 +191,7 @@ function filterTracks(tracks) {
             });
         });
     });
-    _.each(tracks, function (track) {
-        saveTrack(track);
-    });
+    _.each(tracks, function (track) { saveTrack(track); });
 }
 
 var totRefresh = 0;
@@ -566,12 +203,8 @@ function refreshTheWorld(quick) {
     totRefresh += delta;
 }
 
-function playlistSubtitle(s) {
-    $("#playlist-sub-title").text(s);
-}
-function playlistTitle(s) {
-    $("#playlist-title").text(s);
-}
+function playlistSubtitle(s) { $("#playlist-sub-title").text(s); }
+function playlistTitle(s) { $("#playlist-title").text(s); }
 
 var curPlottingNodes = {};
 var curPlottingNames = [];
@@ -592,13 +225,12 @@ function getPlotData(node) {
             size: [],
             sizeref: 1,
             sizemin: 2,
-            color: "#1DB954", // Default spotify green
+            color: "#1DB954",
         },
     };
     var xGetter = plottableData[xDataName].getter;
     var yGetter = plottableData[yDataName].getter;
 
-    var sizes = [];
     _.each(node.tracks, function (track) {
         theDataTrace.x.push(xGetter(track));
         theDataTrace.y.push(yGetter(track));
@@ -623,12 +255,8 @@ function normalizeSizes(tracks) {
     var orange = maxWidth - minWidth;
     _.each(tracks, function (track) {
         var val = sizeInfo.getter(track);
-        if (val < minSize) {
-            val = minSize;
-        }
-        if (val > maxSize) {
-            val = maxSize;
-        }
+        if (val < minSize) val = minSize;
+        if (val > maxSize) val = maxSize;
         var nval = (val - minSize) / range;
         var oval = nval * orange + minWidth;
         out.push(oval);
@@ -658,16 +286,11 @@ function getLayout() {
     var minWidth = 300;
 
     var width = plotHost.innerWidth() - xMargin;
-    if (width < minWidth) {
-        width = minWidth;
-    }
+    if (width < minWidth) width = minWidth;
     var controlsHeight = $("#plot-controls").outerHeight(true) || 0;
     var tabsHeight = $("#exTab3 > ul.nav").outerHeight(true) || 0;
-    var height =
-        $(window).height() - yMargin - yFooter - controlsHeight - tabsHeight;
-    if (height < minHeight) {
-        height = minHeight;
-    }
+    var height = $(window).height() - yMargin - yFooter - controlsHeight - tabsHeight;
+    if (height < minHeight) height = minHeight;
     var layout = {
         showlegend: true,
         legend: { orientation: "v", font: { color: "#b3b3b3" } },
@@ -734,14 +357,6 @@ function clearPlot() {
     redrawPlot();
 }
 
-function getDisplayType(getter, tracks) {
-    if (tracks.length > 0) {
-        return typeof getter(tracks[0]);
-    } else {
-        return "string";
-    }
-}
-
 function showPlaylist(node) {
     if (theTrackTable == null) return;
 
@@ -749,28 +364,50 @@ function showPlaylist(node) {
         $("#the-track-list-tab").tab("show");
     }
     curNode = node;
-    var nTracks = node.tracks.length;
-    var nArtists = node.artists.size;
-    if (node.name == "All results") {
-        playlistTitle("All results in this collection");
-    } else {
-        playlistTitle("Your " + uname(node.name) + " tracks");
+
+    var displayTracks = node.tracks;
+    if (currentSearchQuery.trim() !== "") {
+        var searchQuery = currentSearchQuery.trim().toLowerCase();
+        displayTracks = displayTracks.filter(function (track) {
+            var trackName = (track.details.name || "").toLowerCase();
+            var artistName = track.details.artists.length > 0 ? (track.details.artists[0].name || "").toLowerCase() : "";
+            var nameMatch = trackName.includes(searchQuery);
+            var artistMatch = artistName.includes(searchQuery);
+            return nameMatch || artistMatch;
+        });
     }
-    playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
+
+    var nTracks = displayTracks.length;
+    var nArtists = new Set(displayTracks.map(function (t) { return t.details.artists[0].id; })).size;
+
+    if (node.name == "All results") playlistTitle("All results in this collection");
+    else playlistTitle("Your " + uname(node.name) + " tracks");
+
+    if (currentSearchQuery.trim() !== "") {
+        playlistSubtitle("Search Results: " + nTracks + " tracks / " + nArtists + " artists");
+    } else {
+        playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
+    }
 
     $("#tbl-param").text(node.label);
-    if (node.tracks.length > maxTracksShown) {
-        $("#gthe-track-table-truncated")
-            .removeClass("hidden")
-            .addClass("block");
+    if (displayTracks.length === 0) {
+        $("#track-table-shell").addClass("hidden");
+        $("#track-table-empty").removeClass("hidden").addClass("flex");
+        $("#gthe-track-table-truncated").removeClass("block").addClass("hidden");
+        return;
+    }
+
+    $("#track-table-empty").removeClass("flex").addClass("hidden");
+    $("#track-table-shell").removeClass("hidden");
+
+    if (displayTracks.length > maxTracksShown) {
+        $("#gthe-track-table-truncated").removeClass("hidden").addClass("block");
     } else {
-        $("#gthe-track-table-truncated")
-            .removeClass("block")
-            .addClass("hidden");
+        $("#gthe-track-table-truncated").removeClass("block").addClass("hidden");
     }
     showTracksInTable(
         theTrackTable,
-        node.tracks,
+        displayTracks,
         node.getter,
         node.label,
         false,
@@ -792,13 +429,9 @@ function showStagingList() {
         $("#staging-empty").removeClass("hidden").addClass("block");
     }
     if (curSelectedTracks.length > maxTracksShown) {
-        $("#gthe-staging-table-truncated")
-            .removeClass("hidden")
-            .addClass("block");
+        $("#gthe-staging-table-truncated").removeClass("hidden").addClass("block");
     } else {
-        $("#gthe-staging-table-truncated")
-            .removeClass("block")
-            .addClass("hidden");
+        $("#gthe-staging-table-truncated").removeClass("block").addClass("hidden");
     }
     showTracksInTable(
         theStagingTable,
@@ -816,39 +449,30 @@ function getStagingTracks() {
     if (sortInfo.sortedIndexes) {
         _.each(sortInfo.sortedIndexes, function (idx) {
             var track = curSelectedTracks[idx];
-            if (curSelected.has(track.id)) {
-                out.push(track);
-            }
+            if (curSelected.has(track.id)) out.push(track);
         });
     } else {
         _.each(curSelectedTracks, function (track) {
-            if (curSelected.has(track.id)) {
-                out.push(track);
-            }
+            if (curSelected.has(track.id)) out.push(track);
         });
     }
     return out;
 }
 
-function getInt(val) {
-    return Math.round(val);
-}
-function getString(val) {
-    return val.toString();
-}
-function getDate(val) {
-    return val.format("YYYY‑MM‑DD");
-}
-function getPercent(val) {
-    return getInt(val * 100);
-}
-function getDuration(val) {
-    return getInt(val / 1000);
-}
+function getInt(val) { return Math.round(val); }
+function getString(val) { return val.toString(); }
+function getDate(val) { return val.format("YYYY‑MM‑DD"); }
+function getPercent(val) { return getInt(val * 100); }
+function getDuration(val) { return getInt(val / 1000); }
 
 function showTracksInTable(table, tracks, getter, label, isStagingList) {
+    tracks = tracks || [];
+
+    // Store current tracks onto the table object so selectAllHandler can access them
+    table.currentTracks = tracks;
+
     var data = new google.visualization.DataTable();
-    data.addColumn("string", "Select All");
+    data.addColumn("string", "Select");
     data.addColumn("string", "");
     data.addColumn("string", "Title");
     data.addColumn("string", "Artist");
@@ -873,9 +497,7 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
     _.each(tracks, function (track, i) {
         if (i >= maxTracksShown) return;
 
-        var sel = $(
-            "<input class='track-select w-4 h-4 text-spotify-green bg-spotify-elevated border-spotify-highlight rounded focus:ring-spotify-green focus:ring-2'>",
-        )
+        var sel = $("<input class='track-select w-4 h-4 text-spotify-green bg-spotify-elevated border-spotify-highlight rounded focus:ring-spotify-green focus:ring-2'>")
             .attr("type", "checkbox")
             .attr("id", "sel-" + track.id)
             .attr("title", "select to add this track to the staging list");
@@ -886,9 +508,7 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
 
         var play;
         if (track.details.preview_url != null) {
-            play = $(
-                "<span class='track-play fa fa-play text-zinc-400 hover:text-white cursor-pointer'>",
-            );
+            play = $("<span class='track-play fa fa-play text-zinc-400 hover:text-white cursor-pointer'>");
             play.attr("id", "play-" + track.id);
         } else {
             play = $("<span>");
@@ -928,10 +548,10 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
         },
     });
     table.data = data;
-    addEventHandlers($(table));
+    addEventHandlers($(table.getContainer()));
 }
 
-function addEventHandlers(table) {
+function addEventHandlers(tableContainer) {
     $(".track-select").off("change");
     $(".track-play").off("click");
 
@@ -951,7 +571,6 @@ function addEventHandlers(table) {
         } else {
             curSelected.delete(tid);
         }
-        var track = curTracks[tid];
         e.stopPropagation();
         $(".nstaging-tracks").text(curSelected.size);
         return false;
@@ -961,9 +580,7 @@ function addEventHandlers(table) {
         var tid = getTidFromElemId($(this).attr("id"));
         var track = curTracks[tid];
         if (isPlaying(track)) {
-            $(this)
-                .addClass("fa-pause text-spotify-green")
-                .removeClass("fa-play text-zinc-400");
+            $(this).addClass("fa-pause text-spotify-green").removeClass("fa-play text-zinc-400");
         }
     });
 
@@ -972,15 +589,11 @@ function addEventHandlers(table) {
         var elem = $(e.target);
         var track = curTracks[tid];
 
-        $(".track-play")
-            .removeClass("fa-pause text-spotify-green")
-            .addClass("fa-play text-zinc-400");
+        $(".track-play").removeClass("fa-pause text-spotify-green").addClass("fa-play text-zinc-400");
         if (isPlaying(track)) {
             stopTrack(track);
         } else {
-            elem
-                .removeClass("fa-play text-zinc-400")
-                .addClass("fa-pause text-spotify-green");
+            elem.removeClass("fa-play text-zinc-400").addClass("fa-pause text-spotify-green");
             playTrack(track);
         }
         e.stopPropagation();
@@ -988,9 +601,7 @@ function addEventHandlers(table) {
     });
 }
 
-function getTidFromElemId(elemId) {
-    return elemId.split("-")[1];
-}
+function getTidFromElemId(elemId) { return elemId.split("-")[1]; }
 
 function saveTracksToPlaylist(playlist, inputTracks) {
     var tracks = inputTracks.slice();
@@ -1001,20 +612,12 @@ function saveTracksToPlaylist(playlist, inputTracks) {
             uris.push(track.details.uri);
         }
 
-        var url =
-            "https://api.spotify.com/v1/users/" +
-            curUserID +
-            "/playlists/" +
-            playlist.id +
-            "/tracks";
+        var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists/" + playlist.id + "/tracks";
         var params = { uris: uris };
-        callSpotify("POST", url, params, function (ok, results) {
+        callSpotify("POST", url, params, function (ok) {
             if (ok) {
-                if (tracks.length > 0) {
-                    saveTracks();
-                } else {
-                    info("playlist saved");
-                }
+                if (tracks.length > 0) saveTracks();
+                else info("playlist saved");
             } else {
                 error("Trouble adding tracks to playlist");
             }
@@ -1024,16 +627,7 @@ function saveTracksToPlaylist(playlist, inputTracks) {
 }
 
 function makeNode(name, label, filter, getter, sorter, plottable) {
-    var node = {
-        name: name,
-        label: label,
-        plottable: plottable,
-        tracks: [],
-        artists: new Set(),
-        filter: filter,
-        getter: getter,
-        sorter: sorter,
-    };
+    var node = { name: name, label: label, plottable: plottable, tracks: [], artists: new Set(), filter: filter, getter: getter, sorter: sorter };
     nodeMap[name] = node;
     return node;
 }
@@ -1043,8 +637,7 @@ function savePlaylist() {
     if (curTracks.length > 0) {
         var name = $("#staging-playlist-name").text();
         info("saving " + name);
-        var url =
-            "https://api.spotify.com/v1/users/" + curUserID + "/playlists";
+        var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists";
         callSpotify("POST", url, { name: name }, function (ok, results) {
             if (ok) {
                 saveTracksToPlaylist(results, curTracks);
@@ -1057,6 +650,40 @@ function savePlaylist() {
     }
 }
 
+function collapseAllSidebar() {
+    sidebarExpanded = false;
+    $(".playlist-list").slideUp(200);
+    $("#sidebar h4 i").removeClass("fa-chevron-up").addClass("fa-chevron-down");
+    updateSidebarToggleButton();
+}
+
+function expandAllSidebar() {
+    sidebarExpanded = true;
+    $(".playlist-list").slideDown(200);
+    $("#sidebar h4 i").removeClass("fa-chevron-down").addClass("fa-chevron-up");
+    updateSidebarToggleButton();
+}
+
+function toggleSidebarSections() {
+    if (sidebarExpanded) collapseAllSidebar();
+    else expandAllSidebar();
+}
+
+function updateSidebarToggleButton() {
+    var button = $("#sidebar-toggle-btn");
+    if (button.length == 0) return;
+    var icon = button.find("i");
+    if (sidebarExpanded) {
+        icon.removeClass("fa-angle-double-down").addClass("fa-angle-double-up");
+        button.attr("title", "Collapse all categories");
+        button.attr("aria-label", "Collapse all categories");
+    } else {
+        icon.removeClass("fa-angle-double-up").addClass("fa-angle-double-down");
+        button.attr("title", "Expand all categories");
+        button.attr("aria-label", "Expand all categories");
+    }
+}
+
 function updateViewOfTheWorld(quick) {
     var minTracksForSection = 3;
     var sidebar = $("#sidebar");
@@ -1064,27 +691,32 @@ function updateViewOfTheWorld(quick) {
     var first = true;
 
     updateFavs();
-    _.each(theWorld, function (bin) {
+    var renderWorld = theWorld.slice();
+    if (renderWorld.length > 0) {
+        renderWorld = [renderWorld[renderWorld.length - 1]].concat(renderWorld.slice(0, renderWorld.length - 1));
+    }
+
+    var sidebarControls = $("<div class='mb-4 flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/20 px-3 py-3'></div>");
+    sidebarControls.append($("<div class='min-w-0'></div>").append($("<div class='text-xs font-bold uppercase tracking-wider text-zinc-400'>Library bins</div>").append($("<div class='text-[11px] text-zinc-500'>Top result first, categories below.</div>"))));
+    var toggleButton = $("<button type='button' id='sidebar-toggle-btn' class='inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 transition-colors hover:border-spotify-green hover:text-spotify-green'></button>");
+    toggleButton.append($("<i class='fa fa-angle-double-up text-xs'></i>"));
+    toggleButton.on("click", function () { toggleSidebarSections(); });
+    sidebarControls.append(toggleButton);
+    sidebar.append(sidebarControls);
+
+    _.each(renderWorld, function (bin) {
         var nodes = sortedNodes(bin.nodes);
 
-        // Creating the header with Tailwind classes instead of Bootstrap collapse
         var head = $("<h4>")
             .text(uname(bin.name))
-            .addClass(
-                "mt-4 mb-2 pb-1 border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-400 cursor-pointer hover:text-white flex justify-between items-center transition-colors",
-            );
-        head.append(
-            $(
-                "<i class='fa fa-chevron-down text-zinc-500 text-[10px] transition-transform duration-200'></i>",
-            ),
-        );
+            .addClass("mt-4 mb-2 pb-1 border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-400 cursor-pointer hover:text-white flex justify-between items-center transition-colors");
+        head.append($("<i class='fa fa-chevron-down text-zinc-500 text-[10px] transition-transform duration-200'></i>"));
         sidebar.append(head);
 
         var ul = $("<ul class='playlist-list'>");
         ul.attr("id", nname(bin.name));
         sidebar.append(ul);
 
-        // Use Vanilla jQuery slide toggle logic (bypassing Bootstrap conflicts)
         head.on("click", function () {
             ul.slideToggle(200);
             $(this).find("i").toggleClass("fa-chevron-down fa-chevron-up");
@@ -1096,12 +728,8 @@ function updateViewOfTheWorld(quick) {
             if (tracks.length >= minTracksForSection) {
                 var header = $("<li>")
                     .text(uname(node.name))
-                    .addClass(
-                        "py-1 px-2 text-sm text-zinc-300 cursor-pointer hover:text-white hover:bg-[#3E3E3E] rounded transition-colors duration-150 flex justify-between items-center",
-                    );
-                var stats = $(
-                    "<span class='stats text-xs text-zinc-500 ml-2'>",
-                ).text("(" + tracks.length + ")");
+                    .addClass("py-1 px-2 text-sm text-zinc-300 cursor-pointer hover:text-white hover:bg-[#3E3E3E] rounded transition-colors duration-150 flex justify-between items-center");
+                var stats = $("<span class='stats text-xs text-zinc-500 ml-2'>").text("(" + tracks.length + ")");
                 header.append(stats);
                 if (!quick) {
                     header.on("click", function () {
@@ -1117,95 +745,32 @@ function updateViewOfTheWorld(quick) {
                 ul.append(header);
             }
         });
+
+        if (!sidebarExpanded) {
+            ul.hide();
+            head.find("i").removeClass("fa-chevron-up").addClass("fa-chevron-down");
+        }
     });
+
+    updateSidebarToggleButton();
     persistCurrentCollection();
 }
 
 var plottableData = {
-    energy: {
-        name: "energy",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("energy"),
-    },
-    danceability: {
-        name: "danceability",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("danceability"),
-    },
-    valence: {
-        name: "valence",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("valence"),
-    },
-    duration: {
-        name: "duration",
-        min: 0,
-        max: 1500,
-        getter: featGetter("duration"),
-    },
-    tempo: {
-        name: "tempo",
-        min: 40,
-        max: 240,
-        getter: featGetter("tempo"),
-    },
-    anger: {
-        name: "anger",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("anger"),
-    },
-    happiness: {
-        name: "happiness",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("happiness"),
-    },
-    loudness: {
-        name: "loudness",
-        min: -30,
-        max: 0,
-        getter: featGetter("loudness"),
-    },
-    acousticness: {
-        name: "acousticness",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("acousticness"),
-    },
-    liveness: {
-        name: "live",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("liveness"),
-    },
-    speechiness: {
-        name: "speechiness",
-        min: 0,
-        max: 1,
-        getter: featGetterPercent("speechiness"),
-    },
-    popularity: {
-        name: "popularity",
-        min: 0,
-        max: 100,
-        getter: featGetter("popularity"),
-    },
-    age: {
-        min: 0,
-        max: 5000,
-        name: "days-since-added",
-        getter: featGetter("age"),
-    },
-    year: {
-        min: 1950,
-        max: 2020,
-        name: "release-year",
-        getter: featGetter("year"),
-    },
+    energy: { name: "energy", min: 0, max: 1, getter: featGetterPercent("energy") },
+    danceability: { name: "danceability", min: 0, max: 1, getter: featGetterPercent("danceability") },
+    valence: { name: "valence", min: 0, max: 1, getter: featGetterPercent("valence") },
+    duration: { name: "duration", min: 0, max: 1500, getter: featGetter("duration") },
+    tempo: { name: "tempo", min: 40, max: 240, getter: featGetter("tempo") },
+    anger: { name: "anger", min: 0, max: 1, getter: featGetterPercent("anger") },
+    happiness: { name: "happiness", min: 0, max: 1, getter: featGetterPercent("happiness") },
+    loudness: { name: "loudness", min: -30, max: 0, getter: featGetter("loudness") },
+    acousticness: { name: "acousticness", min: 0, max: 1, getter: featGetterPercent("acousticness") },
+    liveness: { name: "live", min: 0, max: 1, getter: featGetterPercent("liveness") },
+    speechiness: { name: "speechiness", min: 0, max: 1, getter: featGetterPercent("speechiness") },
+    popularity: { name: "popularity", min: 0, max: 100, getter: featGetter("popularity") },
+    age: { min: 0, max: 5000, name: "days-since-added", getter: featGetter("age") },
+    year: { min: 1950, max: 2020, name: "release-year", getter: featGetter("year") },
 };
 
 function addPlotSelect(elem, defaultValue) {
@@ -1223,12 +788,8 @@ function addPlotSelect(elem, defaultValue) {
     elem.on("change", redrawPlot);
 }
 
-function nname(s) {
-    return s.replace(/ /g, "_");
-}
-function uname(s) {
-    return s.replace(/_/g, " ");
-}
+function nname(s) { return s.replace(/ /g, "_"); }
+function uname(s) { return s.replace(/_/g, " "); }
 
 function sortedNodes(nodes) {
     nodes.sort(function (a, b) {
@@ -1243,18 +804,9 @@ function sortedNodes(nodes) {
     return nodes;
 }
 
-function featGenreFilter(genre) {
-    return function (track) {
-        return track.feats.genres.has(genre);
-    };
-}
-function featGenreGetter(genre) {
-    return function (track) {
-        var glist = Array.from(track.feats.genres);
-        return glist.join(", ");
-    };
-}
-function featGenreSorter(genre) {
+function featGenreFilter(genre) { return function (track) { return track.feats.genres.has(genre); }; }
+function featGenreGetter(genre) { return function (track) { var glist = Array.from(track.feats.genres); return glist.join(", "); }; }
+function featGenreSorter() {
     return function (tracks) {
         tracks.sort(function (a, b) {
             if (a.feats.genres.size > b.feats.genres.size) return 1;
@@ -1265,16 +817,8 @@ function featGenreSorter(genre) {
     };
 }
 
-function featSourceFilter(source) {
-    return function (track) {
-        return track.feats.source == source;
-    };
-}
-function featSourceGetter(source) {
-    return function (track) {
-        return track.feats.source;
-    };
-}
+function featSourceFilter(source) { return function (track) { return track.feats.source == source; }; }
+function featSourceGetter(source) { return function (track) { return track.feats.source; }; }
 
 function featSorter(param, reverse) {
     return function (tracks) {
@@ -1288,64 +832,26 @@ function featSorter(param, reverse) {
     };
 }
 
-function featGetter(param) {
-    return function (track) {
-        return track.feats[param];
-    };
-}
-function featGetterInt(param) {
-    return function (track) {
-        return Math.round(track.feats[param]);
-    };
-}
-function featGetterPercent(param) {
-    return function (track) {
-        return Math.round(100 * track.feats[param]);
-    };
-}
-function featGetterBool(param, true_val, false_val) {
-    return function (track) {
-        return track.feats[param] ? true_val : false_val;
-    };
-}
-
-function featBoolFilter(param, state) {
-    return function (track) {
-        return "feats" in track && track.feats[param] == state;
-    };
-}
+function featGetter(param) { return function (track) { return track.feats[param]; }; }
+function featGetterInt(param) { return function (track) { return Math.round(track.feats[param]); }; }
+function featGetterPercent(param) { return function (track) { return Math.round(100 * track.feats[param]); }; }
+function featGetterBool(param, true_val, false_val) { return function (track) { return track.feats[param] ? true_val : false_val; }; }
+function featBoolFilter(param, state) { return function (track) { return "feats" in track && track.feats[param] == state; }; }
 function featMusicFilter(param, low, high) {
     return function (track) {
-        return (
-            "feats" in track &&
-            track.feats.speechiness < 0.8 &&
-            track.feats[param] >= low &&
-            track.feats[param] <= high
-        );
+        return ("feats" in track && track.feats.speechiness < 0.8 && track.feats[param] >= low && track.feats[param] <= high);
     };
 }
-
-function featMissingFilter(param) {
-    return function (track) {
-        return !("energy" in track.feats);
-    };
-}
-
+function featMissingFilter(param) { return function (track) { return !("energy" in track.feats); }; }
 function featFilter(param, low, high) {
     return function (track) {
-        return (
-            "feats" in track &&
-            track.feats[param] >= low &&
-            track.feats[param] <= high
-        );
+        return ("feats" in track && track.feats[param] >= low && track.feats[param] <= high);
     };
 }
 
 function applyFilter(tracks, filt) {
     var out = [];
-    _.each(tracks, function (track) {
-        if (filt(track)) out.push(track);
-    });
+    _.each(tracks, function (track) { if (filt(track)) out.push(track); });
     return out;
 }
 
@@ -1369,17 +875,13 @@ function getGenresForTrack(track) {
     var albumId = track.details.album_id;
     if (albumId in curAlbums) {
         var album = curAlbums[albumId];
-        _.each(album.genres, function (g) {
-            genres.push(g);
-        });
+        _.each(album.genres, function (g) { genres.push(g); });
     }
 
     _.each(track.details.artists, function (artist) {
         if (artist.id in curArtists) {
             var detailedArtist = curArtists[artist.id];
-            _.each(detailedArtist.genres, function (genre) {
-                genres.push(genre);
-            });
+            _.each(detailedArtist.genres, function (genre) { genres.push(genre); });
         }
     });
     if (genres.length == 0) genres.push("(unclassified genre)");
@@ -1395,19 +897,12 @@ function isGoodGenre(genre) {
     return true;
 }
 
-function error(msg) {
-    info(msg);
-}
-function info(msg) {
-    $("#info").text(msg);
-}
-function linfo(msg) {
-    $("#linfo").text(msg);
-}
+function error(msg) { info(msg); }
+function info(msg) { $("#info").text(msg); }
+function linfo(msg) { $("#linfo").text(msg); }
 
 function generateRandomString(length) {
-    var possible =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     var values = crypto.getRandomValues(new Uint8Array(length));
     return Array.from(values).reduce(function (acc, x) {
         return acc + possible[x % possible.length];
@@ -1422,9 +917,7 @@ function sha256(plain) {
 
 function base64encode(input) {
     return btoa(String.fromCharCode.apply(null, new Uint8Array(input)))
-        .replace(/=/g, "")
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_");
+        .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 async function authorizeUser() {
@@ -1435,19 +928,11 @@ async function authorizeUser() {
     var hashed = await sha256(codeVerifier);
     var codeChallenge = base64encode(hashed);
 
-    var authUrl =
-        "https://accounts.spotify.com/authorize?" +
-        "client_id=" +
-        encodeURIComponent(SPOTIFY_CLIENT_ID) +
-        "&response_type=code" +
-        "&show_dialog=false" +
-        "&scope=" +
-        encodeURIComponent(scopes) +
-        "&redirect_uri=" +
-        encodeURIComponent(SPOTIFY_REDIRECT_URI) +
-        "&code_challenge_method=S256" +
-        "&code_challenge=" +
-        encodeURIComponent(codeChallenge);
+    var authUrl = "https://accounts.spotify.com/authorize?" +
+        "client_id=" + encodeURIComponent(SPOTIFY_CLIENT_ID) +
+        "&response_type=code&show_dialog=false&scope=" + encodeURIComponent(scopes) +
+        "&redirect_uri=" + encodeURIComponent(SPOTIFY_REDIRECT_URI) +
+        "&code_challenge_method=S256&code_challenge=" + encodeURIComponent(codeChallenge);
 
     document.location = authUrl;
 }
@@ -1468,17 +953,21 @@ function exchangeCodeForToken(code) {
 }
 
 function callSpotify(type, url, json, callback) {
-    $.ajax(url, {
-        type: type,
-        data: JSON.stringify(json),
+    var backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8000/api/spotify'
+        : '/api/spotify';
+
+    $.ajax(backendUrl, {
+        type: 'POST',
+        data: JSON.stringify({
+            url: url,
+            method: type,
+            data: json,
+            accessToken: accessToken
+        }),
         dataType: "json",
-        headers: {
-            Authorization: "Bearer " + accessToken,
-            "Content-Type": "application/json",
-        },
-        success: function (r) {
-            callback(true, r);
-        },
+        contentType: "application/json",
+        success: function (r) { callback(true, r); },
         error: function (r) {
             if (r.status >= 200 && r.status < 300) callback(true, r);
             else callback(false, r);
@@ -1491,13 +980,20 @@ function getSpotifyP(url, data) {
         var curRetry = 0;
         var maxRetries = 10;
         function go() {
-            $.ajax(url, {
+            var backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:8000/api/spotify'
+                : '/api/spotify';
+
+            $.ajax(backendUrl, {
+                type: 'POST',
                 dataType: "json",
-                data: data,
-                headers: { Authorization: "Bearer " + accessToken },
-                success: function (data) {
-                    resolve(data);
-                },
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    url: url,
+                    data: data,
+                    accessToken: accessToken
+                }),
+                success: function (data) { resolve(data); },
                 error: function (jqXHR, textStatus) {
                     if (jqXHR.status >= 200 && jqXHR.status < 300) resolve(jqXHR);
                     else if (jqXHR.status == 401) window.location = "index.html";
@@ -1509,8 +1005,7 @@ function getSpotifyP(url, data) {
                         var retryAfter = jqXHR.getResponseHeader("Retry-After");
                         if (retryAfter) retry = parseInt(retryAfter, 10) * 1000;
                         if (retry < 1000) retry = 1000;
-                        if (curRetry++ < maxRetries)
-                            setTimeout(go, retry + curRetry * retry);
+                        if (curRetry++ < maxRetries) setTimeout(go, retry + curRetry * retry);
                         else reject(textStatus + " after " + maxRetries + " retries");
                     } else {
                         reject(textStatus);
@@ -1549,30 +1044,46 @@ function stopTrack() {
 }
 
 function collectAudioAttributes(tracks) {
-    var trackIds = [];
+    var maxTracksPerCall = 100;
+    var tids = [];
+    var deferred = RSVP.defer();
+
     _.each(tracks, function (track) {
-        trackIds.push(track.id);
+        tids.push(track.id);
     });
 
-    return getSpotifyP("https://api.spotify.com/v1/audio-features", {
-        ids: trackIds.join(","),
-    }).then(function (results) {
-        _.each(results.audio_features, function (audio_feature) {
-            if (audio_feature) {
-                var track = curTracks[audio_feature.id];
-                _.each(audio_feature, function (val, name) {
-                    track.feats[name] = val;
+    function getNextAudioBatch() {
+        var nextTids = getNextBatch(tids, maxTracksPerCall);
+        if (nextTids.length > 0) {
+            getSpotifyP("https://api.spotify.com/v1/audio-features", {
+                ids: nextTids.join(","),
+            })
+                .then(function (results) {
+                    if (results && results.audio_features) {
+                        _.each(results.audio_features, function (audio_feature) {
+                            if (audio_feature && audio_feature.id) {
+                                var track = curTracks[audio_feature.id];
+                                _.each(audio_feature, function (val, name) {
+                                    track.feats[name] = val;
+                                });
+                                track.feats.sadness = (1 - audio_feature.energy) * (1 - audio_feature.valence);
+                                track.feats.happiness = audio_feature.energy * audio_feature.valence;
+                                track.feats.anger = audio_feature.energy * (1 - audio_feature.valence);
+                            }
+                        });
+                    }
+                    getNextAudioBatch();
+                })
+                .catch(function (error) {
+                    deferred.reject(error);
                 });
-                track.feats.sadness =
-                    (1 - audio_feature.energy) * (1 - audio_feature.valence);
-                track.feats.happiness =
-                    audio_feature.energy * audio_feature.valence;
-                track.feats.anger =
-                    audio_feature.energy * (1 - audio_feature.valence);
-            }
-        });
-        return results;
-    });
+        } else {
+            deferred.resolve();
+        }
+    }
+
+    getNextAudioBatch();
+    return deferred.promise;
 }
 
 function collectArtistAttributes(tracks) {
@@ -1583,24 +1094,16 @@ function collectArtistAttributes(tracks) {
     function getNextArtists() {
         var nextAids = getNextBatch(aids, maxArtistsPerCall);
         if (nextAids.length > 0) {
-            return getSpotifyP("https://api.spotify.com/v1/artists", {
-                ids: nextAids.join(","),
-            })
+            return getSpotifyP("https://api.spotify.com/v1/artists", { ids: nextAids.join(",") })
                 .then(function (results) {
                     _.each(results.artists, function (artist) {
                         if (artist != null && "id" in artist) {
-                            curArtists[artist.id] = {
-                                genres: artist.genres,
-                                name: artist.name,
-                                count: 1,
-                            };
+                            curArtists[artist.id] = { genres: artist.genres, name: artist.name, count: 1 };
                         }
                     });
                     getNextArtists();
                 })
-                .catch(function (error) {
-                    deferred.reject(error);
-                });
+                .catch(function (error) { deferred.reject(error); });
         } else {
             deferred.resolve(curArtists);
         }
@@ -1634,23 +1137,16 @@ function collectAlbumAttributes(tracks) {
     function getNextAlbums() {
         var nextAids = getNextBatch(aids, maxAlbumsPerCall);
         if (nextAids.length > 0) {
-            getSpotifyP("https://api.spotify.com/v1/albums", {
-                ids: nextAids.join(","),
-            })
+            getSpotifyP("https://api.spotify.com/v1/albums", { ids: nextAids.join(",") })
                 .then(function (results) {
                     _.each(results.albums, function (album) {
                         if (album != null && "id" in album) {
-                            curAlbums[album.id] = {
-                                release_date: album.release_date,
-                                genres: album.genres,
-                            };
+                            curAlbums[album.id] = { release_date: album.release_date, genres: album.genres };
                         }
                     });
                     getNextAlbums();
                 })
-                .catch(function (error) {
-                    deferred.reject(error);
-                });
+                .catch(function (error) { deferred.reject(error); });
         } else {
             deferred.resolve(curAlbums);
         }
@@ -1658,8 +1154,7 @@ function collectAlbumAttributes(tracks) {
 
     var aidSet = new Set();
     _.each(tracks, function (track) {
-        if (!(track.details.album_id in curAlbums))
-            aidSet.add(track.details.album_id);
+        if (!(track.details.album_id in curAlbums)) aidSet.add(track.details.album_id);
     });
     aids = Array.from(aidSet);
     getNextAlbums();
@@ -1677,25 +1172,22 @@ var showingTracks = false;
 var tt = $("#tiny-track");
 
 function showLoadingState() {
-    $("#sidebar").addClass("hidden");
+    // FIX 5: Safely remove the md:block class to ensure it actually hides when fetching
+    $("#sidebar").removeClass("md:block").addClass("hidden");
     $("#loaded").addClass("hidden");
     $("#loading").removeClass("hidden");
 }
 
 function showLoadedState() {
-    $("#sidebar").removeClass("hidden");
+    // FIX 5: Ensure sidebar gets its intended desktop structure classes back
+    $("#sidebar").removeClass("hidden").addClass("md:block");
     $("#loaded").removeClass("hidden").addClass("flex");
     $("#loading").addClass("hidden");
 }
 
 function showTracks(prefix, tracks) {
     _.each(tracks, function (track) {
-        var text =
-            prefix +
-            " - " +
-            track.details.artists[0].name +
-            " - " +
-            track.details.name;
+        var text = prefix + " - " + track.details.artists[0].name + " - " + track.details.name;
         trackTextQueue.push(text);
     });
 }
@@ -1718,121 +1210,106 @@ function startShowingTracks() {
     showLoadingState();
     showTracksUpdater();
 }
-function stopShowingTracks() {
-    showingTracks = false;
-}
+function stopShowingTracks() { showingTracks = false; }
 
 function getTracksFromAPI(source, uri) {
     var deferred = RSVP.defer();
+    var allNewTracks = [];
+    var allLoadedTracks = [];
+    var now = moment();
+
+    function processItems(items) {
+        _.each(items, function (item) {
+            if (!item.is_local && item.track && "id" in item.track) {
+                item.track.added_at = item.added_at;
+                item.track.date_added = moment(item.added_at);
+                item.track.age = moment.duration(now.diff(item.track.date_added)).asDays();
+                var track = {
+                    id: item.track.id,
+                    feats: {
+                        date_added: moment(item.added_at),
+                        age: item.track.age,
+                        explicit: item.track.explicit,
+                        duration_ms: item.track.duration_ms,
+                        popularity: item.track.popularity,
+                        source: source,
+                        count: 1,
+                    },
+                    details: {
+                        name: item.track.name,
+                        album_id: item.track.album.id,
+                        uri: item.track.uri,
+                        preview_url: item.track.preview_url,
+                        artists: tinyArtists(item.track.artists),
+                    },
+                };
+                if (track.id in curTracks) {
+                    curTracks[track.id].feats.count += 1;
+                    var count = curTracks[track.id].feats.count;
+                    if (count > topTrackCount) {
+                        topTrackCount = count;
+                        topTrackName = item.track.name;
+                    }
+                } else {
+                    var ntrack = loadTrack(track.id);
+                    if (ntrack != null) {
+                        curTracks[track.id] = ntrack;
+                        curTracks[track.id].feats.count = 1;
+                        allLoadedTracks.push(ntrack);
+                    } else {
+                        allNewTracks.push(track);
+                        curTracks[track.id] = track;
+                    }
+                }
+            }
+        });
+    }
 
     function go(offset) {
-        var params = { limit: 50, market: "from_token", offset: offset };
-        getSpotifyP(uri, params)
+        getSpotifyP(uri, { limit: 50, market: "from_token", offset: offset })
             .then(function (results) {
-                var now = moment();
-                var tracks = [];
-                var loadedTracks = [];
-                _.each(results.items, function (item) {
-                    if (!item.is_local && item.track && "id" in item.track) {
-                        item.track.added_at = item.added_at;
-                        item.track.date_added = moment(item.added_at);
-                        item.track.age = moment
-                            .duration(now.diff(item.track.date_added))
-                            .asDays();
-                        var track = {
-                            id: item.track.id,
-                            feats: {
-                                date_added: moment(item.added_at),
-                                age: moment
-                                    .duration(now.diff(item.track.date_added))
-                                    .asDays(),
-                                explicit: item.track.explicit,
-                                duration_ms: item.track.duration_ms,
-                                popularity: item.track.popularity,
-                                source: source,
-                                count: 1,
-                            },
-                            details: {
-                                name: item.track.name,
-                                album_id: item.track.album.id,
-                                uri: item.track.uri,
-                                preview_url: item.track.preview_url,
-                                artists: tinyArtists(item.track.artists),
-                            },
-                        };
-                        if (track.id in curTracks) {
-                            curTracks[track.id].feats.count += 1;
-                            var count = curTracks[track.id].feats.count;
-                            if (count > topTrackCount) {
-                                topTrackCount = count;
-                                topTrackName = item.track.name;
-                            }
-                        } else {
-                            var ntrack = loadTrack(track.id);
-                            if (ntrack != null) {
-                                curTracks[track.id] = ntrack;
-                                curTracks[track.id].feats.count = 1;
-                                loadedTracks.push(ntrack);
-                            } else {
-                                tracks.push(track);
-                                curTracks[track.id] = track;
-                            }
-                        }
-                    }
-                });
-                showTracks(source, tracks);
-                refreshHeader();
                 totalTracks = results.total;
+                processItems(results.items);
+                showTracks(source, allNewTracks.slice(offset));
+                refreshHeader();
 
-                collectAudioAttributes(tracks)
-                    .then(function () {
-                        return collectArtistAttributes(tracks);
-                    })
-                    .then(function () {
-                        return collectAlbumAttributes(tracks);
-                    })
-                    .then(function () {
-                        addTracks(tracks);
-                        filterTracks(tracks);
-                        filterTracks(loadedTracks);
-                        if (
-                            !abortLoading &&
-                            results.offset + results.items.length < results.total
-                        ) {
-                            go(results.offset + results.items.length);
-                        } else {
+                if (!abortLoading && offset + results.items.length < results.total) {
+                    go(offset + results.items.length);
+                } else {
+                    collectAudioAttributes(allNewTracks)
+                        .then(function () { return collectArtistAttributes(allNewTracks); })
+                        .then(function () { return collectAlbumAttributes(allNewTracks); })
+                        .then(function () {
+                            addTracks(allNewTracks);
+                            filterTracks(allNewTracks);
+                            filterTracks(allLoadedTracks);
                             refreshTheWorld(true);
                             deferred.resolve(curTracks);
-                        }
-                    });
+                        })
+                        .catch(function (err) { deferred.reject(err); });
+                }
             })
             .catch(function (error) {
                 deferred.reject(error);
             });
     }
+
     go(0);
     return deferred.promise;
 }
 
 function tinyArtists(artists) {
     var tartists = [];
-    _.each(artists, function (artist) {
-        tartists.push({ id: artist.id, name: artist.name });
-    });
+    _.each(artists, function (artist) { tartists.push({ id: artist.id, name: artist.name }); });
     return tartists;
 }
 
 function getSavedTracks() {
     startShowingTracks();
     $("#lplaylist-name").text("Your Saved Tracks");
-    getTracksFromAPI(
-        "Your Saved tracks",
-        "https://api.spotify.com/v1/me/tracks",
-    )
-        .then(function (results) { })
-        .catch(function (results) {
-            console.log("GST catch " + results);
-        })
+    getTracksFromAPI("Your Saved tracks", "https://api.spotify.com/v1/me/tracks")
+        .then(function () { })
+        .catch(function (results) { console.log("GST catch " + results); })
         .finally(function () {
             stopShowingTracks();
             refreshTheWorld(false);
@@ -1843,10 +1320,7 @@ function getSavedTracks() {
 function getAllMusic() {
     startShowingTracks();
     $("#lplaylist-name").text("Your Saved Tracks");
-    getTracksFromAPI(
-        "Your Saved Tracks",
-        "https://api.spotify.com/v1/me/tracks",
-    ).then(function (results) {
+    getTracksFromAPI("Your Saved Tracks", "https://api.spotify.com/v1/me/tracks").then(function () {
         getMusicFromPlaylists(true);
     });
 }
@@ -1862,13 +1336,10 @@ function getMusicFromPlaylists(allPlaylists) {
                     var outstandingPlaylists = [];
                     var count = results.offset + results.items.length;
                     totalPlaylists = results.total;
-                    _.each(results.items, function (playlist) {
-                        outstandingPlaylists.push(playlist);
-                    });
+                    _.each(results.items, function (playlist) { outstandingPlaylists.push(playlist); });
                     loadPlaylists(outstandingPlaylists, allPlaylists).then(
                         function () {
-                            if (!abortLoading && count < results.total)
-                                getMyPlaylists(count);
+                            if (!abortLoading && count < results.total) getMyPlaylists(count);
                             else deferred.resolve(outstandingPlaylists);
                         },
                     );
@@ -1876,9 +1347,7 @@ function getMusicFromPlaylists(allPlaylists) {
                     deferred.reject(new Error("can't get your playlist"));
                 }
             })
-            .catch(function (error) {
-                deferred.reject(error);
-            });
+            .catch(function (error) { deferred.reject(error); });
     }
 
     startShowingTracks();
@@ -1886,9 +1355,7 @@ function getMusicFromPlaylists(allPlaylists) {
 
     deferred.promise
         .then(function () { })
-        .catch(function (theError) {
-            error("trouble, " + theError);
-        })
+        .catch(function (theError) { error("trouble, " + theError); })
         .finally(function () {
             stopShowingTracks();
             refreshTheWorld(false);
@@ -1905,17 +1372,12 @@ function loadPlaylists(playlists, allPlaylists) {
         if (!abortLoading && playlists.length > 0) {
             processedPlaylists += 1;
             var playlist = playlists.shift();
-            if (quickMode && processedPlaylists > 100)
-                return deferred.resolve(playlists);
+            if (quickMode && processedPlaylists > 100) return deferred.resolve(playlists);
             if (isGoodPlaylist(playlist, allPlaylists)) {
-                $("#lplaylist-name").text(
-                    playlist.name + " (" + playlist.tracks.total + " tracks)",
-                );
+                $("#lplaylist-name").text(playlist.name + " (" + playlist.tracks.total + " tracks)");
                 getPlaylistTracks(playlist)
-                    .then(function () {
-                        fetchNextPlaylist();
-                    })
-                    .catch(function (error) {
+                    .then(function () { fetchNextPlaylist(); })
+                    .catch(function () {
                         console.log("trouble loading playlist", playlist);
                         fetchNextPlaylist();
                     });
@@ -1941,8 +1403,7 @@ function getPlaylistTracks(playlist) {
     var uri = playlist.uri;
     if (isValidPlaylistUri(uri)) {
         var playlistID = getPlaylistPid(uri);
-        var url =
-            "https://api.spotify.com/v1/playlists/" + playlistID + "/tracks";
+        var url = "https://api.spotify.com/v1/playlists/" + playlistID + "/tracks";
         return getTracksFromAPI(playlist.name, url);
     } else {
         var deferred = RSVP.defer();
@@ -1978,13 +1439,8 @@ function getPlaylistPid(uri) {
     return null;
 }
 
-function saveInfo(params) {
-    localStorage.setItem("info", JSON.stringify(params));
-}
-function getInfo(params) {
-    var item = localStorage.getItem("info");
-    return JSON.parse(item);
-}
+function saveInfo(params) { localStorage.setItem("info", JSON.stringify(params)); }
+function getInfo() { var item = localStorage.getItem("info"); return JSON.parse(item); }
 
 function getCollectionCacheKey(info) {
     var type = info && info.type ? info.type : "unknown";
@@ -1996,9 +1452,7 @@ function serializeTrack(track) {
     return {
         id: track.id,
         feats: {
-            date_added: track.feats.date_added
-                ? track.feats.date_added.toISOString()
-                : null,
+            date_added: track.feats.date_added ? track.feats.date_added.toISOString() : null,
             age: track.feats.age,
             explicit: track.feats.explicit,
             duration_ms: track.feats.duration_ms,
@@ -2034,9 +1488,7 @@ function deserializeTrack(rawTrack) {
     return {
         id: rawTrack.id,
         feats: {
-            date_added: rawTrack.feats.date_added
-                ? moment(rawTrack.feats.date_added)
-                : moment(),
+            date_added: rawTrack.feats.date_added ? moment(rawTrack.feats.date_added) : moment(),
             age: rawTrack.feats.age,
             explicit: rawTrack.feats.explicit,
             duration_ms: rawTrack.feats.duration_ms,
@@ -2128,9 +1580,7 @@ function persistCurrentCollection() {
                 curTypeName: curTypeName,
             }),
         );
-    } catch (error) {
-        console.log("Unable to persist collection cache", error);
-    }
+    } catch (error) { console.log("Unable to persist collection cache", error); }
 }
 
 function restoreCurrentCollection(info) {
@@ -2175,8 +1625,7 @@ function restoreCurrentCollection(info) {
 function startCollectionFetch(info) {
     if (info.type == "saved") getSavedTracks();
     else if (info.type == "added") getMusicFromPlaylists(false);
-    else if (info.type == "playlist")
-        getPlaylistFromURI("Your Playlist", info.uri);
+    else if (info.type == "playlist") getPlaylistFromURI("Your Playlist", info.uri);
     else if (info.type == "follow") getMusicFromPlaylists(true);
     else if (info.type == "all") getAllMusic();
     else console.log("unexpected type", info.type);
@@ -2185,9 +1634,7 @@ function startCollectionFetch(info) {
 function queueRestoreOrFetch(info) {
     var cacheKey = getCollectionCacheKey(info);
     if (localStorage.getItem(cacheKey)) {
-        pendingFetchStarter = function () {
-            startCollectionFetch(info);
-        };
+        pendingFetchStarter = function () { startCollectionFetch(info); };
         if (theTrackTable != null && theStagingTable != null) {
             if (!restoreCurrentCollection(info) && pendingFetchStarter) {
                 var fallbackFetch = pendingFetchStarter;
@@ -2262,54 +1709,37 @@ function setProgress(percent) {
 }
 
 function initTables() {
-    theTrackTable = new google.visualization.Table(
-        document.getElementById("gthe-track-table"),
-    );
-    google.visualization.events.addListener(
-        theTrackTable,
-        "ready",
-        function (e) { },
-    );
-    google.visualization.events.addListener(
-        theTrackTable,
-        "select",
-        function (e) { },
-    );
+    theTrackTable = new google.visualization.Table(document.getElementById("gthe-track-table"));
+    google.visualization.events.addListener(theTrackTable, "ready", function () { });
+    google.visualization.events.addListener(theTrackTable, "select", function () { });
 
-    function selectAllHandler(table, props) {
+    // FIX 3: Master "Select All" function applies selection against the table's raw data
+    // to ensure filtered and non-visible tracks get selected too
+    function selectAllHandler(tableId, props, tableObj) {
         if (props.column == 0) {
-            $(table)
-                .find(".track-select")
-                .each(function () {
-                    $(this).prop("checked", props.ascending);
-                    var id = $(this).attr("id");
-                    var tid = getTidFromElemId(id);
-                    if (props.ascending) curSelected.add(tid);
-                    else curSelected.delete(tid);
-                });
+            var tracksToSelect = tableObj.currentTracks || [];
+            _.each(tracksToSelect, function (track) {
+                if (props.ascending) curSelected.add(track.id);
+                else curSelected.delete(track.id);
+            });
+
+            $(tableId).find(".track-select").each(function () {
+                $(this).prop("checked", props.ascending);
+            });
             $(".nstaging-tracks").text(curSelected.size);
         }
     }
 
-    google.visualization.events.addListener(
-        theTrackTable,
-        "sort",
-        function (props) {
-            selectAllHandler("#gthe-track-table", props);
-            addEventHandlers($(theTrackTable));
-        },
-    );
-    theStagingTable = new google.visualization.Table(
-        document.getElementById("gthe-staging-table"),
-    );
-    google.visualization.events.addListener(
-        theStagingTable,
-        "sort",
-        function (props) {
-            selectAllHandler("#gthe-staging-table", props);
-            addEventHandlers($(theStagingTable));
-        },
-    );
+    google.visualization.events.addListener(theTrackTable, "sort", function (props) {
+        selectAllHandler("#gthe-track-table", props, theTrackTable);
+        addEventHandlers($(theTrackTable.getContainer()));
+    });
+
+    theStagingTable = new google.visualization.Table(document.getElementById("gthe-staging-table"));
+    google.visualization.events.addListener(theStagingTable, "sort", function (props) {
+        selectAllHandler("#gthe-staging-table", props, theStagingTable);
+        addEventHandlers($(theStagingTable.getContainer()));
+    });
 
     if (pendingRestoreInfo) {
         var restoreInfo = pendingRestoreInfo;
@@ -2329,15 +1759,9 @@ function initPlot() {
     addPlotSelect($("#select-yaxis"), "loudness");
     addPlotSelect($("#select-size"), "popularity");
 
-    $("#plot-clear").on("click", function () {
-        clearPlot();
-    });
-    $("#refetch-button").on("click", function () {
-        refetchCurrentCollection();
-    });
-    window.onresize = function () {
-        redrawPlot();
-    };
+    $("#plot-clear").on("click", function () { clearPlot(); });
+    $("#refetch-button").on("click", function () { refetchCurrentCollection(); });
+    window.onresize = function () { redrawPlot(); };
     clearPlot();
 }
 
@@ -2348,56 +1772,40 @@ $(document).ready(function () {
 
     $("#collection-type").on("change", function () {
         var type = $("#collection-type").val();
-        if (type == "playlist")
-            $("#uri-prompt").removeClass("hidden").addClass("block");
+        if (type == "playlist") $("#uri-prompt").removeClass("hidden").addClass("block");
         else $("#uri-prompt").removeClass("block").addClass("hidden");
+    });
+
+    $("#global-search").on("input", function () {
+        currentSearchQuery = $(this).val().trim().toLowerCase();
+        if (curNode) {
+            showPlaylist(curNode);
+        }
     });
 
     $(".max-shown").text(maxTracksShown);
     $(".work").addClass("hidden").removeClass("flex");
 
     if (authError) {
-        error(
-            "Sorry, I can't read your music collection from Spotify without authorization",
-        );
+        error("Sorry, I can't read your music collection from Spotify without authorization");
         $("#go").show();
-        $("#go").on("click", function () {
-            go();
-        });
+        $("#go").on("click", function () { go(); });
     } else if (code) {
-        window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-        );
+        window.history.replaceState({}, document.title, window.location.pathname);
         exchangeCodeForToken(code)
             .then(function (response) {
                 accessToken = response.access_token;
-                if (response.refresh_token)
-                    window.localStorage.setItem(
-                        "refresh_token",
-                        response.refresh_token,
-                    );
+                if (response.refresh_token) window.localStorage.setItem("refresh_token", response.refresh_token);
 
                 thePlot = $("#the-plot").get(0);
-
                 $(".work").removeClass("hidden").addClass("flex");
-                $("#sidebar.work")
-                    .removeClass("hidden flex")
-                    .addClass("md:block hidden");
-
+                $("#sidebar.work").removeClass("hidden flex").addClass("md:block hidden");
                 $("#intro").hide();
-                $("#stop-loading").on("click", function () {
-                    stopLoading();
-                });
-                $("#staging-playlist-name").editable({
-                    mode: "popup",
-                    placement: "right",
-                });
 
-                $("#save-button").on("click", function () {
-                    savePlaylist();
-                });
+                $("#stop-loading").on("click", function () { stopLoading(); });
+                $("#staging-playlist-name").editable({ mode: "popup", placement: "right" });
+                $("#save-button").on("click", function () { savePlaylist(); });
+
                 $("#staging-tab").on("shown.bs.tab", function () {
                     stagingIsVisible = true;
                     showStagingList();
@@ -2411,9 +1819,7 @@ $(document).ready(function () {
                 google.charts.setOnLoadCallback(initTables);
 
                 initPlot();
-                $("a[href='#the-plots']").on("shown.bs.tab", function () {
-                    redrawPlot();
-                });
+                $("a[href='#the-plots']").on("shown.bs.tab", function () { redrawPlot(); });
 
                 fetchCurrentUserProfile().then(function (user) {
                     if (user) {
@@ -2421,9 +1827,7 @@ $(document).ready(function () {
                         $("#who").text(user.id);
                         var info = getInfo();
                         var curType = info.type;
-                        curTypeName = $(
-                            "#collection-type option[value='" + curType + "']",
-                        ).text();
+                        curTypeName = $("#collection-type option[value='" + curType + "']").text();
                         $("#section-title").text(curTypeName);
                         $("#section-title-inline").text(curTypeName);
                         if (!queueRestoreOrFetch(info)) {
@@ -2437,21 +1841,13 @@ $(document).ready(function () {
             .fail(function () {
                 error("Failed to exchange authorization code for token");
                 $("#go").show();
-                $("#go").on("click", function () {
-                    go();
-                });
+                $("#go").on("click", function () { go(); });
             });
     } else {
         $("#go").show();
-        $("#go").on("click", function () {
-            go();
-        });
+        $("#go").on("click", function () { go(); });
     }
 });
 
-function saveTrack(track) {
-    return;
-}
-function loadTrack(id) {
-    return null;
-}
+function saveTrack(track) { return; }
+function loadTrack(id) { return null; }
