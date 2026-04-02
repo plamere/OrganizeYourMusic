@@ -952,7 +952,32 @@ function exchangeCodeForToken(code) {
     });
 }
 
+function refreshAccessToken() {
+    var refreshToken = window.localStorage.getItem("refresh_token");
+    if (!refreshToken) {
+        return RSVP.reject(new Error("Refresh token is missing"));
+    }
+
+    return $.ajax("https://accounts.spotify.com/api/token", {
+        type: "POST",
+        data: $.param({
+            client_id: SPOTIFY_CLIENT_ID,
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+        }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    }).then(function (response) {
+        if (response && response.access_token) {
+            accessToken = response.access_token;
+        }
+        return response;
+    });
+}
+
 function callSpotify(type, url, json, callback) {
+    var refreshed = false;
+
+    function doCall() {
     var backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:8000/api/spotify'
         : '/api/spotify';
@@ -969,16 +994,27 @@ function callSpotify(type, url, json, callback) {
         contentType: "application/json",
         success: function (r) { callback(true, r); },
         error: function (r) {
-            if (r.status >= 200 && r.status < 300) callback(true, r);
+            if ((r.status === 401 || r.status === 403) && !refreshed) {
+                refreshed = true;
+                refreshAccessToken().then(function () {
+                    doCall();
+                }).catch(function () {
+                    callback(false, r);
+                });
+            } else if (r.status >= 200 && r.status < 300) callback(true, r);
             else callback(false, r);
         },
     });
+    }
+
+    doCall();
 }
 
 function getSpotifyP(url, data) {
     return new RSVP.Promise(function (resolve, reject) {
         var curRetry = 0;
         var maxRetries = 10;
+        var refreshed = false;
         function go() {
             var backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
                 ? 'http://localhost:8000/api/spotify'
@@ -997,6 +1033,12 @@ function getSpotifyP(url, data) {
                 error: function (jqXHR, textStatus) {
                     if (jqXHR.status >= 200 && jqXHR.status < 300) resolve(jqXHR);
                     else if (jqXHR.status == 401) window.location = "index.html";
+                    else if ((jqXHR.status === 401 || jqXHR.status === 403) && !refreshed) {
+                        refreshed = true;
+                        refreshAccessToken()
+                            .then(function () { go(); })
+                            .catch(function () { reject(textStatus); });
+                    }
                     else if (jqXHR.status >= 500 && jqXHR.status < 600) {
                         if (curRetry++ < maxRetries) setTimeout(go, 500);
                         else reject(textStatus + " after " + maxRetries + " retries");
