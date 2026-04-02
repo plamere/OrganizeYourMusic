@@ -978,33 +978,33 @@ function callSpotify(type, url, json, callback) {
     var refreshed = false;
 
     function doCall() {
-    var backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:8000/api/spotify'
-        : '/api/spotify';
+        var backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8000/api/spotify'
+            : '/api/spotify';
 
-    $.ajax(backendUrl, {
-        type: 'POST',
-        data: JSON.stringify({
-            url: url,
-            method: type,
-            data: json,
-            accessToken: accessToken
-        }),
-        dataType: "json",
-        contentType: "application/json",
-        success: function (r) { callback(true, r); },
-        error: function (r) {
-            if ((r.status === 401 || r.status === 403) && !refreshed) {
-                refreshed = true;
-                refreshAccessToken().then(function () {
-                    doCall();
-                }).catch(function () {
-                    callback(false, r);
-                });
-            } else if (r.status >= 200 && r.status < 300) callback(true, r);
-            else callback(false, r);
-        },
-    });
+        $.ajax(backendUrl, {
+            type: 'POST',
+            data: JSON.stringify({
+                url: url,
+                method: type,
+                data: json,
+                accessToken: accessToken
+            }),
+            dataType: "json",
+            contentType: "application/json",
+            success: function (r) { callback(true, r); },
+            error: function (r) {
+                if ((r.status === 401 || r.status === 403) && !refreshed) {
+                    refreshed = true;
+                    refreshAccessToken().then(function () {
+                        doCall();
+                    }, function () {
+                        callback(false, r);
+                    });
+                } else if (r.status >= 200 && r.status < 300) callback(true, r);
+                else callback(false, r);
+            },
+        });
     }
 
     doCall();
@@ -1032,13 +1032,14 @@ function getSpotifyP(url, data) {
                 success: function (data) { resolve(data); },
                 error: function (jqXHR, textStatus) {
                     if (jqXHR.status >= 200 && jqXHR.status < 300) resolve(jqXHR);
-                    else if (jqXHR.status == 401) window.location = "index.html";
                     else if ((jqXHR.status === 401 || jqXHR.status === 403) && !refreshed) {
                         refreshed = true;
-                        refreshAccessToken()
-                            .then(function () { go(); })
-                            .catch(function () { reject(textStatus); });
-                    }
+                        refreshAccessToken().then(function () {
+                            go();
+                        }, function () {
+                            reject(textStatus);
+                        });
+                    } else if (jqXHR.status == 401) window.location = "index.html";
                     else if (jqXHR.status >= 500 && jqXHR.status < 600) {
                         if (curRetry++ < maxRetries) setTimeout(go, 500);
                         else reject(textStatus + " after " + maxRetries + " retries");
@@ -1049,9 +1050,8 @@ function getSpotifyP(url, data) {
                         if (retry < 1000) retry = 1000;
                         if (curRetry++ < maxRetries) setTimeout(go, retry + curRetry * retry);
                         else reject(textStatus + " after " + maxRetries + " retries");
-                    } else {
-                        reject(textStatus);
                     }
+                    else reject(textStatus);
                 },
             });
         }
