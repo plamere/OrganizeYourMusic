@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@source "../index.html";
+
+@theme {
+	--color-spotify-green: #1DB954;
+	--color-spotify-green-hover: #1ed760;
+	--color-spotify-base: #121212;
+	--color-spotify-elevated: #242424;
+	--color-spotify-highlight: #3E3E3E;
+	--color-spotify-light: #b3b3b3;
+	--font-sans: "Circular", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
