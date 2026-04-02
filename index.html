@@ -163,6 +163,23 @@
         border-bottom: 1px solid #3f3f46 !important;
         color: white !important;
       }
+
+      /* Fix Plotly modebar layout - Force horizontal row */
+      .modebar {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        flex-wrap: nowrap !important;
+        width: auto !important;
+      }
+      .modebar-group {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        margin-left: 8px !important;
+        padding: 0 !important;
+      }
     </style>
   </head>
 
@@ -762,9 +779,9 @@
                     </div>
 
                     <div
-                      class="grid grid-cols-1 gap-6 md:grid-cols-3 bg-black/30 p-4 rounded-xl border border-zinc-800/50"
+                      class="flex flex-row flex-wrap items-end gap-x-8 gap-y-6 bg-black/30 p-4 rounded-xl border border-zinc-800/50"
                     >
-                      <div>
+                      <div class="flex-1 min-w-[120px]">
                         <label
                           class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2"
                           >X axis</label
@@ -774,7 +791,7 @@
                           class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg py-2.5 px-4 text-sm focus:ring-1 focus:ring-spotify-green focus:outline-none cursor-pointer"
                         ></select>
                       </div>
-                      <div>
+                      <div class="flex-1 min-w-[120px]">
                         <label
                           class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2"
                           >Y axis</label
@@ -784,7 +801,7 @@
                           class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg py-2.5 px-4 text-sm focus:ring-1 focus:ring-spotify-green focus:outline-none cursor-pointer"
                         ></select>
                       </div>
-                      <div>
+                      <div class="flex-1 min-w-[120px]">
                         <label
                           class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2"
                           >Size</label
