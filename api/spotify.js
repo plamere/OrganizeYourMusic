@@ -40,7 +40,19 @@ export default async function handler(req, res) {
 
     const response = await fetch(finalUrl, options);
     const text = await response.text();
-    const payload = text ? JSON.parse(text) : {};
+    
+    let payload = {};
+    try {
+      payload = text ? JSON.parse(text) : {};
+    } catch (parseError) {
+      // If response is not JSON, create an error object
+      payload = {
+        error: {
+          message: text || `HTTP ${response.status}`,
+          status: response.status,
+        },
+      };
+    }
 
     if (!response.ok) {
       return res.status(response.status).json(payload);
@@ -49,6 +61,6 @@ export default async function handler(req, res) {
     return res.status(200).json(payload);
   } catch (error) {
     console.error('Spotify API proxy error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 }

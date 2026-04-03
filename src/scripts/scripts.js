@@ -1142,7 +1142,17 @@ function getSpotifyP(url, data) {
                         restartAuthorization("Your Spotify authorization expired or is missing permissions. Please connect again.");
                         reject(textStatus);
                     }
-                    else if ((jqXHR.status === 401 || jqXHR.status === 403) && !refreshed) {
+                    else if (jqXHR.status === 403 && !refreshed) {
+                        refreshed = true;
+                        setTimeout(function () {
+                            refreshAccessToken().then(function () {
+                                go();
+                            }, function () {
+                                reject("403 Forbidden: " + textStatus);
+                            });
+                        }, 1000);
+                    }
+                    else if (jqXHR.status === 401 && !refreshed) {
                         refreshed = true;
                         refreshAccessToken().then(function () {
                             go();
