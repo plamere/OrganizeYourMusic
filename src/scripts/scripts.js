@@ -522,11 +522,33 @@ function getStagingTracks() {
     return out;
 }
 
-function getInt(val) { return Math.round(val); }
-function getString(val) { return val.toString(); }
+function toFiniteNumber(val) {
+    if (val == null || val === "") return null;
+    var num = Number(val);
+    if (!Number.isFinite(num)) return null;
+    return num;
+}
+function getInt(val) {
+    var num = toFiniteNumber(val);
+    if (num == null) return null;
+    return Math.round(num);
+}
+function getString(val) {
+    if (val == null) return "";
+    if (typeof val === "number" && !Number.isFinite(val)) return "";
+    return String(val);
+}
 function getDate(val) { return val.format("YYYY‑MM‑DD"); }
-function getPercent(val) { return getInt(val * 100); }
-function getDuration(val) { return getInt(val / 1000); }
+function getPercent(val) {
+    var num = toFiniteNumber(val);
+    if (num == null) return null;
+    return getInt(num * 100);
+}
+function getDuration(val) {
+    var num = toFiniteNumber(val);
+    if (num == null) return null;
+    return getInt(num / 1000);
+}
 
 function showTracksInTable(table, tracks, getter, label, isStagingList) {
     tracks = tracks || [];
