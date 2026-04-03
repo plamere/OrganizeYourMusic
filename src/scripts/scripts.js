@@ -32,7 +32,8 @@ var theStagingTable = null;
 var stagingIsVisible = false;
 var maxTracksShown = 5000;
 var defaultTablePageSize = 50;
-var cachePrefix = "omy-cache-v2:";
+var cachePrefix = "omy-cache-v4:";
+var legacyCachePrefixes = ["omy-cache-v3:", "omy-cache-v2:", "omy-cache-v1:"];
 var pendingRestoreInfo = null;
 var pendingFetchStarter = null;
 var sidebarExpanded = true;
@@ -1606,12 +1607,26 @@ function getLegacyCollectionCacheKey(info) {
     return "omy-cache-v1:" + type + ":" + uri;
 }
 
+function getLegacyCollectionCacheKeys(info) {
+    var type = info && info.type ? info.type : "unknown";
+    var uri = info && info.uri ? info.uri : "";
+    var keys = [];
+
+    _.each(legacyCachePrefixes, function (prefix) {
+        keys.push(prefix + type + ":" + uri);
+    });
+
+    return keys;
+}
+
 function getCollectionCacheKeyForRestore(info) {
     var primaryKey = getCollectionCacheKey(info);
     if (localStorage.getItem(primaryKey)) return primaryKey;
 
-    var legacyKey = getLegacyCollectionCacheKey(info);
-    if (localStorage.getItem(legacyKey)) return legacyKey;
+    var legacyKeys = getLegacyCollectionCacheKeys(info);
+    for (var i = 0; i < legacyKeys.length; i += 1) {
+        if (localStorage.getItem(legacyKeys[i])) return legacyKeys[i];
+    }
 
     return null;
 }
@@ -1696,6 +1711,17 @@ function deserializeTrack(rawTrack) {
             uri: rawTrack.details.uri,
             preview_url: rawTrack.details.preview_url,
             artists: compactTrackArtists(rawTrack.details.artists),
+        },
+    };
+}
+
+function compactTrackForCache(track) {
+    return {
+        id: track.id,
+        feats: {
+            date_added: track.feats.date_added ? track.feats.date_added.toISOString() : null,
+            source: track.feats.source,
+            count: track.feats.count,
         },
     };
 }
@@ -1808,11 +1834,11 @@ function persistCurrentCollection() {
         var cacheKey = getCollectionCacheKey(info);
         var tracks = [];
         _.each(curTracks, function (track) {
-            tracks.push(serializeTrack(track));
+            tracks.push(compactTrackForCache(track));
         });
 
         var snapshot = {
-            version: 2,
+            version: 4,
             tracks: tracks,
             artists: compactArtistsForCache(curArtists),
             albums: compactAlbumsForCache(curAlbums),
@@ -1885,22 +1911,120 @@ function restoreCurrentCollection(info, cacheKey) {
         processedPlaylists = snapshot.processedPlaylists || 0;
         curTypeName = snapshot.curTypeName || curTypeName;
 
-        var restoredTracks = [];
-        _.each(snapshot.tracks, function (rawTrack) {
-            var track = deserializeTrack(rawTrack);
-            curTracks[track.id] = track;
-            restoredTracks.push(track);
-        });
+        var firstTrack = snapshot.tracks[0];
+        if (firstTrack && firstTrack.details) {
+            var restoredTracks = [];
+            _.each(snapshot.tracks, function (rawTrack) {
+                var track = deserializeTrack(rawTrack);
+                curTracks[track.id] = track;
+                restoredTracks.push(track);
+            });
 
-        addTracks(restoredTracks);
-        filterTracks(restoredTracks);
-        refreshTheWorld(false);
-        showLoadedState();
+            addTracks(restoredTracks);
+            filterTracks(restoredTracks);
+            refreshTheWorld(false);
+            showLoadedState();
+            return true;
+        }
+
+        var trackRefs = snapshot.tracks;
+        if (!trackRefs.length) return false;
+
+        collectTracksByIds(trackRefs)
+            .then(function (restoredTracks) {
+                curTracks = {};
+                _.each(restoredTracks, function (track) {
+                    curTracks[track.id] = track;
+                });
+                addTracks(restoredTracks);
+                filterTracks(restoredTracks);
+                refreshTheWorld(false);
+                showLoadedState();
+            })
+            .catch(function (error) {
+                console.log("Unable to restore cached tracks by id", error);
+                pendingFetchStarter = function () { startCollectionFetch(info); };
+                if (pendingFetchStarter) {
+                    var fallbackFetch = pendingFetchStarter;
+                    pendingFetchStarter = null;
+                    fallbackFetch();
+                }
+            });
         return true;
     } catch (error) {
         console.log("Unable to restore collection cache", error);
         return false;
     }
+}
+
+function buildTrackFromSpotifyItem(item, source) {
+    var dateAdded = item.added_at ? moment(item.added_at) : moment();
+    var age = moment.duration(moment().diff(dateAdded)).asDays();
+
+    return {
+        id: item.track.id,
+        feats: {
+            date_added: dateAdded,
+            age: age,
+            explicit: item.track.explicit,
+            duration_ms: item.track.duration_ms,
+            popularity: item.track.popularity,
+            source: source,
+            count: 1,
+        },
+        details: {
+            name: item.track.name,
+            album_id: item.track.album.id,
+            uri: item.track.uri,
+            preview_url: item.track.preview_url,
+            artists: tinyArtists(item.track.artists),
+        },
+    };
+}
+
+function collectTracksByIds(trackRefs) {
+    var ids = [];
+    var trackMeta = {};
+    var deferred = RSVP.defer();
+
+    _.each(trackRefs, function (trackRef) {
+        if (!trackRef || !trackRef.id) return;
+        ids.push(trackRef.id);
+        trackMeta[trackRef.id] = trackRef;
+    });
+
+    function getNextTrackBatch(restoredTracks) {
+        var nextIds = getNextBatch(ids, 50);
+        if (nextIds.length > 0) {
+            getSpotifyP("https://api.spotify.com/v1/tracks", { ids: nextIds.join(",") })
+                .then(function (results) {
+                    _.each(results.tracks, function (trackItem) {
+                        if (!trackItem || !trackItem.id) return;
+
+                        var trackRef = trackMeta[trackItem.id];
+                        var track = buildTrackFromSpotifyItem({ track: trackItem, added_at: trackRef && trackRef.feats ? trackRef.feats.date_added : null }, trackRef && trackRef.feats ? trackRef.feats.source : null);
+                        if (trackRef && trackRef.feats) {
+                            if (trackRef.feats.date_added) track.feats.date_added = moment(trackRef.feats.date_added);
+                            if (trackRef.feats.source) track.feats.source = trackRef.feats.source;
+                            if (trackRef.feats.count) track.feats.count = trackRef.feats.count;
+                            track.feats.age = moment.duration(moment().diff(track.feats.date_added)).asDays();
+                        }
+
+                        restoredTracks.push(track);
+                    });
+
+                    getNextTrackBatch(restoredTracks);
+                })
+                .catch(function (error) {
+                    deferred.reject(error);
+                });
+        } else {
+            deferred.resolve(restoredTracks);
+        }
+    }
+
+    getNextTrackBatch([]);
+    return deferred.promise;
 }
 
 function startCollectionFetch(info) {

@@ -32,7 +32,9 @@ var theStagingTable = null;
 var stagingIsVisible = false;
 var maxTracksShown = 5000;
 var defaultTablePageSize = 50;
-var cachePrefix = "omy-cache-v2:";
+var cachePrefix = "omy-cache-v3:";
+var legacyCachePrefixes = ["omy-cache-v2:", "omy-cache-v1:"];
+var trackCachePrefix = "omy-track-cache-v1:";
 var pendingRestoreInfo = null;
 var pendingFetchStarter = null;
 var sidebarExpanded = true;
@@ -1606,12 +1608,26 @@ function getLegacyCollectionCacheKey(info) {
     return "omy-cache-v1:" + type + ":" + uri;
 }
 
+function getLegacyCollectionCacheKeys(info) {
+    var type = info && info.type ? info.type : "unknown";
+    var uri = info && info.uri ? info.uri : "";
+    var keys = [];
+
+    _.each(legacyCachePrefixes, function (prefix) {
+        keys.push(prefix + type + ":" + uri);
+    });
+
+    return keys;
+}
+
 function getCollectionCacheKeyForRestore(info) {
     var primaryKey = getCollectionCacheKey(info);
     if (localStorage.getItem(primaryKey)) return primaryKey;
 
-    var legacyKey = getLegacyCollectionCacheKey(info);
-    if (localStorage.getItem(legacyKey)) return legacyKey;
+    var legacyKeys = getLegacyCollectionCacheKeys(info);
+    for (var i = 0; i < legacyKeys.length; i += 1) {
+        if (localStorage.getItem(legacyKeys[i])) return legacyKeys[i];
+    }
 
     return null;
 }
@@ -1698,6 +1714,10 @@ function deserializeTrack(rawTrack) {
             artists: compactTrackArtists(rawTrack.details.artists),
         },
     };
+}
+
+function getTrackCacheKey(trackId) {
+    return trackCachePrefix + trackId;
 }
 
 function compactArtistsForCache(artists) {
@@ -1808,11 +1828,11 @@ function persistCurrentCollection() {
         var cacheKey = getCollectionCacheKey(info);
         var tracks = [];
         _.each(curTracks, function (track) {
-            tracks.push(serializeTrack(track));
+            tracks.push(track.id);
         });
 
         var snapshot = {
-            version: 2,
+            version: 3,
             tracks: tracks,
             artists: compactArtistsForCache(curArtists),
             albums: compactAlbumsForCache(curAlbums),
@@ -1827,37 +1847,13 @@ function persistCurrentCollection() {
         };
 
         if (tryPersistSnapshot(cacheKey, snapshot)) {
+            removeOtherCollectionCaches(cacheKey);
             localStorage.removeItem(getLegacyCollectionCacheKey(info));
+            _.each(legacyCachePrefixes, function (prefix) {
+                localStorage.removeItem(prefix + (info && info.type ? info.type : "unknown") + ":" + (info && info.uri ? info.uri : ""));
+            });
             return;
         }
-
-        removeOtherCollectionCaches(cacheKey);
-        if (tryPersistSnapshot(cacheKey, snapshot)) {
-            localStorage.removeItem(getLegacyCollectionCacheKey(info));
-            return;
-        }
-
-        snapshot.artists = {};
-        snapshot.albums = {};
-        if (tryPersistSnapshot(cacheKey, snapshot)) {
-            localStorage.removeItem(getLegacyCollectionCacheKey(info));
-            console.log("Collection cache stored in compact mode to avoid storage limits");
-            return;
-        }
-
-        var reducedTrackCount = Math.floor(tracks.length * 0.75);
-        while (reducedTrackCount >= 50) {
-            snapshot.tracks = downsampleTracksForCache(tracks, reducedTrackCount);
-            if (tryPersistSnapshot(cacheKey, snapshot)) {
-                localStorage.removeItem(getLegacyCollectionCacheKey(info));
-                console.log("Collection cache stored in reduced mode (" + reducedTrackCount + "/" + tracks.length + " tracks) to avoid storage limits");
-                return;
-            }
-            reducedTrackCount = Math.floor(reducedTrackCount * 0.7);
-        }
-
-        localStorage.removeItem(cacheKey);
-        console.log("Skipped collection cache due to localStorage size limits");
     } catch (error) { console.log("Unable to persist collection cache", error); }
 }
 
@@ -1886,11 +1882,30 @@ function restoreCurrentCollection(info, cacheKey) {
         curTypeName = snapshot.curTypeName || curTypeName;
 
         var restoredTracks = [];
-        _.each(snapshot.tracks, function (rawTrack) {
-            var track = deserializeTrack(rawTrack);
-            curTracks[track.id] = track;
+        var restoredTrackMap = {};
+        for (var i = 0; i < snapshot.tracks.length; i += 1) {
+            var rawTrack = snapshot.tracks[i];
+            var track = null;
+
+            if (typeof rawTrack === "string") {
+                track = loadTrack(rawTrack);
+            } else if (rawTrack && rawTrack.id) {
+                track = deserializeTrack(rawTrack);
+            }
+
+            if (track == null && rawTrack && rawTrack.id) {
+                track = loadTrack(rawTrack.id);
+            }
+
+            if (track == null) {
+                return false;
+            }
+
+            restoredTrackMap[track.id] = track;
             restoredTracks.push(track);
-        });
+        }
+
+        curTracks = restoredTrackMap;
 
         addTracks(restoredTracks);
         filterTracks(restoredTracks);
@@ -1937,6 +1952,9 @@ function refetchCurrentCollection() {
     if (!info || !info.type) return;
     localStorage.removeItem(getCollectionCacheKey(info));
     localStorage.removeItem(getLegacyCollectionCacheKey(info));
+    _.each(getLegacyCollectionCacheKeys(info), function (legacyKey) {
+        localStorage.removeItem(legacyKey);
+    });
     pendingRestoreInfo = null;
     pendingFetchStarter = null;
     abortLoading = false;
@@ -2150,5 +2168,67 @@ $(document).ready(function () {
     }
 });
 
-function saveTrack(track) { return; }
-function loadTrack(id) { return null; }
+function saveTrack(track) {
+    if (!track || !track.id) return;
+
+    persistTrackCache(getTrackCacheKey(track.id), serializeTrack(track));
+}
+
+function loadTrack(id) {
+    if (!id) return null;
+
+    var raw = localStorage.getItem(getTrackCacheKey(id));
+    if (!raw) return null;
+
+    try {
+        return deserializeTrack(JSON.parse(raw));
+    } catch (error) {
+        console.log("Unable to restore track cache", error);
+        return null;
+    }
+}
+
+function removeOldTrackCaches() {
+    var keys = [];
+
+    for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf(trackCachePrefix) === 0) {
+            keys.push(key);
+        }
+    }
+
+    if (keys.length === 0) return 0;
+
+    var removeCount = Math.max(1, Math.ceil(keys.length / 4));
+    for (var j = 0; j < removeCount; j++) {
+        localStorage.removeItem(keys[j]);
+    }
+
+    return removeCount;
+}
+
+function persistTrackCache(cacheKey, trackData) {
+    var serialized = JSON.stringify(trackData);
+    var attempts = 0;
+
+    while (attempts < 4) {
+        try {
+            localStorage.setItem(cacheKey, serialized);
+            return true;
+        } catch (error) {
+            if (!isStorageQuotaError(error)) {
+                console.log("Unable to persist track cache", error);
+                return false;
+            }
+
+            if (removeOldTrackCaches() === 0) {
+                return false;
+            }
+        }
+
+        attempts += 1;
+    }
+
+    return false;
+}

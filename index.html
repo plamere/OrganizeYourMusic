@@ -204,8 +204,10 @@
       .google-visualization-table-div-page input:hover {
         color: #1db954 !important;
       }
-      .google-visualization-table-div-page .google-visualization-table-page-number,
-      .google-visualization-table-div-page .google-visualization-table-page-number,
+      .google-visualization-table-div-page
+        .google-visualization-table-page-number,
+      .google-visualization-table-div-page
+        .google-visualization-table-page-number,
       .google-visualization-table-div-page .pager-control {
         border: 1px solid #3e3e3e !important;
         border-radius: 9999px !important;
@@ -231,25 +233,34 @@
         line-height: 1 !important;
         pointer-events: none;
       }
-      .google-visualization-table-div-page .google-visualization-table-page-number:hover,
+      .google-visualization-table-div-page
+        .google-visualization-table-page-number:hover,
       .google-visualization-table-div-page .pager-control:hover {
         border-color: #1db954 !important;
         background-color: rgba(29, 185, 84, 0.15) !important;
       }
-      .google-visualization-table-div-page .google-visualization-table-page-number.google-visualization-table-page-number-selected {
+      .google-visualization-table-div-page
+        .google-visualization-table-page-number.google-visualization-table-page-number-selected {
         color: #121212 !important;
         border-color: #1db954 !important;
         background-color: #1db954 !important;
       }
-      .google-visualization-table-div-page .google-visualization-table-page-number-current {
+      .google-visualization-table-div-page
+        .google-visualization-table-page-number-current {
         color: #121212 !important;
         border-color: #1db954 !important;
         background-color: #1db954 !important;
       }
-      .google-visualization-table-div-page .google-visualization-table-nav-disabled,
-      .google-visualization-table-div-page .google-visualization-table-nav-disabled *,
-      .google-visualization-table-div-page .google-visualization-table-page-disabled,
-      .google-visualization-table-div-page .google-visualization-table-page-disabled *,
+      .google-visualization-table-div-page
+        .google-visualization-table-nav-disabled,
+      .google-visualization-table-div-page
+        .google-visualization-table-nav-disabled
+        *,
+      .google-visualization-table-div-page
+        .google-visualization-table-page-disabled,
+      .google-visualization-table-div-page
+        .google-visualization-table-page-disabled
+        *,
       .google-visualization-table-div-page [disabled] {
         color: #6b7280 !important;
         border-color: #303030 !important;
@@ -726,7 +737,6 @@
             <div
               class="flex flex-col gap-6 mb-8 lg:flex-row lg:items-end lg:justify-between bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800/50"
             >
-              
               <div class="min-w-0 flex-1">
                 <h3
                   id="section-title-inline"
@@ -739,7 +749,6 @@
                 </p>
               </div>
 
-              
               <div class="w-full max-w-xl lg:mr-4">
                 <label
                   for="global-search"
@@ -760,7 +769,6 @@
                 </div>
               </div>
 
-              
               <button
                 id="refetch-button"
                 class="mt-2 lg:mt-0 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-zinc-700 bg-zinc-800 px-5 py-3 text-sm font-bold text-white transition-all hover:bg-zinc-700 hover:border-zinc-600 shadow-sm shrink-0"
@@ -888,6 +896,7 @@
                     >
                       <div class="flex-1 min-w-30">
                         <label
+                          for="select-xaxis"
                           class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2"
                           >X axis</label
                         >
@@ -898,6 +907,7 @@
                       </div>
                       <div class="flex-1 min-w-30">
                         <label
+                          for="select-yaxis"
                           class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2"
                           >Y axis</label
                         >
@@ -908,6 +918,7 @@
                       </div>
                       <div class="flex-1 min-w-30">
                         <label
+                          for="select-size"
                           class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2"
                           >Size</label
                         >
