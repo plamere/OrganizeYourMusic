@@ -1,4 +1,5 @@
 "use strict";
+console.log("Organize Your Music - scripts.js loaded");
 var accessToken = null;
 var curUserID = null;
 var curTracks = {};
@@ -1043,21 +1044,26 @@ function base64encode(input) {
         .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-async function authorizeUser() {
+function authorizeUser() {
+    console.log("Initiating Authorize User flow...");
     var scopes = "user-library-read playlist-read-private playlist-read-collaborative playlist-modify-public";
     var codeVerifier = generateRandomString(64);
     window.localStorage.setItem("code_verifier", codeVerifier);
 
-    var hashed = await sha256(codeVerifier);
-    var codeChallenge = base64encode(hashed);
+    sha256(codeVerifier).then(function(hashed) {
+        var codeChallenge = base64encode(hashed);
+        var authUrl = "https://accounts.spotify.com/authorize?" +
+            "client_id=" + encodeURIComponent(SPOTIFY_CLIENT_ID) +
+            "&response_type=code&show_dialog=false&scope=" + encodeURIComponent(scopes) +
+            "&redirect_uri=" + encodeURIComponent(SPOTIFY_REDIRECT_URI) +
+            "&code_challenge_method=S256&code_challenge=" + encodeURIComponent(codeChallenge);
 
-    var authUrl = "https://accounts.spotify.com/authorize?" +
-        "client_id=" + encodeURIComponent(SPOTIFY_CLIENT_ID) +
-        "&response_type=code&show_dialog=false&scope=" + encodeURIComponent(scopes) +
-        "&redirect_uri=" + encodeURIComponent(SPOTIFY_REDIRECT_URI) +
-        "&code_challenge_method=S256&code_challenge=" + encodeURIComponent(codeChallenge);
-
-    document.location = authUrl;
+        console.log("Redirecting to Spotify Auth URL:", authUrl);
+        document.location = authUrl;
+    }).catch(function(err) {
+        console.error("Error in sha256 generation:", err);
+        error("Secure context required or crypto API failure.");
+    });
 }
 
 function exchangeCodeForToken(code) {
@@ -1092,6 +1098,9 @@ function refreshAccessToken() {
     }).then(function (response) {
         if (response && response.access_token) {
             accessToken = response.access_token;
+            if (response.refresh_token) {
+                window.localStorage.setItem("refresh_token", response.refresh_token);
+            }
         }
         return response;
     });
@@ -2107,14 +2116,32 @@ function go() {
     var params = { type: type };
     if (type == "playlist") params.uri = $("#uri-text").val();
     saveInfo(params);
-    authorizeUser();
+
+    // Transition to loading/work state (Stage 2)
+    $("#intro").hide();
+    $(".work").removeClass("hidden").addClass("flex");
+    $("#sidebar.work").removeClass("hidden flex").addClass("md:block hidden");
+    showLoadingState();
+
+    if (!queueRestoreOrFetch(params)) {
+        startCollectionFetch(params);
+    }
 }
 
 function goAll() {
     $(".err-txt").text("");
     var params = { type: "all" };
     saveInfo(params);
-    authorizeUser();
+
+    // Transition to loading/work state (Stage 2)
+    $("#intro").hide();
+    $(".work").removeClass("hidden").addClass("flex");
+    $("#sidebar.work").removeClass("hidden flex").addClass("md:block hidden");
+    showLoadingState();
+
+    if (!queueRestoreOrFetch(params)) {
+        startCollectionFetch(params);
+    }
 }
 
 function normalizeUri(uri) {
@@ -2136,7 +2163,16 @@ function goPlaylist() {
     if (isValidPlaylistUri(uri)) {
         var params = { type: "playlist", uri: uri };
         saveInfo(params);
-        authorizeUser();
+
+        // Transition to loading/work state (Stage 2)
+        $("#intro").hide();
+        $(".work").removeClass("hidden").addClass("flex");
+        $("#sidebar.work").removeClass("hidden flex").addClass("md:block hidden");
+        showLoadingState();
+
+        if (!queueRestoreOrFetch(params)) {
+            startCollectionFetch(params);
+        }
     } else {
         $(".err-txt").text("That's not a playlist URI");
     }
@@ -2240,70 +2276,79 @@ $(document).ready(function () {
         }
     });
 
+    console.log("Attaching login button listener...");
+    $("#login-button").on("click", function () {
+        console.log("Login button clicked!");
+        authorizeUser();
+    });
+
     $(".max-shown").text(maxTracksShown);
     $(".work").addClass("hidden").removeClass("flex");
 
+    function showSelectionUI() {
+        $("#login-state").hide();
+        $("#selection-state").removeClass("hidden").show();
+
+        thePlot = $("#the-plot").get(0);
+        $("#stop-loading").on("click", function () { stopLoading(); });
+        $("#staging-playlist-name").editable({ mode: "popup", placement: "right" });
+        $("#save-button").on("click", function () { savePlaylist(); });
+
+        $("#staging-tab").on("shown.bs.tab", function () {
+            stagingIsVisible = true;
+            showStagingList();
+        });
+        $("#staging-tab").on("hidden.bs.tab", function () {
+            stagingIsVisible = false;
+            showStagingList();
+        });
+
+        google.charts.load("current", { packages: ["table"] });
+        google.charts.setOnLoadCallback(initTables);
+        initPlot();
+        $("a[href='#the-plots']").on("shown.bs.tab", function () { redrawPlot(); });
+
+        fetchCurrentUserProfile().then(function (user) {
+            if (user) {
+                curUserID = user.id;
+                $("#who").text(user.id);
+            }
+        });
+    }
+
     if (authError) {
         error("Sorry, I can't read your music collection from Spotify without authorization");
-        $("#go").show();
-        $("#go").on("click", function () { go(); });
+        $("#login-state").show();
+        $("#selection-state").hide();
     } else if (code) {
         window.history.replaceState({}, document.title, window.location.pathname);
         exchangeCodeForToken(code)
             .then(function (response) {
                 accessToken = response.access_token;
                 if (response.refresh_token) window.localStorage.setItem("refresh_token", response.refresh_token);
-
-                thePlot = $("#the-plot").get(0);
-                $(".work").removeClass("hidden").addClass("flex");
-                $("#sidebar.work").removeClass("hidden flex").addClass("md:block hidden");
-                $("#intro").hide();
-
-                $("#stop-loading").on("click", function () { stopLoading(); });
-                $("#staging-playlist-name").editable({ mode: "popup", placement: "right" });
-                $("#save-button").on("click", function () { savePlaylist(); });
-
-                $("#staging-tab").on("shown.bs.tab", function () {
-                    stagingIsVisible = true;
-                    showStagingList();
-                });
-                $("#staging-tab").on("hidden.bs.tab", function () {
-                    stagingIsVisible = false;
-                    showStagingList();
-                });
-
-                google.charts.load("current", { packages: ["table"] });
-                google.charts.setOnLoadCallback(initTables);
-
-                initPlot();
-                $("a[href='#the-plots']").on("shown.bs.tab", function () { redrawPlot(); });
-
-                fetchCurrentUserProfile().then(function (user) {
-                    if (user) {
-                        curUserID = user.id;
-                        $("#who").text(user.id);
-                        var info = getInfo();
-                        var curType = info.type;
-                        curTypeName = $("#collection-type option[value='" + curType + "']").text();
-                        $("#section-title").text(curTypeName);
-                        $("#section-title-inline").text(curTypeName);
-                        if (!queueRestoreOrFetch(info)) {
-                            startCollectionFetch(info);
-                        }
-                    } else {
-                        error("Trouble getting the user profile");
-                    }
-                });
+                showSelectionUI();
             })
             .fail(function () {
                 error("Failed to exchange authorization code for token");
-                $("#go").show();
-                $("#go").on("click", function () { go(); });
+                $("#login-state").show();
+                $("#selection-state").hide();
             });
     } else {
-        $("#go").show();
-        $("#go").on("click", function () { go(); });
+        var storedRefreshToken = window.localStorage.getItem("refresh_token");
+        if (storedRefreshToken) {
+             refreshAccessToken().then(function() {
+                showSelectionUI();
+             }).fail(function() {
+                $("#login-state").show();
+                $("#selection-state").hide();
+             });
+        } else {
+            $("#login-state").show();
+            $("#selection-state").hide();
+        }
     }
+
+    $("#go").on("click", function () { go(); });
 });
 
 function saveTrack(track) { return; }
