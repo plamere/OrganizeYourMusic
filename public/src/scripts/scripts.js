@@ -1462,12 +1462,16 @@ function getTracksFromAPI(source, uri) {
     function go(offset) {
         getSpotifyP(uri, { limit: 50, market: "from_token", offset: offset })
             .then(function (results) {
+                if (!results || results.total === undefined) {
+                    deferred.resolve(curTracks);
+                    return;
+                }
                 totalTracks = results.total;
-                processItems(results.items);
+                processItems(results.items || []);
                 showTracks(source, allNewTracks.slice(offset));
                 refreshHeader();
 
-                if (!abortLoading && offset + results.items.length < results.total) {
+                if (!abortLoading && results.items && offset + results.items.length < results.total) {
                     go(offset + results.items.length);
                 } else {
                     collectAudioAttributes(allNewTracks)
@@ -1526,14 +1530,16 @@ function getMusicFromPlaylists(allPlaylists) {
         var params = { limit: 50, offset: offset };
         getSpotifyP("https://api.spotify.com/v1/me/playlists", params)
             .then(function (results) {
-                if (results) {
+                if (results && results.items) {
                     var outstandingPlaylists = [];
                     var count = results.offset + results.items.length;
-                    totalPlaylists = results.total;
-                    _.each(results.items, function (playlist) { outstandingPlaylists.push(playlist); });
+                    totalPlaylists = results.total || 0;
+                    _.each(results.items, function (playlist) {
+                        if (playlist) outstandingPlaylists.push(playlist);
+                    });
                     loadPlaylists(outstandingPlaylists, allPlaylists).then(
                         function () {
-                            if (!abortLoading && count < results.total) getMyPlaylists(count);
+                            if (!abortLoading && results.total && count < results.total) getMyPlaylists(count);
                             else deferred.resolve(outstandingPlaylists);
                         },
                     );
@@ -1568,7 +1574,8 @@ function loadPlaylists(playlists, allPlaylists) {
             var playlist = playlists.shift();
             if (quickMode && processedPlaylists > 100) return deferred.resolve(playlists);
             if (isGoodPlaylist(playlist, allPlaylists)) {
-                $("#lplaylist-name").text(playlist.name + " (" + playlist.tracks.total + " tracks)");
+                var trackCount = (playlist.tracks && playlist.tracks.total) ? playlist.tracks.total : 0;
+                $("#lplaylist-name").text(playlist.name + " (" + trackCount + " tracks)");
                 getPlaylistTracks(playlist)
                     .then(function () { fetchNextPlaylist(); })
                     .catch(function () {
@@ -1587,8 +1594,9 @@ function loadPlaylists(playlists, allPlaylists) {
 }
 
 function isGoodPlaylist(playlist, allPlaylists) {
-    if (allPlaylists || playlist.owner.id == curUserID) {
-        if (playlist.tracks.total > 0) return true;
+    if (!playlist) return false;
+    if (allPlaylists || (playlist.owner && playlist.owner.id == curUserID)) {
+        if (playlist.tracks && playlist.tracks.total > 0) return true;
     }
     return false;
 }
