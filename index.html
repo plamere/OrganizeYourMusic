@@ -919,7 +919,12 @@
 
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-  <script src="/config.js?v=4"></script>
+  <script type="text/javascript">
+    // Configuration injected by Vite during build/dev
+    window.SPOTIFY_CLIENT_ID = "%VITE_SPOTIFY_CLIENT_ID%";
+    window.SPOTIFY_REDIRECT_URI = "%VITE_SPOTIFY_REDIRECT_URI%";
+    window.isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  </script>
   <script src="/src/scripts/scripts.js?v=9"></script>
 </body>
 
