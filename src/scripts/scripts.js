@@ -605,7 +605,7 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
         row.push(play.prop("outerHTML"));
         row.push(track.details.name);
         row.push(track.details.artists[0].name);
-        row.push(track.feats.topGenre);
+        row.push(track.feats.topGenre ? track.feats.topGenre : "Unknown Genre");
         row.push(getString(track.feats.year));
         row.push(getDate(track.feats.date_added));
         row.push(getInt(track.feats.tempo));
@@ -1050,7 +1050,7 @@ function authorizeUser() {
     var codeVerifier = generateRandomString(64);
     window.localStorage.setItem("code_verifier", codeVerifier);
 
-    sha256(codeVerifier).then(function(hashed) {
+    sha256(codeVerifier).then(function (hashed) {
         var codeChallenge = base64encode(hashed);
         var authUrl = "https://accounts.spotify.com/authorize?" +
             "client_id=" + encodeURIComponent(SPOTIFY_CLIENT_ID) +
@@ -1060,7 +1060,7 @@ function authorizeUser() {
 
         console.log("Redirecting to Spotify Auth URL:", authUrl);
         document.location = authUrl;
-    }).catch(function(err) {
+    }).catch(function (err) {
         console.error("Error in sha256 generation:", err);
         error("Secure context required or crypto API failure.");
     });
@@ -1237,391 +1237,342 @@ function stopTrack() {
     $(".playing").removeClass("playing");
 }
 
-function collectAudioAttributes(tracks) {
-    var maxTracksPerCall = 100;
-    var tids = [];
-    var deferred = RSVP.defer();
+// =======================================================================
+// MODERNIZED DATA FETCHING (Replaces old sequential RSVP/Ajax logic)
+// =======================================================================
 
-    _.each(tracks, function (track) {
-        tids.push(track.id);
-    });
-
-    function getNextAudioBatch() {
-        var nextTids = getNextBatch(tids, maxTracksPerCall);
-        if (nextTids.length > 0) {
-            getSpotifyP("https://api.spotify.com/v1/audio-features", {
-                ids: nextTids.join(","),
-            })
-                .then(function (results) {
-                    if (results && results.audio_features) {
-                        _.each(results.audio_features, function (audio_feature) {
-                            if (audio_feature && audio_feature.id) {
-                                var track = curTracks[audio_feature.id];
-                                _.each(audio_feature, function (val, name) {
-                                    track.feats[name] = val;
-                                });
-                                track.feats.sadness = (1 - audio_feature.energy) * (1 - audio_feature.valence);
-                                track.feats.happiness = audio_feature.energy * audio_feature.valence;
-                                track.feats.anger = audio_feature.energy * (1 - audio_feature.valence);
-                            }
-                        });
-                    }
-                    getNextAudioBatch();
-                })
-                .catch(function (error) {
-                    deferred.reject(error);
-                });
-        } else {
-            deferred.resolve();
-        }
+class SpotifyDataFetcher {
+    constructor() {
+        // Automatically determine the correct backend URL (local vs prod)
+        this.proxyUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8000/api/spotify'
+            : '/api/spotify';
     }
 
-    getNextAudioBatch();
-    return deferred.promise;
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    chunkArray(array, chunkSize) {
+        const chunks = [];
+        for (let i = 0; i < array.length; i += chunkSize) {
+            chunks.push(array.slice(i, i + chunkSize));
+        }
+        return chunks;
+    }
+
+    async apiCall(url, method = 'GET', data = null, retries = 3) {
+        try {
+            const response = await fetch(this.proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, method, data, accessToken })
+            });
+
+            if (response.status === 429) {
+                if (retries > 0) {
+                    const retryAfter = response.headers.get('Retry-After') || 2;
+                    await this.sleep(retryAfter * 1000);
+                    return this.apiCall(url, method, data, retries - 1);
+                }
+                throw new Error("Max retries exceeded due to rate limiting.");
+            }
+
+            if (response.status === 401 || (response.status === 403 && !response.ok)) {
+                restartAuthorization("Your Spotify session expired or is missing permissions. Please connect again.");
+                throw new Error("Auth expired");
+            }
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(`API Error: ${response.status} - ${errorData}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error("Fetch failed:", error);
+            throw error;
+        }
+    }
 }
 
-function collectArtistAttributes(tracks) {
-    var aids = [];
-    var maxArtistsPerCall = 50;
-    var deferred = RSVP.defer();
+const spotifyFetcher = new SpotifyDataFetcher();
 
-    function getNextArtists() {
-        var nextAids = getNextBatch(aids, maxArtistsPerCall);
-        if (nextAids.length > 0) {
-            return getSpotifyP("https://api.spotify.com/v1/artists", { ids: nextAids.join(",") })
-                .then(function (results) {
-                    _.each(results.artists, function (artist) {
-                        if (artist != null && "id" in artist) {
-                            curArtists[artist.id] = { genres: artist.genres, name: artist.name, count: 1 };
+/**
+ * Replaces the old collectAudioAttributes, collectArtistAttributes, 
+ * and collectAlbumAttributes by fetching them all concurrently.
+ */
+async function collectAllMetadata(tracks) {
+    const tids = tracks.map(t => t.id);
+    const aidsSet = new Set();
+    const albumIdsSet = new Set();
+
+    // Map out the IDs we need to query
+    tracks.forEach(track => {
+        track.details.artists.forEach(artist => aidsSet.add(artist.id));
+        if (!(track.details.album_id in curAlbums)) albumIdsSet.add(track.details.album_id);
+    });
+
+    const aids = Array.from(aidsSet);
+    const albumIds = Array.from(albumIdsSet);
+
+    // Spotify's mandatory chunk limits
+    const trackChunks = spotifyFetcher.chunkArray(tids, 100);
+    const artistChunks = spotifyFetcher.chunkArray(aids, 50);
+    const albumChunks = spotifyFetcher.chunkArray(albumIds, 20);
+
+    // Fetch Audio Features, Artists, and Albums in PARALLEL
+    await Promise.all([
+        ...trackChunks.map(async chunk => {
+            const res = await spotifyFetcher.apiCall("https://api.spotify.com/v1/audio-features", 'GET', { ids: chunk.join(",") });
+            if (res && res.audio_features) {
+                res.audio_features.forEach(audio_feature => {
+                    if (audio_feature && audio_feature.id) {
+                        const track = curTracks[audio_feature.id];
+                        if (track) {
+                            _.each(audio_feature, (val, name) => { track.feats[name] = val; });
+                            track.feats.sadness = (1 - audio_feature.energy) * (1 - audio_feature.valence);
+                            track.feats.happiness = audio_feature.energy * audio_feature.valence;
+                            track.feats.anger = audio_feature.energy * (1 - audio_feature.valence);
                         }
-                    });
-                    getNextArtists();
-                })
-                .catch(function (error) { deferred.reject(error); });
-        } else {
-            deferred.resolve(curArtists);
-        }
-    }
+                    }
+                });
+            }
+        }),
+        ...artistChunks.map(async chunk => {
+            const res = await spotifyFetcher.apiCall("https://api.spotify.com/v1/artists", 'GET', { ids: chunk.join(",") });
+            if (res && res.artists) {
+                res.artists.forEach(artist => {
+                    if (artist && artist.id) {
+                        curArtists[artist.id] = { genres: artist.genres, name: artist.name, count: 0 };
+                    }
+                });
+            }
+        }),
+        ...albumChunks.map(async chunk => {
+            const res = await spotifyFetcher.apiCall("https://api.spotify.com/v1/albums", 'GET', { ids: chunk.join(",") });
+            if (res && res.albums) {
+                res.albums.forEach(album => {
+                    if (album && album.id) {
+                        curAlbums[album.id] = { name: album.name, release_date: album.release_date, genres: album.genres };
+                    }
+                });
+            }
+        })
+    ]);
 
-    var aidsSet = new Set();
-    _.each(tracks, function (track) {
-        _.each(track.details.artists, function (artist) {
-            if (!(artist.id in curArtists)) {
-                aidsSet.add(artist.id);
-            } else {
+    // Calculate artist appearance counts based on new tracks safely
+    tracks.forEach(track => {
+        track.details.artists.forEach(artist => {
+            if (curArtists[artist.id]) {
                 curArtists[artist.id].count += 1;
-                var count = curArtists[artist.id].count;
-                if (count > topArtistCount) {
-                    topArtistCount = count;
+                if (curArtists[artist.id].count > topArtistCount) {
+                    topArtistCount = curArtists[artist.id].count;
                     topArtistName = curArtists[artist.id].name;
                 }
             }
         });
     });
-    aids = Array.from(aidsSet);
-    getNextArtists();
-    return deferred.promise;
 }
 
-function collectAlbumAttributes(tracks) {
-    var maxAlbumsPerCall = 20;
-    var aids = [];
-    var deferred = RSVP.defer();
+/**
+ * Replaces recursive fetching with parallel page fetching
+ */
+async function getTracksFromAPI(source, uri) {
+    const now = moment();
+    const allNewTracks = [];
+    const allLoadedTracks = [];
+    const limit = 50;
 
-    function getNextAlbums() {
-        var nextAids = getNextBatch(aids, maxAlbumsPerCall);
-        if (nextAids.length > 0) {
-            getSpotifyP("https://api.spotify.com/v1/albums", { ids: nextAids.join(",") })
-                .then(function (results) {
-                    _.each(results.albums, function (album) {
-                        if (album != null && "id" in album) {
-                            curAlbums[album.id] = { name: album.name, release_date: album.release_date, genres: album.genres };
-                        }
-                    });
-                    getNextAlbums();
-                })
-                .catch(function (error) { deferred.reject(error); });
-        } else {
-            deferred.resolve(curAlbums);
+    // 1. Fetch the first page to get total size
+    const firstPage = await spotifyFetcher.apiCall(uri, 'GET', { limit, offset: 0, market: "from_token" });
+    if (!firstPage || firstPage.total === undefined) return curTracks;
+
+    totalTracks = firstPage.total;
+    let allItems = [...(firstPage.items || [])];
+    showTracks(source, allItems);
+    refreshHeader();
+
+    // 2. Queue up the rest of the pages to fetch in parallel
+    const remainingRequests = [];
+    for (let offset = limit; offset < totalTracks; offset += limit) {
+        if (abortLoading) break;
+        remainingRequests.push(spotifyFetcher.apiCall(uri, 'GET', { limit, offset, market: "from_token" }));
+    }
+
+    const pages = await Promise.all(remainingRequests);
+    for (const page of pages) {
+        if (page && page.items) {
+            allItems = allItems.concat(page.items);
+            showTracks(source, page.items);
         }
     }
 
-    var aidSet = new Set();
-    _.each(tracks, function (track) {
-        if (!(track.details.album_id in curAlbums)) aidSet.add(track.details.album_id);
-    });
-    aids = Array.from(aidSet);
-    getNextAlbums();
-    return deferred.promise;
-}
+    // 3. Process the collected track objects
+    allItems.forEach(item => {
+        if (!item.is_local && item.track && "id" in item.track) {
+            item.track.added_at = item.added_at;
+            item.track.date_added = moment(item.added_at);
+            item.track.age = moment.duration(now.diff(item.track.date_added)).asDays();
 
-function getNextBatch(list, nitems) {
-    var out = [];
-    while (list.length > 0 && out.length < nitems) out.push(list.shift());
-    return out;
-}
+            const track = {
+                id: item.track.id,
+                feats: {
+                    date_added: moment(item.added_at),
+                    age: item.track.age,
+                    explicit: item.track.explicit,
+                    duration_ms: item.track.duration_ms,
+                    popularity: item.track.popularity,
+                    source: source,
+                    count: 1,
+                },
+                details: {
+                    name: item.track.name,
+                    album_id: item.track.album.id,
+                    uri: item.track.uri,
+                    preview_url: item.track.preview_url,
+                    artists: tinyArtists(item.track.artists),
+                },
+            };
 
-var trackTextQueue = [];
-var showingTracks = false;
-var tt = $("#tiny-track");
-
-function showLoadingState() {
-    // FIX 5: Safely remove the md:block class to ensure it actually hides when fetching
-    $("#sidebar").removeClass("md:block").addClass("hidden");
-    $("#loaded").addClass("hidden");
-    $("#loading").removeClass("hidden");
-}
-
-function showLoadedState() {
-    // FIX 5: Ensure sidebar gets its intended desktop structure classes back
-    $("#sidebar").removeClass("hidden").addClass("md:block");
-    $("#loaded").removeClass("hidden").addClass("flex");
-    $("#loading").addClass("hidden");
-}
-
-function showTracks(prefix, tracks) {
-    _.each(tracks, function (track) {
-        var text = prefix + " - " + track.details.artists[0].name + " - " + track.details.name;
-        trackTextQueue.push(text);
-    });
-}
-
-function showTracksUpdater() {
-    if (showingTracks) {
-        if (trackTextQueue.length > 0) {
-            var text = trackTextQueue.shift();
-            tt.text(text);
-        }
-        if (trackTextQueue.length > 0) setTimeout(showTracksUpdater, 40);
-        else setTimeout(showTracksUpdater, 300);
-    } else {
-        tt.text("");
-    }
-}
-
-function startShowingTracks() {
-    showingTracks = true;
-    showLoadingState();
-    showTracksUpdater();
-}
-function stopShowingTracks() { showingTracks = false; }
-
-function getTracksFromAPI(source, uri) {
-    var deferred = RSVP.defer();
-    var allNewTracks = [];
-    var allLoadedTracks = [];
-    var now = moment();
-
-    function processItems(items) {
-        _.each(items, function (item) {
-            if (!item.is_local && item.track && "id" in item.track) {
-                item.track.added_at = item.added_at;
-                item.track.date_added = moment(item.added_at);
-                item.track.age = moment.duration(now.diff(item.track.date_added)).asDays();
-                var track = {
-                    id: item.track.id,
-                    feats: {
-                        date_added: moment(item.added_at),
-                        age: item.track.age,
-                        explicit: item.track.explicit,
-                        duration_ms: item.track.duration_ms,
-                        popularity: item.track.popularity,
-                        source: source,
-                        count: 1,
-                    },
-                    details: {
-                        name: item.track.name,
-                        album_id: item.track.album.id,
-                        uri: item.track.uri,
-                        preview_url: item.track.preview_url,
-                        artists: tinyArtists(item.track.artists),
-                    },
-                };
-                if (track.id in curTracks) {
-                    curTracks[track.id].feats.count += 1;
-                    var count = curTracks[track.id].feats.count;
-                    if (count > topTrackCount) {
-                        topTrackCount = count;
-                        topTrackName = item.track.name;
-                    }
-                } else {
-                    var ntrack = loadTrack(track.id);
-                    if (ntrack != null) {
-                        curTracks[track.id] = ntrack;
-                        curTracks[track.id].feats.count = 1;
-                        allLoadedTracks.push(ntrack);
-                    } else {
-                        allNewTracks.push(track);
-                        curTracks[track.id] = track;
-                    }
+            if (track.id in curTracks) {
+                curTracks[track.id].feats.count += 1;
+                if (curTracks[track.id].feats.count > topTrackCount) {
+                    topTrackCount = curTracks[track.id].feats.count;
+                    topTrackName = item.track.name;
                 }
-            }
-        });
-    }
-
-    function go(offset) {
-        getSpotifyP(uri, { limit: 50, market: "from_token", offset: offset })
-            .then(function (results) {
-                if (!results || results.total === undefined) {
-                    deferred.resolve(curTracks);
-                    return;
-                }
-                totalTracks = results.total;
-                processItems(results.items || []);
-                showTracks(source, allNewTracks.slice(offset));
-                refreshHeader();
-
-                if (!abortLoading && results.items && offset + results.items.length < results.total) {
-                    go(offset + results.items.length);
-                } else {
-                    collectAudioAttributes(allNewTracks)
-                        .then(function () { return collectArtistAttributes(allNewTracks); })
-                        .then(function () { return collectAlbumAttributes(allNewTracks); })
-                        .then(function () {
-                            addTracks(allNewTracks);
-                            filterTracks(allNewTracks);
-                            filterTracks(allLoadedTracks);
-                            refreshTheWorld(true);
-                            deferred.resolve(curTracks);
-                        })
-                        .catch(function (err) { deferred.reject(err); });
-                }
-            })
-            .catch(function (error) {
-                deferred.reject(error);
-            });
-    }
-
-    go(0);
-    return deferred.promise;
-}
-
-function tinyArtists(artists) {
-    var tartists = [];
-    _.each(artists, function (artist) { tartists.push({ id: artist.id, name: artist.name }); });
-    return tartists;
-}
-
-function getSavedTracks() {
-    startShowingTracks();
-    $("#lplaylist-name").text("Your Saved Tracks");
-    getTracksFromAPI("Your Saved tracks", "https://api.spotify.com/v1/me/tracks")
-        .then(function () { })
-        .catch(function (results) { console.log("GST catch " + results); })
-        .finally(function () {
-            stopShowingTracks();
-            refreshTheWorld(false);
-            showLoadedState();
-        });
-}
-
-function getAllMusic() {
-    startShowingTracks();
-    $("#lplaylist-name").text("Your Saved Tracks");
-    getTracksFromAPI("Your Saved Tracks", "https://api.spotify.com/v1/me/tracks").then(function () {
-        getMusicFromPlaylists(true);
-    });
-}
-
-function getMusicFromPlaylists(allPlaylists) {
-    var deferred = RSVP.defer();
-
-    function getMyPlaylists(offset) {
-        var params = { limit: 50, offset: offset };
-        getSpotifyP("https://api.spotify.com/v1/me/playlists", params)
-            .then(function (results) {
-                if (results && results.items) {
-                    var outstandingPlaylists = [];
-                    var count = results.offset + results.items.length;
-                    totalPlaylists = results.total || 0;
-                    _.each(results.items, function (playlist) {
-                        if (playlist) outstandingPlaylists.push(playlist);
-                    });
-                    loadPlaylists(outstandingPlaylists, allPlaylists).then(
-                        function () {
-                            if (!abortLoading && results.total && count < results.total) getMyPlaylists(count);
-                            else deferred.resolve(outstandingPlaylists);
-                        },
-                    );
-                } else {
-                    deferred.reject(new Error("can't get your playlist"));
-                }
-            })
-            .catch(function (error) { deferred.reject(error); });
-    }
-
-    startShowingTracks();
-    getMyPlaylists(0);
-
-    deferred.promise
-        .then(function () { })
-        .catch(function (theError) { error("trouble, " + theError); })
-        .finally(function () {
-            stopShowingTracks();
-            refreshTheWorld(false);
-            showLoadedState();
-        });
-}
-
-var quickMode = false;
-
-function loadPlaylists(playlists, allPlaylists) {
-    var deferred = RSVP.defer();
-
-    function fetchNextPlaylist() {
-        if (!abortLoading && playlists.length > 0) {
-            processedPlaylists += 1;
-            var playlist = playlists.shift();
-            if (quickMode && processedPlaylists > 100) return deferred.resolve(playlists);
-            if (isGoodPlaylist(playlist, allPlaylists)) {
-                var trackCount = (playlist.tracks && playlist.tracks.total) ? playlist.tracks.total : 0;
-                $("#lplaylist-name").text(playlist.name + " (" + trackCount + " tracks)");
-                getPlaylistTracks(playlist)
-                    .then(function () { fetchNextPlaylist(); })
-                    .catch(function () {
-                        console.log("trouble loading playlist", playlist);
-                        fetchNextPlaylist();
-                    });
             } else {
-                fetchNextPlaylist();
+                const ntrack = loadTrack(track.id);
+                if (ntrack != null) {
+                    curTracks[track.id] = ntrack;
+                    curTracks[track.id].feats.count = 1;
+                    allLoadedTracks.push(ntrack);
+                } else {
+                    allNewTracks.push(track);
+                    curTracks[track.id] = track;
+                }
             }
-        } else {
-            return deferred.resolve(playlists);
         }
+    });
+
+    // 4. Fetch the metadata attributes (parallelized)
+    if (allNewTracks.length > 0) {
+        await collectAllMetadata(allNewTracks);
+        addTracks(allNewTracks);
+        filterTracks(allNewTracks);
     }
-    fetchNextPlaylist();
-    return deferred.promise;
+
+    if (allLoadedTracks.length > 0) {
+        filterTracks(allLoadedTracks);
+    }
+
+    refreshTheWorld(true);
+    return curTracks;
 }
 
-function isGoodPlaylist(playlist, allPlaylists) {
-    if (!playlist) return false;
-    if (allPlaylists || (playlist.owner && playlist.owner.id == curUserID)) {
-        if (playlist.tracks && playlist.tracks.total > 0) return true;
-    }
-    return false;
-}
+// -------------------------------------------------------------------
+// Updated Entry Points (Async Native)
+// -------------------------------------------------------------------
 
-function getPlaylistTracks(playlist) {
-    var uri = playlist.uri;
-    if (isValidPlaylistUri(uri)) {
-        var playlistID = getPlaylistPid(uri);
-        var url = "https://api.spotify.com/v1/playlists/" + playlistID + "/tracks";
-        return getTracksFromAPI(playlist.name, url);
-    } else {
-        var deferred = RSVP.defer();
-        deferred.reject(new Error("bad playlist URI"));
-        return deferred.promise;
-    }
-}
-
-function getPlaylistFromURI(name, uri) {
+async function getSavedTracks() {
     startShowingTracks();
-    var playlist = { name: name, uri: uri };
-    getPlaylistTracks(playlist).finally(function () {
+    $("#lplaylist-name").text("Your Saved Tracks");
+    try {
+        await getTracksFromAPI("Your Saved tracks", "https://api.spotify.com/v1/me/tracks");
+    } catch (error) {
+        console.log("GST catch ", error);
+    } finally {
         stopShowingTracks();
         refreshTheWorld(false);
         showLoadedState();
-    });
+    }
+}
+
+async function getAllMusic() {
+    startShowingTracks();
+    $("#lplaylist-name").text("Your Saved Tracks");
+    try {
+        await getTracksFromAPI("Your Saved Tracks", "https://api.spotify.com/v1/me/tracks");
+        await getMusicFromPlaylists(true);
+    } catch (err) {
+        console.error("Error fetching all music: ", err);
+    }
+}
+
+async function getMusicFromPlaylists(allPlaylists) {
+    startShowingTracks();
+    try {
+        let offset = 0;
+        let total = Infinity;
+        const outstandingPlaylists = [];
+
+        // Paginate playlists sequentially to avoid massive overhead upfront
+        while (offset < total && !abortLoading) {
+            const results = await spotifyFetcher.apiCall("https://api.spotify.com/v1/me/playlists", 'GET', { limit: 50, offset });
+            if (results && results.items) {
+                totalPlaylists = results.total || 0;
+                total = totalPlaylists;
+
+                results.items.forEach(playlist => {
+                    if (playlist) outstandingPlaylists.push(playlist);
+                });
+
+                offset += results.items.length;
+            } else {
+                throw new Error("Can't get your playlists");
+            }
+        }
+
+        await loadPlaylists(outstandingPlaylists, allPlaylists);
+    } catch (error) {
+        error("trouble, " + error);
+    } finally {
+        stopShowingTracks();
+        refreshTheWorld(false);
+        showLoadedState();
+    }
+}
+
+async function loadPlaylists(playlists, allPlaylists) {
+    for (const playlist of playlists) {
+        if (abortLoading) break;
+        processedPlaylists += 1;
+
+        if (quickMode && processedPlaylists > 100) return;
+
+        if (isGoodPlaylist(playlist, allPlaylists)) {
+            const trackCount = (playlist.tracks && playlist.tracks.total) ? playlist.tracks.total : 0;
+            $("#lplaylist-name").text(`${playlist.name} (${trackCount} tracks)`);
+            try {
+                await getPlaylistTracks(playlist);
+            } catch (err) {
+                console.log("trouble loading playlist", playlist);
+            }
+        }
+    }
+}
+
+async function getPlaylistTracks(playlist) {
+    const uri = playlist.uri;
+    if (isValidPlaylistUri(uri)) {
+        const playlistID = getPlaylistPid(uri);
+        const url = `https://api.spotify.com/v1/playlists/${playlistID}/tracks`;
+        return getTracksFromAPI(playlist.name, url);
+    } else {
+        throw new Error("bad playlist URI");
+    }
+}
+
+async function getPlaylistFromURI(name, uri) {
+    startShowingTracks();
+    const playlist = { name, uri };
+    try {
+        await getPlaylistTracks(playlist);
+    } finally {
+        stopShowingTracks();
+        refreshTheWorld(false);
+        showLoadedState();
+    }
 }
 
 function isValidPlaylistUri(uri) {
@@ -2344,12 +2295,12 @@ $(document).ready(function () {
     } else {
         var storedRefreshToken = window.localStorage.getItem("refresh_token");
         if (storedRefreshToken) {
-             refreshAccessToken().then(function() {
+            refreshAccessToken().then(function () {
                 showSelectionUI();
-             }).fail(function() {
+            }).fail(function () {
                 $("#login-state").show();
                 $("#selection-state").hide();
-             });
+            });
         } else {
             $("#login-state").show();
             $("#selection-state").hide();
