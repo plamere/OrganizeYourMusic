@@ -53,6 +53,8 @@ app.post('/api/spotify', async (req, res) => {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            const retryAfter = response.headers.get('retry-after');
+            if (retryAfter) res.set('Retry-After', retryAfter);
             return res.status(response.status).json(errorData);
         }
 

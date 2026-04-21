@@ -13,8 +13,7 @@
 
   <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" />
 
-  <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css"
-    rel="stylesheet" />
+
 
   <link rel="stylesheet" href="/src/index.css" />
 
@@ -92,18 +91,41 @@
       background-color: #242424 !important;
     }
 
-    .google-visualization-table-tr-head td,
-    .google-visualization-table-tr-head th {
-      border-bottom: 1px solid #3e3e3e !important;
+    /* Targeted classes for the Google Table */
+    .track-header-cell {
+      border-bottom: 2px solid #2d2d2d !important;
       border-top: none !important;
       border-right: none !important;
       border-left: none !important;
-      background-color: #242424 !important;
-      padding: 12px !important;
-      font-size: 0.75rem !important;
+      background-color: #1a1a1a !important;
+      padding: 24px 16px !important;
+      font-size: 0.85rem !important;
       text-transform: uppercase !important;
-      font-weight: 700 !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.12em !important;
       color: #a1a1aa !important;
+      white-space: nowrap !important;
+      text-align: center !important;
+      transition: background-color 0.2s, color 0.2s !important;
+    }
+
+    .track-header-cell div {
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      width: 100% !important;
+    }
+
+    .google-visualization-table-tr-head td,
+    .google-visualization-table-tr-head th {
+      padding: 0 !important;
+      /* Let track-header-cell handle padding */
+    }
+
+    .google-visualization-table-tr-head td:hover,
+    .google-visualization-table-tr-head th:hover {
+      color: #ffffff !important;
+      background-color: #242424 !important;
     }
 
     .google-visualization-table-tr-odd {
@@ -117,121 +139,148 @@
     }
 
     .google-visualization-table-tr-sel {
-      background-color: rgba(29, 185, 84, 0.2) !important;
+      background-color: rgba(29, 185, 84, 0.15) !important;
+      color: #ffffff !important;
     }
 
     .google-visualization-table-tr-over {
       background-color: #2a2a2a !important;
+      cursor: pointer;
+    }
+
+    /* Style for the new Select All checkbox in header */
+    .header-select-all {
+      margin: 0 !important;
+      cursor: pointer;
     }
 
     .track-table-cell,
     .google-visualization-table-table td {
-      padding: 14px 12px !important;
+      padding: 18px 14px !important;
       border-bottom: 1px solid #242424 !important;
       border-top: none !important;
       border-left: none !important;
       border-right: none !important;
       vertical-align: middle !important;
       font-size: 0.875rem !important;
+      text-align: center !important;
+      color: #e4e4e7 !important;
+      min-width: 110px !important;
     }
 
-    .google-visualization-table-div-page {
+    /* Force centering on numeric columns which Google Table right-aligns */
+    .google-visualization-table-td-number {
+      text-align: center !important;
+    }
+
+    .google-visualization-table-div-page,
+    .google-visualization-table-div-page table,
+    .google-visualization-table-div-page tr,
+    .google-visualization-table-div-page td,
+    .google-visualization-table-div-page * {
       background-color: #121212 !important;
       background-image: none !important;
       color: #b3b3b3 !important;
       border: none !important;
-      border-top: 1px solid #242424 !important;
-      padding: 12px 16px !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
+    .google-visualization-table-div-page {
+      padding: 24px 32px !important;
+      border-top: 1px solid #2d2d2d !important;
       display: flex !important;
+      justify-content: space-between !important;
       align-items: center !important;
-      justify-content: flex-end !important;
       gap: 16px !important;
-      border-radius: 0 0 8px 8px !important;
+      font-family: inherit !important;
     }
 
-    .google-visualization-table-div-page,
-    .google-visualization-table-div-page * {
-      color: #b3b3b3 !important;
-      background-image: none !important;
-      box-shadow: none !important;
-      text-shadow: none !important;
-    }
-
-    .google-visualization-table-div-page table {
-      margin-left: auto !important;
-      border-collapse: separate !important;
-      border-spacing: 8px 0 !important;
-    }
-
-    .google-visualization-table-div-page tr {
+    .pager-controls-wrapper {
       display: flex !important;
       align-items: center !important;
+      gap: 16px !important;
     }
 
-    .google-visualization-table-div-page td {
-      padding: 0 !important;
-      margin: 0 !important;
-      border: none !important;
-      background: transparent !important;
-    }
-
-    .google-visualization-table-div-page [role="button"],
-    .google-visualization-table-div-page a,
-    .google-visualization-table-div-page button,
-    .google-visualization-table-div-page input {
+    /* Target the library's pagination controls */
+    .google-visualization-table-div-page .google-visualization-table-page-number,
+    .google-visualization-table-div-page .google-visualization-table-page-prev,
+    .google-visualization-table-div-page .google-visualization-table-page-next,
+    .google-visualization-table-div-page .google-visualization-table-page-first,
+    .google-visualization-table-div-page .google-visualization-table-page-last {
+      cursor: pointer !important;
+      padding: 8px 14px !important;
+      border-radius: 6px !important;
+      background-color: #282828 !important;
       color: #b3b3b3 !important;
-      cursor: pointer;
-      padding: 4px 8px;
-      text-decoration: none !important;
-      transition: color 0.2s;
-      display: inline-flex;
+      font-weight: 600 !important;
+      font-size: 0.85rem !important;
+      transition: all 0.2s ease !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      min-width: 36px !important;
+      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .google-visualization-table-div-page .google-visualization-table-page-number:hover,
+    .google-visualization-table-div-page .google-visualization-table-page-prev:hover,
+    .google-visualization-table-div-page .google-visualization-table-page-next:hover {
+      background-color: #3e3e3e !important;
+      color: #ffffff !important;
+    }
+
+    .google-visualization-table-div-page .google-visualization-table-page-number.current {
+      background-color: #1db954 !important;
+      color: #000000 !important;
+      font-weight: 700 !important;
+    }
+
+    #page-size-selector-container {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      min-width: 30px;
-      height: 30px;
-      line-height: 1;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-      border: 1px solid #3e3e3e !important;
-      border-radius: 9999px !important;
-      background: #1a1a1a !important;
-      background-image: none !important;
+      gap: 12px;
+      color: #71717a;
+      font-size: 0.85rem;
+      font-weight: 600;
     }
 
-    .google-visualization-table-div-page .pager-shell {
-      border: none !important;
-      background: transparent !important;
-      background-image: none !important;
-      box-shadow: none !important;
-      padding: 0 !important;
+    #page-size-selector {
+      background-color: #282828;
+      border: 1px solid #3e3e3e;
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: all 0.2s ease;
     }
 
+    #page-size-selector:hover {
+      background-color: #3e3e3e;
+      border-color: #52525b;
+    }
+
+    .google-visualization-table-div-page select {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 8px center !important;
+      background-size: 16px !important;
+      padding-right: 32px !important;
+    }
+
+    .google-visualization-table-div-page .pager-shell,
     .google-visualization-table-div-page span {
       border: none !important;
       background: transparent !important;
       background-image: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
       min-width: 0 !important;
       height: auto !important;
-      padding: 0 !important;
-    }
-
-    .google-visualization-table-div-page [role="button"]:hover,
-    .google-visualization-table-div-page a:hover,
-    .google-visualization-table-div-page button:hover,
-    .google-visualization-table-div-page input:hover {
-      color: #1db954 !important;
-    }
-
-    .google-visualization-table-div-page .google-visualization-table-page-number,
-    .google-visualization-table-div-page .google-visualization-table-page-number,
-    .google-visualization-table-div-page .pager-control {
-      border: 1px solid #3e3e3e !important;
-      border-radius: 9999px !important;
-      min-width: 28px;
-      height: 30px;
-      text-align: center;
-      font-weight: 600;
-      background-color: #1a1a1a !important;
     }
 
     .google-visualization-table-div-page .pager-arrow {
@@ -343,85 +392,62 @@
         musical attributes including genre, mood, decade of release and more.
       </p>
 
-        <!-- Stage 0: Login -->
-        <div id="login-state" class="group w-full max-w-md relative z-10">
-          <div
-            class="absolute -inset-0.5 bg-linear-to-r from-spotify-green to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"
-          ></div>
-          <div
-            class="relative bg-zinc-900/90 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-zinc-700/50 w-full"
-          >
-            <p class="text-zinc-400 text-sm mb-8 text-center leading-relaxed">
-              To organize your collection, we first need your permission to access your Spotify library.
-            </p>
-            <a
-              id="login-button"
-              href="javascript:void(0)"
-              role="button"
-              class="block w-full text-center bg-spotify-green hover:bg-spotify-green-hover text-black font-extrabold py-4 px-6 rounded-full uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.3)]"
-            >
-              <i class="fa fa-spotify mr-2 text-xl"></i>
-              Authorize Spotify
-            </a>
-          </div>
+      <!-- Stage 0: Login -->
+      <div id="login-state" class="group w-full max-w-md relative z-10">
+        <div
+          class="absolute -inset-0.5 bg-linear-to-r from-spotify-green to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
         </div>
-
-        <!-- Stage 1: Selection (Home) -->
-        <div id="selection-state" class="group w-full max-w-md relative z-10 hidden">
-          <div
-            class="absolute -inset-0.5 bg-linear-to-r from-spotify-green to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"
-          ></div>
-          <div
-            class="relative bg-zinc-900/90 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-zinc-700/50 w-full"
-          >
-            <div class="form-group mb-6 text-left">
-              <label
-                id="what-label"
-                for="collection-type"
-                class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest"
-              >
-                What do you want to organize?
-              </label>
-              <select
-                id="collection-type"
-                class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-spotify-green focus:border-transparent transition-all cursor-pointer"
-              >
-                <option value="saved">Songs you've saved to Your Music</option>
-                <option value="added">Songs you've added to a playlist</option>
-                <option value="follow">Songs in playlists you follow</option>
-                <option value="all">All of your music</option>
-                <option value="playlist">A specific playlist</option>
-              </select>
-            </div>
-
-            <div id="uri-prompt" class="mb-6 text-left hidden">
-              <label
-                for="uri-text"
-                class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest"
-              >
-                Enter the URI for your playlist
-              </label>
-              <input
-                id="uri-text"
-                type="text"
-                class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-spotify-green transition-all"
-                placeholder="spotify:user:spotify:playlist:5FJX..."
-              />
-            </div>
-
-            <a
-              id="go"
-              href="javascript:void(0)"
-              role="button"
-              class="block w-full text-center bg-spotify-green hover:bg-spotify-green-hover text-black font-extrabold py-3.5 px-6 rounded-full uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.3)]"
-            >
-              Organize your music
-            </a>
-            <div
-              class="err-txt text-red-400 font-medium text-sm mt-4 text-center"
-            ></div>
-          </div>
+        <div
+          class="relative bg-zinc-900/90 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-zinc-700/50 w-full">
+          <p class="text-zinc-400 text-sm mb-8 text-center leading-relaxed">
+            To organize your collection, we first need your permission to access your Spotify library.
+          </p>
+          <a id="login-button" href="javascript:void(0)" role="button"
+            class="block w-full text-center bg-spotify-green hover:bg-spotify-green-hover text-black font-extrabold py-4 px-6 rounded-full uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.3)]">
+            <i class="fa fa-spotify mr-2 text-xl"></i>
+            Authorize Spotify
+          </a>
         </div>
+      </div>
+
+      <!-- Stage 1: Selection (Home) -->
+      <div id="selection-state" class="group w-full max-w-md relative z-10 hidden">
+        <div
+          class="absolute -inset-0.5 bg-linear-to-r from-spotify-green to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
+        </div>
+        <div
+          class="relative bg-zinc-900/90 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-zinc-700/50 w-full">
+          <div class="form-group mb-6 text-left">
+            <label id="what-label" for="collection-type"
+              class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest">
+              What do you want to organize?
+            </label>
+            <select id="collection-type"
+              class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-spotify-green focus:border-transparent transition-all cursor-pointer">
+              <option value="saved">Songs you've saved to Your Music</option>
+              <option value="added">Songs you've added to a playlist</option>
+              <option value="follow">Songs in playlists you follow</option>
+              <option value="all">All of your music</option>
+              <option value="playlist">A specific playlist</option>
+            </select>
+          </div>
+
+          <div id="uri-prompt" class="mb-6 text-left hidden">
+            <label for="uri-text" class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest">
+              Enter the URI for your playlist
+            </label>
+            <input id="uri-text" type="text"
+              class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-spotify-green transition-all"
+              placeholder="spotify:user:spotify:playlist:5FJX..." />
+          </div>
+
+          <a id="go" href="javascript:void(0)" role="button"
+            class="block w-full text-center bg-spotify-green hover:bg-spotify-green-hover text-black font-extrabold py-3.5 px-6 rounded-full uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.3)]">
+            Organize your music
+          </a>
+          <div class="err-txt text-red-400 font-medium text-sm mt-4 text-center"></div>
+        </div>
+      </div>
     </div>
 
     <div class="container mx-auto px-6 py-20 border-t border-zinc-800/50">
@@ -655,7 +681,7 @@
           </div>
         </div>
 
-        <div id="loaded" class="hidden h-full flex-col w-full max-w-7xl mx-auto">
+        <div id="loaded" class="work hidden h-full flex-col w-full max-w-7xl mx-auto">
           <div
             class="flex flex-col gap-6 mb-8 lg:flex-row lg:items-end lg:justify-between bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800/50">
             <div class="min-w-0 flex-1">
@@ -694,7 +720,7 @@
                 </a>
               </li>
               <li class="group">
-                <a href="#the-plots" data-toggle="tab"
+                <a id="the-plots-tab" href="#the-plots" data-toggle="tab"
                   class="block px-6 py-4 text-sm font-bold uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-zinc-900/50 rounded-t-lg group-[.active]:text-spotify-green group-[.active]:border-b-2 group-[.active]:border-spotify-green group-[.active]:bg-transparent transition-all">
                   <i class="fa fa-bar-chart mr-2"></i> The Plots
                 </a>
@@ -728,7 +754,7 @@
                 <div id="track-table-shell"
                   class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden border border-zinc-800">
                   <div class="overflow-x-auto w-full">
-                    <table id="gthe-track-table" class="w-full text-left"></table>
+                    <div id="gthe-track-table" class="w-full text-left"></div>
                   </div>
                   <div id="gthe-track-table-truncated"
                     class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
@@ -851,7 +877,7 @@
 
                   <div class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden border border-zinc-800">
                     <div class="overflow-x-auto w-full">
-                      <table id="gthe-staging-table" class="w-full text-left"></table>
+                      <div id="gthe-staging-table" class="w-full text-left"></div>
                     </div>
                     <div id="gthe-staging-table-truncated"
                       class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
@@ -891,17 +917,10 @@
     </div>
   </div>
 
-  <script src="/lib/jquery-1.11.1.min.js?v=4"></script>
-  <script src="/lib/moment.min.js?v=4"></script>
-  <script src="https://sp-bootstrap.global.ssl.fastly.net/7.4.1/sp-bootstrap.min.js"></script>
-  <script src="/lib/underscore-min.js?v=4"></script>
-  <script
-    src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script type="text/javascript" charset="utf-8" src="/lib/rsvp-latest.min.js?v=4"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
   <script src="/config.js?v=4"></script>
-  <script src="/src/scripts/scripts.js?v=8"></script>
+  <script src="/src/scripts/scripts.js?v=9"></script>
 </body>
 
 </html>
