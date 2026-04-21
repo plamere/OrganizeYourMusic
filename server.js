@@ -49,10 +49,12 @@ app.post('/api/spotify', async (req, res) => {
             finalUrl = `${url}?${params.toString()}`;
         }
 
+        console.log(`Proxying ${method} request to: ${finalUrl}`);
         const response = await fetch(finalUrl, options);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            console.error(`Spotify API error (${response.status}):`, errorData);
             const retryAfter = response.headers.get('retry-after');
             if (retryAfter) res.set('Retry-After', retryAfter);
             return res.status(response.status).json(errorData);
@@ -61,7 +63,7 @@ app.post('/api/spotify', async (req, res) => {
         const responseData = await response.json();
         res.json(responseData);
     } catch (error) {
-        console.error('Spotify API proxy error:', error);
+        console.error('Spotify API proxy fatal error:', error);
         res.status(500).json({ error: error.message });
     }
 });

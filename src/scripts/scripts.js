@@ -77,7 +77,24 @@ function restartAuthorization(message) {
 
     accessToken = null;
     window.localStorage.removeItem("refresh_token");
-    go();
+    
+    // Stop any ongoing fetch
+    abortLoading = true;
+
+    // Reset UI to login state
+    var intro = document.getElementById("intro");
+    if (intro) intro.style.display = "block";
+
+    var loginState = document.getElementById("login-state");
+    if (loginState) loginState.style.display = "block";
+
+    var selectionState = document.getElementById("selection-state");
+    if (selectionState) selectionState.style.display = "none";
+
+    document.querySelectorAll(".work").forEach(function (el) {
+        el.classList.add("hidden");
+        el.classList.remove("flex");
+    });
 }
 
 var theWorld = [
@@ -677,6 +694,10 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
     var maxPage = Math.max(Math.ceil(rows.length / defaultTablePageSize) - 1, 0);
     if (currentPage > maxPage) currentPage = maxPage;
 
+    table.currentPage = currentPage;
+    table.data = data;
+    table.totalRows = rows.length;
+
     table.draw(data, {
         showRowNumber: false,
         width: "100%",
@@ -690,76 +711,113 @@ function showTracksInTable(table, tracks, getter, label, isStagingList) {
             headerCell: "track-header-cell",
         },
     });
-    table.currentPage = currentPage;
-    table.data = data;
-    enhancePagerUI(table);
 }
 
 function enhancePagerUI(table) {
-    var container = table.getContainer();
-    var pager = container.querySelector(".google-visualization-table-div-page");
-    if (!pager) return;
+    // Debounce/Guard to prevent multiple simultaneous enhancements on the same table
+    if (table._isEnhancing) return;
+    table._isEnhancing = true;
 
-    // Wrap navigation controls to separate them from the potential dropdown
-    var controlsWrapper = pager.querySelector(".pager-controls-wrapper");
-    if (!controlsWrapper) {
-        controlsWrapper = document.createElement("div");
-        controlsWrapper.className = "pager-controls-wrapper";
-        var tableInside = pager.querySelector("table");
-        if (tableInside) {
-            tableInside.parentNode.insertBefore(controlsWrapper, tableInside);
-            controlsWrapper.appendChild(tableInside);
-        }
-    }
+    // Use setTimeout to ensure we run AFTER the Google Table has finished its internal DOM updates
+    setTimeout(function() {
+        try {
+            var container = table.getContainer();
+            if (!container) return;
+            var pager = container.querySelector(".google-visualization-table-div-page");
+            if (!pager) return;
 
-    // Inject row count selector
-    var selectorId = "page-size-selector-container";
-    if (!pager.querySelector("#" + selectorId)) {
-        var selectorDiv = document.createElement("div");
-        selectorDiv.id = selectorId;
-        selectorDiv.innerHTML = '<span class="hidden md:inline">Show:</span><select id="page-size-selector">' +
-            '<option value="50">50 rows</option>' +
-            '<option value="100">100 rows</option>' +
-            '<option value="200">200 rows</option>' +
-            '<option value="500">500 rows</option>' +
-            '<option value="1000">1000 rows</option>' +
-            '</select>';
-        
-        pager.insertBefore(selectorDiv, pager.firstChild);
-        
-        var select = selectorDiv.querySelector("select");
-        select.value = defaultTablePageSize;
-        select.onchange = function() {
-            defaultTablePageSize = parseInt(this.value);
-            // Refresh the current view with the new page size
-            if (curNode) showPlaylist(curNode);
-        };
-    }
+            // Check if we've already structuraly enhanced this specific pager instance
+            // Google often re-creates the entire pager DOM on draw/page
+            var isAlreadyWrapped = !!pager.querySelector(".pager-controls-wrapper");
 
-    function iconize(selector, iconClass, label) {
-        pager.querySelectorAll(selector).forEach(function (elem) {
-            var control = elem;
-            if (!elem.matches("a,button,input,[role='button']")) {
-                var inner = elem.querySelector("a,button,input,[role='button']");
-                if (inner) control = inner;
+            // 1. Wrap navigation controls if not already done
+            var controlsWrapper = pager.querySelector(".pager-controls-wrapper");
+            if (!controlsWrapper) {
+                controlsWrapper = document.createElement("div");
+                controlsWrapper.className = "pager-controls-wrapper";
+                var tableInside = pager.querySelector("table");
+                if (tableInside) {
+                    tableInside.parentNode.insertBefore(controlsWrapper, tableInside);
+                    controlsWrapper.appendChild(tableInside);
+                }
             }
 
-            control.setAttribute("title", label);
-            control.setAttribute("aria-label", label);
-            control.classList.add("pager-control-btn");
-            control.innerHTML = "<i class='fa " + iconClass + "' aria-hidden='true'></i>";
-            
-            // Remove text content if present (like "Next", "Prev")
-            Array.from(control.childNodes).forEach(function(node) {
-                if (node.nodeType === 3) node.remove();
-            });
-        });
-    }
+            // 2. Inject row count selector if missing
+            var selectorId = "page-size-selector-container";
+            if (!pager.querySelector("#" + selectorId)) {
+                var selectorDiv = document.createElement("div");
+                selectorDiv.id = selectorId;
+                selectorDiv.innerHTML = '<span class="hidden md:inline">Show:</span><select id="page-size-selector">' +
+                    '<option value="50">50 rows</option>' +
+                    '<option value="100">100 rows</option>' +
+                    '<option value="200">200 rows</option>' +
+                    '<option value="500">500 rows</option>' +
+                    '<option value="1000">1000 rows</option>' +
+                    '</select>';
+                
+                pager.insertBefore(selectorDiv, pager.firstChild);
+                
+                var select = selectorDiv.querySelector("select");
+                select.value = defaultTablePageSize;
+                select.onchange = function() {
+                    defaultTablePageSize = parseInt(this.value);
+                    if (curNode) showPlaylist(curNode);
+                };
+            }
 
-    iconize(".google-visualization-table-page-first, .google-visualization-table-first-page", "fa-step-backward", "First page");
-    iconize(".google-visualization-table-page-prev, .google-visualization-table-prev-page", "fa-chevron-left", "Previous page");
-    iconize(".google-visualization-table-page-next, .google-visualization-table-next-page", "fa-chevron-right", "Next page");
-    iconize(".google-visualization-table-page-last, .google-visualization-table-last-page", "fa-step-forward", "Last page");
+            // 3. Inject/Update pagination info ("Showing X to Y of Z")
+            var infoId = "pagination-info-container";
+            var infoDiv = pager.querySelector("#" + infoId);
+            if (!infoDiv) {
+                infoDiv = document.createElement("div");
+                infoDiv.id = infoId;
+                infoDiv.className = "text-zinc-500 text-xs font-semibold hidden md:block";
+                var selector = pager.querySelector("#page-size-selector-container");
+                if (selector && selector.nextSibling) {
+                    pager.insertBefore(infoDiv, selector.nextSibling);
+                } else {
+                    pager.appendChild(infoDiv);
+                }
+            }
+
+            var currentPage = table.currentPage || 0;
+            var pageSize = defaultTablePageSize;
+            var totalRows = table.totalRows || 0;
+            var startRow = totalRows > 0 ? (currentPage * pageSize + 1) : 0;
+            var endRow = Math.min((currentPage + 1) * pageSize, totalRows);
+            infoDiv.textContent = "Showing " + startRow + " to " + endRow + " of " + totalRows + " entries";
+
+            // 4. Iconize buttons (idempotent check)
+            function iconize(selector, iconClass, label) {
+                pager.querySelectorAll(selector).forEach(function (elem) {
+                    var control = elem;
+                    if (!elem.matches("a,button,input,[role='button']")) {
+                        var inner = elem.querySelector("a,button,input,[role='button']");
+                        if (inner) control = inner;
+                    }
+
+                    // Only apply if not already iconized to prevent fighting with Google's updates
+                    if (control.querySelector("i.fa")) return;
+
+                    control.setAttribute("title", label);
+                    control.setAttribute("aria-label", label);
+                    control.classList.add("pager-control-btn");
+                    control.innerHTML = "<i class='fa " + iconClass + "' aria-hidden='true'></i>";
+                    
+                    Array.from(control.childNodes).forEach(function(node) {
+                        if (node.nodeType === 3) node.remove();
+                    });
+                });
+            }
+
+            iconize(".google-visualization-table-page-first, .google-visualization-table-first-page", "fa-step-backward", "First page");
+            iconize(".google-visualization-table-page-prev, .google-visualization-table-prev-page", "fa-chevron-left", "Previous page");
+            iconize(".google-visualization-table-page-next, .google-visualization-table-next-page", "fa-chevron-right", "Next page");
+            iconize(".google-visualization-table-page-last, .google-visualization-table-last-page", "fa-step-forward", "Last page");
+        } finally {
+            table._isEnhancing = false;
+        }
+    }, 50);
 }
 
 function addEventHandlers(tableContainer, table) {
@@ -1579,8 +1637,9 @@ class SpotifyDataFetcher {
 
     async apiCall(url, method = 'GET', data = null, retries = 5) {
         let currentRetries = retries;
+        let hasRefreshed = false;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for large batches
 
         while (currentRetries >= 0) {
             const result = await this.enqueue(async () => {
@@ -1592,8 +1651,6 @@ class SpotifyDataFetcher {
                         signal: controller.signal
                     });
 
-                    clearTimeout(timeoutId);
-
                     if (response.status === 429) {
                         const retryAfterHeader = response.headers.get('Retry-After');
                         const baseDelay = retryAfterHeader ? parseInt(retryAfterHeader, 10) : (Math.pow(2, 5 - currentRetries) + 1);
@@ -1603,7 +1660,32 @@ class SpotifyDataFetcher {
                     }
 
                     if (response.status === 401 || (response.status === 403 && !response.ok)) {
-                        restartAuthorization("Your Spotify session expired or is missing permissions. Please connect again.");
+                        // Log the actual error body from Spotify for debugging
+                        try {
+                            const errorClone = response.clone();
+                            const errorData = await errorClone.json();
+                            console.error(`Spotify ${response.status} Error:`, errorData);
+                        } catch (e) {
+                            // ignore json parse errors
+                        }
+
+                        // Try to refresh token ONCE per call
+                        if (!hasRefreshed) {
+                            console.log("Token expired during API call, attempting refresh...");
+                            hasRefreshed = true;
+                            try {
+                                await refreshAccessToken();
+                                return { type: 'retry', delay: 0 }; // Immediate retry with new token
+                            } catch (e) {
+                                console.error("Automatic token refresh failed:", e);
+                            }
+                        }
+                        
+                        var errorMsg = "Your Spotify session expired or is missing permissions. Please connect again.";
+                        if (response.status === 403) {
+                            errorMsg = "Access Forbidden (403). If using a custom Client ID, ensure your Spotify email is whitelisted in the Developer Dashboard (Users and Access).";
+                        }
+                        restartAuthorization(errorMsg);
                         return { type: 'error', message: 'Auth expired' };
                     }
 
@@ -1615,18 +1697,28 @@ class SpotifyDataFetcher {
                     const json = await response.json();
                     return { type: 'success', data: json };
                 } catch (error) {
+                    if (error.name === 'AbortError') {
+                        return { type: 'error', message: 'Request timed out' };
+                    }
                     return { type: 'error', message: error.message };
                 }
             });
 
-            if (result.type === 'success') return result.data;
+            if (result.type === 'success') {
+                clearTimeout(timeoutId);
+                return result.data;
+            }
+            
             if (result.type === 'retry' && currentRetries > 0) {
-                console.warn(`Rate limited (429). Retrying in ${Math.round(result.delay)}ms... (Attempts left: ${currentRetries})`);
-                await this.sleep(result.delay);
+                if (result.delay > 0) {
+                    console.warn(`Rate limited (429). Retrying in ${Math.round(result.delay)}ms... (Attempts left: ${currentRetries})`);
+                    await this.sleep(result.delay);
+                }
                 currentRetries--;
                 continue;
             }
 
+            clearTimeout(timeoutId);
             throw new Error(result.message || "Max retries exceeded or fatal error.");
         }
     }
@@ -1670,6 +1762,7 @@ async function collectAllMetadata(tracks) {
     // Process all requests. The enqueue system handles the 3-at-a-time limit,
     // but we use Promise.all here to manage the overall collection.
     await Promise.all(allReqs.map(async (req) => {
+        if (abortLoading) return;
         try {
             if (req.type === 'track') {
                 const res = await spotifyFetcher.apiCall("https://api.spotify.com/v1/audio-features", 'GET', { ids: req.chunk.join(",") });
@@ -2085,12 +2178,12 @@ function deserializeTrack(rawTrack) {
             genres: new Set(rawTrack.feats.genres || []),
         },
         details: {
-            name: rawTrack.details.name,
-            album_id: rawTrack.details.album_id,
-            album_name: rawTrack.details.album_name || "",
-            uri: rawTrack.details.uri,
-            preview_url: rawTrack.details.preview_url,
-            artists: compactTrackArtists(rawTrack.details.artists),
+            name: (rawTrack.details && rawTrack.details.name) ? rawTrack.details.name : "Unknown Track",
+            album_id: (rawTrack.details && rawTrack.details.album_id) ? rawTrack.details.album_id : "",
+            album_name: (rawTrack.details && rawTrack.details.album_name) ? rawTrack.details.album_name : "",
+            uri: (rawTrack.details && rawTrack.details.uri) ? rawTrack.details.uri : "",
+            preview_url: (rawTrack.details && rawTrack.details.preview_url) ? rawTrack.details.preview_url : "",
+            artists: compactTrackArtists(rawTrack.details ? rawTrack.details.artists : []),
         },
     };
 }
@@ -2519,6 +2612,7 @@ function initTables() {
     google.visualization.events.addListener(theTrackTable, "ready", function () {
         updateHeaderCheckbox(theTrackTable);
         addEventHandlers(theTrackTable.getContainer(), theTrackTable);
+        enhancePagerUI(theTrackTable);
     });
 
     google.visualization.events.addListener(theTrackTable, "sort", function (props) {
@@ -2536,6 +2630,7 @@ function initTables() {
     google.visualization.events.addListener(theStagingTable, "ready", function () {
         updateHeaderCheckbox(theStagingTable);
         addEventHandlers(theStagingTable.getContainer(), theStagingTable);
+        enhancePagerUI(theStagingTable);
     });
 
     google.visualization.events.addListener(theStagingTable, "sort", function (props) {
@@ -2576,6 +2671,16 @@ function initPlot() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+    // Detect Client ID changes to prevent using incompatible tokens
+    var lastClientId = window.localStorage.getItem("omy_last_client_id");
+    if (lastClientId && lastClientId !== SPOTIFY_CLIENT_ID) {
+        console.warn("Client ID change detected. Clearing stored session.");
+        window.localStorage.removeItem("refresh_token");
+        window.localStorage.removeItem("code_verifier");
+        // Access token will be cleared upon first failure or manual reset
+    }
+    window.localStorage.setItem("omy_last_client_id", SPOTIFY_CLIENT_ID);
+
     var urlParams = new URLSearchParams(window.location.search);
     var code = urlParams.get("code");
     var authError = urlParams.get("error");
