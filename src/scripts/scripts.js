@@ -33,10 +33,6 @@ var theStagingTable = null;
 var stagingIsVisible = false;
 var maxTracksShown = 20000;
 var defaultTablePageSize = 200;
-var cachePrefix = "omy-cache-v4:";
-var legacyCachePrefixes = ["omy-cache-v3:", "omy-cache-v2:", "omy-cache-v1:"];
-var pendingRestoreInfo = null;
-var pendingFetchStarter = null;
 var sidebarExpanded = true;
 
 // NEW: Global search state
@@ -825,65 +821,70 @@ function addEventHandlers(tableContainer, table) {
 
     var rows = tableContainer.querySelectorAll(".google-visualization-table-table tbody tr");
 
+    function clearTextSelection() {
+        if (window.getSelection) {
+            window.getSelection().removeAllRanges();
+        }
+    }
+
+    function applyRangeSelection(start, end, isSelected) {
+        for (var i = start; i <= end; i++) {
+            var r = rows[i];
+            var cb = r && r.querySelector(".track-select");
+            if (!cb) continue;
+            var rTid = getTidFromElemId(cb.id);
+            // Batch operation: pass true to skip per-row header refresh.
+            toggleRowSelection(rTid, isSelected, tableContainer, table, true);
+        }
+        updateHeaderCheckbox(table);
+    }
+
+    function isInteractiveTarget(target) {
+        if (!target || !target.closest) return false;
+        return !!target.closest(".track-play, .track-select, .track-play-cell, input, button, a, select, textarea, label");
+    }
+
     rows.forEach(function (row, index) {
         var checkbox = row.querySelector(".track-select");
         if (!checkbox) return;
 
         var tid = getTidFromElemId(checkbox.id);
 
-        // Entire row click for selection
+        // Entire row click selects; shift-click selects range from last anchor.
         row.onclick = function (e) {
-            // If the user clicked a button or the checkbox itself, don't double-trigger
-            if (e.target.closest(".track-play") || e.target.closest(".track-select") || e.target.closest(".track-play-cell")) {
+            if (isInteractiveTarget(e.target)) {
                 return;
             }
 
             if (e.shiftKey && table.lastClickedIndex !== undefined) {
-                // Range selection
                 var start = Math.min(index, table.lastClickedIndex);
                 var end = Math.max(index, table.lastClickedIndex);
-                var targetSelected = !checkbox.checked;
-
-                for (var i = start; i <= end; i++) {
-                    var r = rows[i];
-                    var cb = r.querySelector(".track-select");
-                    if (cb) {
-                        var rTid = getTidFromElemId(cb.id);
-                        // Batch operation: pass true to skip header update
-                        toggleRowSelection(rTid, targetSelected, tableContainer, table, true);
-                    }
-                }
-                updateHeaderCheckbox(table);
-                // Clear text selection after shift-click
-                window.getSelection().removeAllRanges();
+                applyRangeSelection(start, end, true);
+                clearTextSelection();
             } else {
-                toggleRowSelection(tid, !checkbox.checked, tableContainer, table);
-                table.lastClickedIndex = index;
+                toggleRowSelection(tid, true, tableContainer, table);
             }
+
+            table.lastClickedIndex = index;
         };
 
-        // Checkbox explicit change
+        // Keep checkbox behavior explicit; support shift-range from checkbox as well.
         checkbox.onclick = function (e) {
             e.stopPropagation();
+        };
+
+        checkbox.onchange = function (e) {
+            var isChecked = checkbox.checked;
+
             if (e.shiftKey && table.lastClickedIndex !== undefined) {
-                // If checkbox clicked with shift, do range logic too
                 var start = Math.min(index, table.lastClickedIndex);
                 var end = Math.max(index, table.lastClickedIndex);
-                var targetSelected = checkbox.checked;
-
-                for (var i = start; i <= end; i++) {
-                    var r = rows[i];
-                    var cb = r.querySelector(".track-select");
-                    if (cb) {
-                        var rTid = getTidFromElemId(cb.id);
-                        toggleRowSelection(rTid, targetSelected, tableContainer, table, true);
-                    }
-                }
-                updateHeaderCheckbox(table);
-                window.getSelection().removeAllRanges();
+                applyRangeSelection(start, end, isChecked);
+                clearTextSelection();
             } else {
-                toggleRowSelection(tid, checkbox.checked, tableContainer, table);
+                toggleRowSelection(tid, isChecked, tableContainer, table);
             }
+
             table.lastClickedIndex = index;
         };
     });
@@ -1094,7 +1095,6 @@ function updateViewOfTheWorld(quick) {
     var minTracksForSection = 3;
     var sidebar = document.getElementById("sidebar");
     sidebar.replaceChildren();
-    var first = true;
 
     updateFavs();
     var renderWorld = theWorld.slice();
@@ -1192,7 +1192,6 @@ function updateViewOfTheWorld(quick) {
     });
 
     updateSidebarToggleButton();
-    persistCurrentCollection();
 }
 
 var plottableData = {
@@ -1726,6 +1725,129 @@ class SpotifyDataFetcher {
 
 const spotifyFetcher = new SpotifyDataFetcher();
 
+// =======================================================================
+// UI STATE MANAGEMENT FUNCTIONS (moved earlier to prevent ReferenceError)
+// =======================================================================
+
+function startShowingTracks() {
+    showLoadingState();
+}
+
+function stopShowingTracks() {
+    showLoadedState();
+}
+
+function showLoadingState() {
+    var selectionState = document.getElementById("selection-state");
+    if (selectionState) selectionState.style.display = "none";
+
+    var loadingState = document.getElementById("loading");
+    if (loadingState) {
+        loadingState.classList.remove("hidden");
+        loadingState.classList.add("block");
+    }
+
+    // Hide all UI aspects using forceful styles
+    var nav = document.querySelector("nav");
+    if (nav) nav.style.setProperty("display", "none", "important");
+
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+        sidebar.classList.add("hidden");
+        sidebar.classList.remove("md:block", "md:flex", "flex");
+        sidebar.style.setProperty("display", "none", "important");
+    }
+
+    var loaded = document.getElementById("loaded");
+    if (loaded) {
+        loaded.classList.add("hidden");
+        loaded.classList.remove("flex");
+        loaded.style.setProperty("display", "none", "important");
+    }
+
+    var mainArea = document.getElementById("main-area");
+    if (mainArea) {
+        mainArea.classList.remove("hidden");
+        mainArea.classList.add("flex");
+        mainArea.style.setProperty("display", "flex", "important");
+    }
+
+    var intro = document.getElementById("intro");
+    if (intro) intro.style.setProperty("display", "none", "important");
+}
+
+function showLoadedState() {
+    var loadingState = document.getElementById("loading");
+    if (loadingState) {
+        loadingState.classList.remove("block");
+        loadingState.classList.add("hidden");
+        loadingState.style.setProperty("display", "none", "important");
+    }
+
+    var selectionState = document.getElementById("selection-state");
+    if (selectionState) selectionState.style.display = "none";
+
+    // Restore UI aspects
+    var nav = document.querySelector("nav");
+    if (nav) nav.style.setProperty("display", "flex", "important");
+
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+        sidebar.classList.remove("hidden");
+        sidebar.classList.add("md:block");
+        sidebar.style.removeProperty("display");
+    }
+
+    var loaded = document.getElementById("loaded");
+    if (loaded) {
+        loaded.classList.remove("hidden");
+        loaded.classList.add("flex");
+        loaded.style.removeProperty("display");
+    }
+
+    var mainArea = document.getElementById("main-area");
+    if (mainArea) {
+        mainArea.classList.remove("hidden");
+        mainArea.classList.add("flex");
+        mainArea.style.removeProperty("display");
+    }
+
+    var intro = document.getElementById("intro");
+    if (intro) intro.style.setProperty("display", "none", "important");
+}
+
+function showRefreshingState() {
+    // For refetching: show subtle loading overlay without hiding the UI
+    var loadingState = document.getElementById("loading");
+    if (loadingState) {
+        loadingState.classList.remove("hidden");
+        loadingState.classList.add("block");
+        loadingState.style.setProperty("opacity", "0.7", "important");
+    }
+
+    // Keep the UI visible so users can see current data
+    var nav = document.querySelector("nav");
+    if (nav) nav.style.setProperty("display", "flex", "important");
+
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+        sidebar.classList.remove("hidden");
+        sidebar.style.removeProperty("display");
+    }
+
+    var loaded = document.getElementById("loaded");
+    if (loaded) {
+        loaded.classList.remove("hidden");
+        loaded.style.removeProperty("display");
+    }
+
+    var mainArea = document.getElementById("main-area");
+    if (mainArea) {
+        mainArea.classList.remove("hidden");
+        mainArea.style.removeProperty("display");
+    }
+}
+
 /**
  * Replaces the old collectAudioAttributes, collectArtistAttributes, 
  * and collectAlbumAttributes by fetching them all concurrently.
@@ -2068,42 +2190,6 @@ function getPlaylistPid(uri) {
 function saveInfo(params) { localStorage.setItem("info", JSON.stringify(params)); }
 function getInfo() { var item = localStorage.getItem("info"); return JSON.parse(item); }
 
-function getCollectionCacheKey(info) {
-    var type = info && info.type ? info.type : "unknown";
-    var uri = info && info.uri ? info.uri : "";
-    return cachePrefix + type + ":" + uri;
-}
-
-function getLegacyCollectionCacheKey(info) {
-    var type = info && info.type ? info.type : "unknown";
-    var uri = info && info.uri ? info.uri : "";
-    return "omy-cache-v1:" + type + ":" + uri;
-}
-
-function getLegacyCollectionCacheKeys(info) {
-    var type = info && info.type ? info.type : "unknown";
-    var uri = info && info.uri ? info.uri : "";
-    var keys = [];
-
-    legacyCachePrefixes.forEach(function (prefix) {
-        keys.push(prefix + type + ":" + uri);
-    });
-
-    return keys;
-}
-
-function getCollectionCacheKeyForRestore(info) {
-    var primaryKey = getCollectionCacheKey(info);
-    if (localStorage.getItem(primaryKey)) return primaryKey;
-
-    var legacyKeys = getLegacyCollectionCacheKeys(info);
-    for (var i = 0; i < legacyKeys.length; i += 1) {
-        if (localStorage.getItem(legacyKeys[i])) return legacyKeys[i];
-    }
-
-    return null;
-}
-
 function compactTrackArtists(artists) {
     return (artists || []).map(function (artist) {
         return {
@@ -2113,156 +2199,6 @@ function compactTrackArtists(artists) {
     });
 }
 
-function serializeTrack(track) {
-    var albumInfo = curAlbums[track.details.album_id] || {};
-    return {
-        id: track.id,
-        feats: {
-            date_added: track.feats.date_added ? track.feats.date_added.toISOString() : null,
-            age: track.feats.age,
-            explicit: track.feats.explicit,
-            duration_ms: track.feats.duration_ms,
-            popularity: track.feats.popularity,
-            source: track.feats.source,
-            count: track.feats.count,
-            tempo: track.feats.tempo,
-            energy: track.feats.energy,
-            sadness: track.feats.sadness,
-            happiness: track.feats.happiness,
-            anger: track.feats.anger,
-            danceability: track.feats.danceability,
-            loudness: track.feats.loudness,
-            liveness: track.feats.liveness,
-            valence: track.feats.valence,
-            acousticness: track.feats.acousticness,
-            speechiness: track.feats.speechiness,
-            year: track.feats.year,
-            topGenre: track.feats.topGenre,
-            genres: track.feats.genres ? Array.from(track.feats.genres) : [],
-        },
-        details: {
-            name: track.details.name,
-            album_id: track.details.album_id,
-            album_name: albumInfo.name || track.details.album_name || "",
-            uri: track.details.uri,
-            preview_url: track.details.preview_url,
-            artists: compactTrackArtists(track.details.artists),
-        },
-    };
-}
-
-function deserializeTrack(rawTrack) {
-    return {
-        id: rawTrack.id,
-        feats: {
-            date_added: rawTrack.feats.date_added ? new Date(rawTrack.feats.date_added) : new Date(),
-            age: rawTrack.feats.age,
-            explicit: rawTrack.feats.explicit,
-            duration_ms: rawTrack.feats.duration_ms,
-            popularity: rawTrack.feats.popularity,
-            source: rawTrack.feats.source,
-            count: rawTrack.feats.count,
-            tempo: rawTrack.feats.tempo,
-            energy: rawTrack.feats.energy,
-            sadness: rawTrack.feats.sadness,
-            happiness: rawTrack.feats.happiness,
-            anger: rawTrack.feats.anger,
-            danceability: rawTrack.feats.danceability,
-            loudness: rawTrack.feats.loudness,
-            liveness: rawTrack.feats.liveness,
-            valence: rawTrack.feats.valence,
-            acousticness: rawTrack.feats.acousticness,
-            speechiness: rawTrack.feats.speechiness,
-            year: rawTrack.feats.year,
-            topGenre: rawTrack.feats.topGenre,
-            genres: new Set(rawTrack.feats.genres || []),
-        },
-        details: {
-            name: (rawTrack.details && rawTrack.details.name) ? rawTrack.details.name : "Unknown Track",
-            album_id: (rawTrack.details && rawTrack.details.album_id) ? rawTrack.details.album_id : "",
-            album_name: (rawTrack.details && rawTrack.details.album_name) ? rawTrack.details.album_name : "",
-            uri: (rawTrack.details && rawTrack.details.uri) ? rawTrack.details.uri : "",
-            preview_url: (rawTrack.details && rawTrack.details.preview_url) ? rawTrack.details.preview_url : "",
-            artists: compactTrackArtists(rawTrack.details ? rawTrack.details.artists : []),
-        },
-    };
-}
-
-function compactTrackForCache(track) {
-    return {
-        id: track.id,
-        feats: {
-            date_added: track.feats.date_added ? track.feats.date_added.toISOString() : null,
-            source: track.feats.source,
-            count: track.feats.count,
-        },
-    };
-}
-
-function compactArtistsForCache(artists) {
-    var out = {};
-    Object.keys(artists).forEach(function (artistId) {
-        var artist = artists[artistId];
-        if (!artist) return;
-        out[artistId] = {
-            genres: artist.genres || [],
-        };
-    });
-    return out;
-}
-
-function compactAlbumsForCache(albums) {
-    var out = {};
-    Object.keys(albums).forEach(function (albumId) {
-        var album = albums[albumId];
-        if (!album) return;
-        out[albumId] = {
-            name: album.name || "",
-            genres: album.genres || [],
-            release_date: album.release_date || "",
-        };
-    });
-    return out;
-}
-
-function isStorageQuotaError(error) {
-    if (!error) return false;
-    return error.name === "QuotaExceededError" || error.code === 22 || error.code === 1014;
-}
-
-function removeOtherCollectionCaches(activeKey) {
-    for (var i = localStorage.length - 1; i >= 0; i--) {
-        var key = localStorage.key(i);
-        if (key && key.indexOf(cachePrefix) === 0 && key !== activeKey) {
-            localStorage.removeItem(key);
-        }
-    }
-}
-
-function tryPersistSnapshot(cacheKey, snapshot) {
-    try {
-        localStorage.setItem(cacheKey, JSON.stringify(snapshot));
-        return true;
-    } catch (error) {
-        if (!isStorageQuotaError(error)) {
-            console.log("Unable to persist collection cache", error);
-        }
-        return false;
-    }
-}
-
-function downsampleTracksForCache(serializedTracks, maxTracks) {
-    if (!serializedTracks || serializedTracks.length <= maxTracks) return serializedTracks;
-    if (maxTracks <= 0) return [];
-
-    var step = serializedTracks.length / maxTracks;
-    var sampled = [];
-    for (var i = 0; i < maxTracks; i++) {
-        var sourceIndex = Math.floor(i * step);
-        sampled.push(serializedTracks[sourceIndex]);
-    }
-    return sampled;
-}
 
 function clearWorldState() {
     theWorld.forEach(function (bin) {
@@ -2299,136 +2235,6 @@ function resetCollectionState() {
     clearPlot();
     var elements = document.querySelectorAll(".nstaging-tracks");
     elements.forEach(function (el) { el.textContent = "0"; });
-}
-
-function persistCurrentCollection() {
-    var info = getInfo();
-    if (!info || !info.type) return;
-    try {
-        var cacheKey = getCollectionCacheKey(info);
-        var tracks = [];
-        Object.values(curTracks).forEach(function (track) {
-            tracks.push(compactTrackForCache(track));
-        });
-
-        var snapshot = {
-            version: 4,
-            tracks: tracks,
-            artists: compactArtistsForCache(curArtists),
-            albums: compactAlbumsForCache(curAlbums),
-            topArtistCount: topArtistCount,
-            topArtistName: topArtistName,
-            topTrackName: topTrackName,
-            topTrackCount: topTrackCount,
-            totalTracks: totalTracks,
-            totalPlaylists: totalPlaylists,
-            processedPlaylists: processedPlaylists,
-            curTypeName: curTypeName,
-        };
-
-        if (tryPersistSnapshot(cacheKey, snapshot)) {
-            localStorage.removeItem(getLegacyCollectionCacheKey(info));
-            return;
-        }
-
-        removeOtherCollectionCaches(cacheKey);
-        if (tryPersistSnapshot(cacheKey, snapshot)) {
-            localStorage.removeItem(getLegacyCollectionCacheKey(info));
-            return;
-        }
-
-        snapshot.artists = {};
-        snapshot.albums = {};
-        if (tryPersistSnapshot(cacheKey, snapshot)) {
-            localStorage.removeItem(getLegacyCollectionCacheKey(info));
-            console.log("Collection cache stored in compact mode to avoid storage limits");
-            return;
-        }
-
-        var reducedTrackCount = Math.floor(tracks.length * 0.75);
-        while (reducedTrackCount >= 50) {
-            snapshot.tracks = downsampleTracksForCache(tracks, reducedTrackCount);
-            if (tryPersistSnapshot(cacheKey, snapshot)) {
-                localStorage.removeItem(getLegacyCollectionCacheKey(info));
-                console.log("Collection cache stored in reduced mode (" + reducedTrackCount + "/" + tracks.length + " tracks) to avoid storage limits");
-                return;
-            }
-            reducedTrackCount = Math.floor(reducedTrackCount * 0.7);
-        }
-
-        localStorage.removeItem(cacheKey);
-        console.log("Skipped collection cache due to localStorage size limits");
-    } catch (error) { console.log("Unable to persist collection cache", error); }
-}
-
-function restoreCurrentCollection(info, cacheKey) {
-    var resolvedKey = cacheKey || getCollectionCacheKeyForRestore(info);
-    if (!resolvedKey) return false;
-
-    var raw = localStorage.getItem(resolvedKey);
-    if (!raw) return false;
-
-    try {
-        var snapshot = JSON.parse(raw);
-        if (!snapshot || !snapshot.tracks) return false;
-
-        clearWorldState();
-        curTracks = {};
-        curArtists = snapshot.artists || {};
-        curAlbums = snapshot.albums || {};
-        topArtistCount = snapshot.topArtistCount || 0;
-        topArtistName = snapshot.topArtistName || null;
-        topTrackName = snapshot.topTrackName || null;
-        topTrackCount = snapshot.topTrackCount || 0;
-        totalTracks = snapshot.totalTracks || 0;
-        totalPlaylists = snapshot.totalPlaylists || 0;
-        processedPlaylists = snapshot.processedPlaylists || 0;
-        curTypeName = snapshot.curTypeName || curTypeName;
-
-        var firstTrack = snapshot.tracks[0];
-        if (firstTrack && (firstTrack.details || firstTrack.id)) {
-            var restoredTracks = [];
-            snapshot.tracks.forEach(function (rawTrack) {
-                var track = deserializeTrack(rawTrack);
-                curTracks[track.id] = track;
-                restoredTracks.push(track);
-            });
-
-            addTracks(restoredTracks);
-            filterTracks(restoredTracks);
-            refreshTheWorld(false);
-            showLoadedState();
-            return true;
-        }
-
-        var trackRefs = snapshot.tracks;
-        if (!trackRefs.length) return false;
-
-        collectTracksByIds(trackRefs)
-            .then(function (restoredTracks) {
-                curTracks = {};
-                restoredTracks.forEach(function (track) {
-                    curTracks[track.id] = track;
-                });
-                addTracks(restoredTracks);
-                filterTracks(restoredTracks);
-                refreshTheWorld(false);
-                showLoadedState();
-            })
-            .catch(function (error) {
-                console.error("Unable to restore cached tracks by id", error);
-                pendingFetchStarter = function () { startCollectionFetch(info); };
-                if (pendingFetchStarter) {
-                    var fallbackFetch = pendingFetchStarter;
-                    pendingFetchStarter = null;
-                    fallbackFetch();
-                }
-            });
-        return true;
-    } catch (error) {
-        console.error("Unable to restore collection cache", error);
-        return false;
-    }
 }
 
 function buildTrackFromSpotifyItem(item, source) {
@@ -2508,36 +2314,12 @@ function startCollectionFetch(info) {
     else console.log("unexpected type", info.type);
 }
 
-function queueRestoreOrFetch(info) {
-    var cacheKey = getCollectionCacheKeyForRestore(info);
-    if (cacheKey) {
-        pendingFetchStarter = function () { startCollectionFetch(info); };
-        if (theTrackTable != null && theStagingTable != null) {
-            if (!restoreCurrentCollection(info, cacheKey) && pendingFetchStarter) {
-                var fallbackFetch = pendingFetchStarter;
-                pendingFetchStarter = null;
-                fallbackFetch();
-            } else {
-                pendingFetchStarter = null;
-            }
-        } else {
-            pendingRestoreInfo = info;
-        }
-        return true;
-    }
-    return false;
-}
-
 function refetchCurrentCollection() {
     var info = getInfo();
     if (!info || !info.type) return;
-    localStorage.removeItem(getCollectionCacheKey(info));
-    localStorage.removeItem(getLegacyCollectionCacheKey(info));
-    pendingRestoreInfo = null;
-    pendingFetchStarter = null;
     abortLoading = false;
-    resetCollectionState();
-    showLoadingState();
+    // Show refreshing state (overlay) without resetting or hiding existing data
+    showRefreshingState();
     startCollectionFetch(info);
 }
 
@@ -2550,10 +2332,7 @@ function go() {
     saveInfo(params);
 
     showLoadingState();
-
-    if (!queueRestoreOrFetch(params)) {
-        startCollectionFetch(params);
-    }
+    startCollectionFetch(params);
 }
 
 function goAll() {
@@ -2563,10 +2342,7 @@ function goAll() {
     saveInfo(params);
 
     showLoadingState();
-
-    if (!queueRestoreOrFetch(params)) {
-        startCollectionFetch(params);
-    }
+    startCollectionFetch(params);
 }
 
 function normalizeUri(uri) {
@@ -2589,15 +2365,11 @@ function goPlaylist() {
     if (isValidPlaylistUri(uri)) {
         var params = { type: "playlist", uri: uri };
         saveInfo(params);
-
         showLoadingState();
-
-        if (!queueRestoreOrFetch(params)) {
-            startCollectionFetch(params);
-        }
+        startCollectionFetch(params);
     } else {
-        var errs = document.querySelectorAll(".err-txt");
-        errs.forEach(function (el) { el.textContent = "That's not a playlist URI"; });
+        var errMsg = document.getElementById("playlist-uri-error");
+        if (errMsg) errMsg.textContent = "Invalid playlist URI";
     }
 }
 
@@ -2643,17 +2415,7 @@ function initTables() {
         enhancePagerUI(theStagingTable);
     });
 
-    if (pendingRestoreInfo) {
-        var restoreInfo = pendingRestoreInfo;
-        pendingRestoreInfo = null;
-        if (!restoreCurrentCollection(restoreInfo) && pendingFetchStarter) {
-            var fallbackFetch = pendingFetchStarter;
-            pendingFetchStarter = null;
-            fallbackFetch();
-        } else {
-            pendingFetchStarter = null;
-        }
-    } else if (curNode) {
+    if (curNode) {
         showPlaylist(curNode);
         plotPlaylist(curNode);
     }
@@ -2894,93 +2656,6 @@ function showTab(selector) {
     } else {
         stagingIsVisible = false;
     }
-}
-
-function startShowingTracks() {
-    showLoadingState();
-}
-
-function stopShowingTracks() {
-    showLoadedState();
-}
-
-function showLoadingState() {
-    var selectionState = document.getElementById("selection-state");
-    if (selectionState) selectionState.style.display = "none";
-
-    var loadingState = document.getElementById("loading");
-    if (loadingState) {
-        loadingState.classList.remove("hidden");
-        loadingState.classList.add("block");
-    }
-
-    // Hide all UI aspects using forceful styles
-    var nav = document.querySelector("nav");
-    if (nav) nav.style.setProperty("display", "none", "important");
-
-    var sidebar = document.getElementById("sidebar");
-    if (sidebar) {
-        sidebar.classList.add("hidden");
-        sidebar.classList.remove("md:block", "md:flex", "flex");
-        sidebar.style.setProperty("display", "none", "important");
-    }
-
-    var loaded = document.getElementById("loaded");
-    if (loaded) {
-        loaded.classList.add("hidden");
-        loaded.classList.remove("flex");
-        loaded.style.setProperty("display", "none", "important");
-    }
-
-    var mainArea = document.getElementById("main-area");
-    if (mainArea) {
-        mainArea.classList.remove("hidden");
-        mainArea.classList.add("flex");
-        mainArea.style.setProperty("display", "flex", "important");
-    }
-
-    var intro = document.getElementById("intro");
-    if (intro) intro.style.setProperty("display", "none", "important");
-}
-
-function showLoadedState() {
-    var loadingState = document.getElementById("loading");
-    if (loadingState) {
-        loadingState.classList.remove("block");
-        loadingState.classList.add("hidden");
-        loadingState.style.setProperty("display", "none", "important");
-    }
-
-    var selectionState = document.getElementById("selection-state");
-    if (selectionState) selectionState.style.display = "none";
-
-    // Restore UI aspects
-    var nav = document.querySelector("nav");
-    if (nav) nav.style.setProperty("display", "flex", "important");
-
-    var sidebar = document.getElementById("sidebar");
-    if (sidebar) {
-        sidebar.classList.remove("hidden");
-        sidebar.classList.add("md:block");
-        sidebar.style.removeProperty("display");
-    }
-
-    var loaded = document.getElementById("loaded");
-    if (loaded) {
-        loaded.classList.remove("hidden");
-        loaded.classList.add("flex");
-        loaded.style.removeProperty("display");
-    }
-
-    var mainArea = document.getElementById("main-area");
-    if (mainArea) {
-        mainArea.classList.remove("hidden");
-        mainArea.classList.add("flex");
-        mainArea.style.removeProperty("display");
-    }
-
-    var intro = document.getElementById("intro");
-    if (intro) intro.style.setProperty("display", "none", "important");
 }
 
 function toggleSidebarSections() {
