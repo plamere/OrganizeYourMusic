@@ -98,14 +98,14 @@
       border-right: none !important;
       border-left: none !important;
       background-color: #1a1a1a !important;
-      padding: 24px 16px !important;
-      font-size: 0.85rem !important;
+      padding: 12px 16px;
+      font-size: 0.75rem !important;
       text-transform: uppercase !important;
       font-weight: 800 !important;
       letter-spacing: 0.12em !important;
       color: #a1a1aa !important;
       white-space: nowrap !important;
-      text-align: center !important;
+      text-align: left !important;
       transition: background-color 0.2s, color 0.2s !important;
     }
 
@@ -116,13 +116,6 @@
       width: 100% !important;
     }
 
-    .google-visualization-table-tr-head td,
-    .google-visualization-table-tr-head th {
-      padding: 0 !important;
-      /* Let track-header-cell handle padding */
-    }
-
-    .google-visualization-table-tr-head td:hover,
     .google-visualization-table-tr-head th:hover {
       color: #ffffff !important;
       background-color: #242424 !important;
@@ -156,16 +149,16 @@
 
     .track-table-cell,
     .google-visualization-table-table td {
-      padding: 18px 14px !important;
+      padding: 12px 16px;
       border-bottom: 1px solid #242424 !important;
       border-top: none !important;
       border-left: none !important;
       border-right: none !important;
       vertical-align: middle !important;
       font-size: 0.875rem !important;
-      text-align: center !important;
+      text-align: left !important;
       color: #e4e4e7 !important;
-      min-width: 110px !important;
+      min-width: 40px;
     }
 
     /* Force centering on numeric columns which Google Table right-aligns */
@@ -187,7 +180,7 @@
     }
 
     .google-visualization-table-div-page {
-      padding: 24px 32px !important;
+      padding: 16px 24px !important;
       border-top: 1px solid #2d2d2d !important;
       display: flex !important;
       justify-content: space-between !important;
@@ -265,6 +258,8 @@
     }
 
     .google-visualization-table-div-page select {
+      appearance: none !important;
+      -webkit-appearance: none !important;
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
       background-repeat: no-repeat !important;
       background-position: right 8px center !important;
@@ -438,7 +433,7 @@
             </label>
             <input id="uri-text" type="text"
               class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-spotify-green transition-all"
-              placeholder="spotify:user:spotify:playlist:5FJX..." />
+              placeholder="https://open.spotify.com/playlist/..." />
           </div>
 
           <a id="go" href="javascript:void(0)" role="button"
@@ -917,7 +912,7 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="module" src="/src/scripts/react-adapter.jsx"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
   <script type="text/javascript">
     // Configuration injected by Vite during build/dev
@@ -925,7 +920,7 @@
     window.SPOTIFY_REDIRECT_URI = "%VITE_SPOTIFY_REDIRECT_URI%";
     window.isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   </script>
-  <script src="/src/scripts/scripts.js?v=9"></script>
+  <script src="/src/scripts/scripts.js"></script>
 </body>
 
 </html>

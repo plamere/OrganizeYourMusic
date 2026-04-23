@@ -73,7 +73,7 @@ function restartAuthorization(message) {
 
     accessToken = null;
     window.localStorage.removeItem("refresh_token");
-    
+
     // Stop any ongoing fetch
     abortLoading = true;
 
@@ -560,19 +560,14 @@ function showStagingList() {
 }
 
 function getStagingTracks() {
-    var sortInfo = theStagingTable.getSortInfo();
+    // Return currently selected tracks in a consistent order
     var out = [];
-
-    if (sortInfo.sortedIndexes) {
-        sortInfo.sortedIndexes.forEach(function (idx) {
-            var track = curSelectedTracks[idx];
-            if (curSelected.has(track.id)) out.push(track);
-        });
-    } else {
-        curSelectedTracks.forEach(function (track) {
-            if (curSelected.has(track.id)) out.push(track);
-        });
-    }
+    curSelected.forEach(function (tid) {
+        var track = curTracks[tid];
+        if (track) out.push(track);
+    });
+    // Sort by popularity by default for the saved playlist
+    out.sort(function (a, b) { return b.feats.popularity - a.feats.popularity; });
     return out;
 }
 
@@ -610,393 +605,16 @@ function getDuration(val) {
 }
 
 function showTracksInTable(table, tracks, getter, label, isStagingList) {
-    tracks = tracks || [];
-
-    // Store current tracks onto the table object so selectAllHandler can access them
-    table.currentTracks = tracks;
-
-    var data = new google.visualization.DataTable();
-    data.addColumn("string", "#");
-    data.addColumn("string", "");
-    data.addColumn("string", "Title");
-    data.addColumn("string", "Artist");
-    data.addColumn("string", "Top Genre");
-    data.addColumn("string", "Year");
-    data.addColumn("string", "Added");
-    data.addColumn("number", "BPM");
-    data.addColumn("number", "Energy");
-    data.addColumn("number", "Danceability");
-    data.addColumn("number", "Loudness");
-    data.addColumn("number", "Liveness");
-    data.addColumn("number", "Valence");
-    data.addColumn("number", "Duration");
-    data.addColumn("number", "Acousticness");
-    data.addColumn("number", "Speechiness");
-    data.addColumn("number", "Popularity");
-
-    data.setColumnProperty(0, { allowHTML: true });
-    data.setColumnProperty(1, { allowHTML: true });
-
-    var rows = [];
-    tracks.forEach(function (track, i) {
-        if (i >= maxTracksShown) return;
-
-        var sel = document.createElement("input");
-        sel.className = "track-select w-4 h-4 text-spotify-green bg-spotify-elevated border-spotify-highlight rounded focus:ring-spotify-green focus:ring-2 pointer-events-auto";
-        sel.type = "checkbox";
-        sel.id = "sel-" + track.id;
-        sel.title = "select to add this track to the staging list";
-
-        if (curSelected.has(track.id)) {
-            sel.checked = true;
+    if (isStagingList) {
+        if (window.renderStagingTable) {
+            window.renderStagingTable(tracks);
         }
-
-        var indexCell = document.createElement("div");
-        indexCell.className = "flex items-center justify-center min-w-[40px]";
-        indexCell.appendChild(sel);
-
-        var play;
-        if (track.details.preview_url != null) {
-            play = document.createElement("span");
-            play.className = "track-play fa fa-play text-zinc-400 hover:text-white cursor-pointer";
-            play.id = "play-" + track.id;
-        } else {
-            play = document.createElement("span");
-        }
-
-        var row = [];
-        row.push(indexCell.outerHTML);
-        row.push(play.outerHTML);
-        row.push(track.details.name);
-        row.push(track.details.artists[0].name);
-        row.push(track.feats.topGenre ? track.feats.topGenre : "Unknown Genre");
-        row.push(getString(track.feats.year));
-        row.push(getDate(track.feats.date_added));
-        row.push(getInt(track.feats.tempo));
-        row.push(getPercent(track.feats.energy));
-        row.push(getPercent(track.feats.danceability));
-        row.push(getInt(track.feats.loudness));
-        row.push(getPercent(track.feats.liveness));
-        row.push(getPercent(track.feats.valence));
-        row.push(getDuration(track.feats.duration_ms));
-        row.push(getPercent(track.feats.acousticness));
-        row.push(getPercent(track.feats.speechiness));
-        row.push(getInt(track.feats.popularity));
-        rows.push(row);
-    });
-    data.addRows(rows);
-
-    var currentPage = table.currentPage || 0;
-    var maxPage = Math.max(Math.ceil(rows.length / defaultTablePageSize) - 1, 0);
-    if (currentPage > maxPage) currentPage = maxPage;
-
-    table.currentPage = currentPage;
-    table.data = data;
-    table.totalRows = rows.length;
-
-    table.draw(data, {
-        showRowNumber: false,
-        width: "100%",
-        page: "enable",
-        pageSize: defaultTablePageSize,
-        startPage: currentPage,
-        allowHtml: true,
-        cssClassNames: {
-            headerRow: "headerRow",
-            tableCell: "track-table-cell",
-            headerCell: "track-header-cell",
-        },
-    });
-}
-
-function enhancePagerUI(table) {
-    // Debounce/Guard to prevent multiple simultaneous enhancements on the same table
-    if (table._isEnhancing) return;
-    table._isEnhancing = true;
-
-    // Use setTimeout to ensure we run AFTER the Google Table has finished its internal DOM updates
-    setTimeout(function() {
-        try {
-            var container = table.getContainer();
-            if (!container) return;
-            var pager = container.querySelector(".google-visualization-table-div-page");
-            if (!pager) return;
-
-            // Check if we've already structuraly enhanced this specific pager instance
-            // Google often re-creates the entire pager DOM on draw/page
-            var isAlreadyWrapped = !!pager.querySelector(".pager-controls-wrapper");
-
-            // 1. Wrap navigation controls if not already done
-            var controlsWrapper = pager.querySelector(".pager-controls-wrapper");
-            if (!controlsWrapper) {
-                controlsWrapper = document.createElement("div");
-                controlsWrapper.className = "pager-controls-wrapper";
-                var tableInside = pager.querySelector("table");
-                if (tableInside) {
-                    tableInside.parentNode.insertBefore(controlsWrapper, tableInside);
-                    controlsWrapper.appendChild(tableInside);
-                }
-            }
-
-            // 2. Inject row count selector if missing
-            var selectorId = "page-size-selector-container";
-            if (!pager.querySelector("#" + selectorId)) {
-                var selectorDiv = document.createElement("div");
-                selectorDiv.id = selectorId;
-                selectorDiv.innerHTML = '<span class="hidden md:inline">Show:</span><select id="page-size-selector">' +
-                    '<option value="50">50 rows</option>' +
-                    '<option value="100">100 rows</option>' +
-                    '<option value="200">200 rows</option>' +
-                    '<option value="500">500 rows</option>' +
-                    '<option value="1000">1000 rows</option>' +
-                    '</select>';
-                
-                pager.insertBefore(selectorDiv, pager.firstChild);
-                
-                var select = selectorDiv.querySelector("select");
-                select.value = defaultTablePageSize;
-                select.onchange = function() {
-                    defaultTablePageSize = parseInt(this.value);
-                    if (curNode) showPlaylist(curNode);
-                };
-            }
-
-            // 3. Inject/Update pagination info ("Showing X to Y of Z")
-            var infoId = "pagination-info-container";
-            var infoDiv = pager.querySelector("#" + infoId);
-            if (!infoDiv) {
-                infoDiv = document.createElement("div");
-                infoDiv.id = infoId;
-                infoDiv.className = "text-zinc-500 text-xs font-semibold hidden md:block";
-                var selector = pager.querySelector("#page-size-selector-container");
-                if (selector && selector.nextSibling) {
-                    pager.insertBefore(infoDiv, selector.nextSibling);
-                } else {
-                    pager.appendChild(infoDiv);
-                }
-            }
-
-            var currentPage = table.currentPage || 0;
-            var pageSize = defaultTablePageSize;
-            var totalRows = table.totalRows || 0;
-            var startRow = totalRows > 0 ? (currentPage * pageSize + 1) : 0;
-            var endRow = Math.min((currentPage + 1) * pageSize, totalRows);
-            infoDiv.textContent = "Showing " + startRow + " to " + endRow + " of " + totalRows + " entries";
-
-            // 4. Iconize buttons (idempotent check)
-            function iconize(selector, iconClass, label) {
-                pager.querySelectorAll(selector).forEach(function (elem) {
-                    var control = elem;
-                    if (!elem.matches("a,button,input,[role='button']")) {
-                        var inner = elem.querySelector("a,button,input,[role='button']");
-                        if (inner) control = inner;
-                    }
-
-                    // Only apply if not already iconized to prevent fighting with Google's updates
-                    if (control.querySelector("i.fa")) return;
-
-                    control.setAttribute("title", label);
-                    control.setAttribute("aria-label", label);
-                    control.classList.add("pager-control-btn");
-                    control.innerHTML = "<i class='fa " + iconClass + "' aria-hidden='true'></i>";
-                    
-                    Array.from(control.childNodes).forEach(function(node) {
-                        if (node.nodeType === 3) node.remove();
-                    });
-                });
-            }
-
-            iconize(".google-visualization-table-page-first, .google-visualization-table-first-page", "fa-step-backward", "First page");
-            iconize(".google-visualization-table-page-prev, .google-visualization-table-prev-page", "fa-chevron-left", "Previous page");
-            iconize(".google-visualization-table-page-next, .google-visualization-table-next-page", "fa-chevron-right", "Next page");
-            iconize(".google-visualization-table-page-last, .google-visualization-table-last-page", "fa-step-forward", "Last page");
-        } finally {
-            table._isEnhancing = false;
-        }
-    }, 50);
-}
-
-function addEventHandlers(tableContainer, table) {
-    if (!tableContainer) return;
-
-    var rows = tableContainer.querySelectorAll(".google-visualization-table-table tbody tr");
-
-    function clearTextSelection() {
-        if (window.getSelection) {
-            window.getSelection().removeAllRanges();
-        }
-    }
-
-    function applyRangeSelection(start, end, isSelected) {
-        for (var i = start; i <= end; i++) {
-            var r = rows[i];
-            var cb = r && r.querySelector(".track-select");
-            if (!cb) continue;
-            var rTid = getTidFromElemId(cb.id);
-            // Batch operation: pass true to skip per-row header refresh.
-            toggleRowSelection(rTid, isSelected, tableContainer, table, true);
-        }
-        updateHeaderCheckbox(table);
-    }
-
-    function isInteractiveTarget(target) {
-        if (!target || !target.closest) return false;
-        return !!target.closest(".track-play, .track-select, .track-play-cell, input, button, a, select, textarea, label");
-    }
-
-    rows.forEach(function (row, index) {
-        var checkbox = row.querySelector(".track-select");
-        if (!checkbox) return;
-
-        var tid = getTidFromElemId(checkbox.id);
-
-        // Entire row click selects; shift-click selects range from last anchor.
-        row.onclick = function (e) {
-            if (isInteractiveTarget(e.target)) {
-                return;
-            }
-
-            if (e.shiftKey && table.lastClickedIndex !== undefined) {
-                var start = Math.min(index, table.lastClickedIndex);
-                var end = Math.max(index, table.lastClickedIndex);
-                applyRangeSelection(start, end, true);
-                clearTextSelection();
-            } else {
-                toggleRowSelection(tid, true, tableContainer, table);
-            }
-
-            table.lastClickedIndex = index;
-        };
-
-        // Keep checkbox behavior explicit; support shift-range from checkbox as well.
-        checkbox.onclick = function (e) {
-            e.stopPropagation();
-        };
-
-        checkbox.onchange = function (e) {
-            var isChecked = checkbox.checked;
-
-            if (e.shiftKey && table.lastClickedIndex !== undefined) {
-                var start = Math.min(index, table.lastClickedIndex);
-                var end = Math.max(index, table.lastClickedIndex);
-                applyRangeSelection(start, end, isChecked);
-                clearTextSelection();
-            } else {
-                toggleRowSelection(tid, isChecked, tableContainer, table);
-            }
-
-            table.lastClickedIndex = index;
-        };
-    });
-
-    var plays = tableContainer.querySelectorAll(".track-play");
-    plays.forEach(function (el) {
-        var tid = getTidFromElemId(el.id);
-        var track = curTracks[tid];
-        if (isPlaying(track)) {
-            el.classList.remove("fa-play", "text-zinc-400");
-            el.classList.add("fa-pause", "text-spotify-green");
-        }
-
-        el.onclick = function (e) {
-            e.stopPropagation();
-            var tid = getTidFromElemId(e.target.id);
-            var track = curTracks[tid];
-
-            tableContainer.querySelectorAll(".track-play").forEach(function (p) {
-                p.classList.remove("fa-pause", "text-spotify-green");
-                p.classList.add("fa-play", "text-zinc-400");
-            });
-
-            if (isPlaying(track)) {
-                stopTrack(track);
-            } else {
-                e.target.classList.remove("fa-play", "text-zinc-400");
-                e.target.classList.add("fa-pause", "text-spotify-green");
-                playTrack(track);
-            }
-            return false;
-        };
-    });
-}
-
-function toggleRowSelection(tid, isSelected, tableContainer, table, skipHeaderUpdate) {
-    if (isSelected) {
-        curSelected.add(tid);
     } else {
-        curSelected.delete(tid);
-    }
-
-    // Update UI for the specific checkbox
-    var cb = tableContainer.querySelector("#sel-" + tid);
-    if (cb) cb.checked = isSelected;
-
-    // Update staging counts
-    var elements = document.querySelectorAll(".nstaging-tracks");
-    elements.forEach(function (el) { el.textContent = curSelected.size; });
-
-    // Update "Select All" status unless skipping for batch operations
-    if (!skipHeaderUpdate) {
-        updateHeaderCheckbox(table);
+        if (window.renderTrackTable) {
+            window.renderTrackTable(tracks);
+        }
     }
 }
-
-function updateHeaderCheckbox(table) {
-    var container = table.getContainer();
-    var headerRow = container.querySelector(".google-visualization-table-table thead tr");
-    if (!headerRow) return;
-
-    // The first column (index 0) is now our merged "Index + Select" column.
-    var selectHeaderCell = headerRow.cells[0];
-    if (!selectHeaderCell) return;
-
-    // Inject Search/Select All checkbox if not present
-    var headerCheckbox = selectHeaderCell.querySelector(".header-select-all");
-    if (!headerCheckbox) {
-        selectHeaderCell.innerHTML = '<div class="flex items-center justify-center"><input type="checkbox" class="header-select-all w-4 h-4 text-spotify-green bg-zinc-800 border-zinc-700 rounded focus:ring-spotify-green focus:ring-2"></div>';
-        headerCheckbox = selectHeaderCell.querySelector(".header-select-all");
-
-        headerCheckbox.onchange = function (e) {
-            var isChecked = e.target.checked;
-            var tracksToToggle = table.currentTracks || [];
-            tracksToToggle.forEach(function (track) {
-                if (isChecked) curSelected.add(track.id);
-                else curSelected.delete(track.id);
-            });
-
-            // Sync visible checkboxes on the current page
-            var visibleCheckboxes = container.querySelectorAll(".track-select");
-            visibleCheckboxes.forEach(function (cb) {
-                cb.checked = isChecked;
-            });
-
-            var elements = document.querySelectorAll(".nstaging-tracks");
-            elements.forEach(function (el) { el.textContent = curSelected.size; });
-        };
-    }
-
-    // Update state based on the global curSelected and the table's current track set
-    var currentTracks = table.currentTracks || [];
-    var checkedCount = 0;
-
-    // We only care about the tracks that are currently in the filtered set
-    currentTracks.forEach(function (track) {
-        if (curSelected.has(track.id)) checkedCount++;
-    });
-
-    if (checkedCount === 0) {
-        headerCheckbox.checked = false;
-        headerCheckbox.indeterminate = false;
-    } else if (checkedCount === currentTracks.length) {
-        headerCheckbox.checked = true;
-        headerCheckbox.indeterminate = false;
-    } else {
-        headerCheckbox.checked = false;
-        headerCheckbox.indeterminate = true;
-    }
-}
-
-function getTidFromElemId(elemId) { return elemId.split("-")[1]; }
 
 function saveTracksToPlaylist(playlist, inputTracks) {
     var tracks = inputTracks.slice();
@@ -1092,6 +710,7 @@ function updateSidebarToggleButton() {
 }
 
 function updateViewOfTheWorld(quick) {
+    var isFirstPlaylist = true;
     var minTracksForSection = 3;
     var sidebar = document.getElementById("sidebar");
     sidebar.replaceChildren();
@@ -1174,8 +793,8 @@ function updateViewOfTheWorld(quick) {
                         plotPlaylist(node);
                         showPlaylist(node);
                     };
-                    if (first) {
-                        first = false;
+                    if (isFirstPlaylist) {
+                        isFirstPlaylist = false;
                         showPlaylist(node);
                         plotPlaylist(node);
                     }
@@ -1679,7 +1298,7 @@ class SpotifyDataFetcher {
                                 console.error("Automatic token refresh failed:", e);
                             }
                         }
-                        
+
                         var errorMsg = "Your Spotify session expired or is missing permissions. Please connect again.";
                         if (response.status === 403) {
                             errorMsg = "Access Forbidden (403). If using a custom Client ID, ensure your Spotify email is whitelisted in the Developer Dashboard (Users and Access).";
@@ -1707,7 +1326,7 @@ class SpotifyDataFetcher {
                 clearTimeout(timeoutId);
                 return result.data;
             }
-            
+
             if (result.type === 'retry' && currentRetries > 0) {
                 if (result.delay > 0) {
                     console.warn(`Rate limited (429). Retrying in ${Math.round(result.delay)}ms... (Attempts left: ${currentRetries})`);
@@ -2163,6 +1782,9 @@ async function getPlaylistFromURI(name, uri) {
     const playlist = { name, uri };
     try {
         await getPlaylistTracks(playlist);
+    } catch (err) {
+        console.error("Error in getPlaylistFromURI:", err);
+        error("Trouble fetching playlist: " + err.message);
     } finally {
         stopShowingTracks();
         refreshTheWorld(false);
@@ -2171,19 +1793,23 @@ async function getPlaylistFromURI(name, uri) {
 }
 
 function isValidPlaylistUri(uri) {
+    if (!uri || typeof uri !== 'string') return false;
     var fields = uri.split(":");
-    if (fields.length == 3) {
-        if (fields[0] != "spotify" || fields[1] != "playlist") return false;
-    } else if (fields.length == 5) {
-        if (fields[0] != "spotify" || fields[3] != "playlist") return false;
-    } else return false;
-    return true;
+    if (fields[0] !== "spotify") return false;
+    // Standard playlist URI: spotify:playlist:ID (length 3)
+    // Legacy user playlist URI: spotify:user:USER:playlist:ID (length 5)
+    if (fields.length === 3 && fields[1] === "playlist") return true;
+    if (fields.length === 5 && fields[3] === "playlist") return true;
+    return false;
 }
 
 function getPlaylistPid(uri) {
     var fields = uri.split(":");
-    if (fields.length == 3) return fields[2];
-    else if (fields.length == 5) return fields[4];
+    if (fields.length === 3 && fields[1] === "playlist") return fields[2];
+    if (fields.length === 5 && fields[3] === "playlist") return fields[4];
+    // Fallback search for 'playlist' segment
+    var idx = fields.indexOf("playlist");
+    if (idx !== -1 && fields[idx + 1]) return fields[idx + 1];
     return null;
 }
 
@@ -2328,7 +1954,10 @@ function go() {
     errs.forEach(function (el) { el.textContent = ""; });
     var type = document.getElementById("collection-type").value;
     var params = { type: type };
-    if (type == "playlist") params.uri = document.getElementById("uri-text").value;
+    if (type == "playlist") {
+        var rawUri = document.getElementById("uri-text").value;
+        params.uri = normalizeUri(rawUri);
+    }
     saveInfo(params);
 
     showLoadingState();
@@ -2346,9 +1975,35 @@ function goAll() {
 }
 
 function normalizeUri(uri) {
-    uri = uri.replace("https://open.spotify.com", "spotify");
-    uri = uri.replace("https://play.spotify.com", "spotify");
-    uri = uri.replace(/\//g, ":");
+    if (typeof uri !== 'string') return "";
+    uri = uri.trim();
+    if (uri.indexOf("?") !== -1) uri = uri.split("?")[0];
+
+    // If it's a URL or contains path segments
+    if (uri.indexOf("/") !== -1) {
+        var parts = uri.split("/").filter(function (p) { return p; });
+        var playlistIdx = parts.indexOf("playlist");
+        if (playlistIdx !== -1 && parts[playlistIdx + 1]) {
+            var id = parts[playlistIdx + 1];
+            var userIdx = parts.indexOf("user");
+            if (userIdx !== -1 && parts[userIdx + 1]) {
+                return "spotify:user:" + parts[userIdx + 1] + ":playlist:" + id;
+            }
+            return "spotify:playlist:" + id;
+        }
+    }
+
+    // If it's already a URI
+    if (uri.startsWith("spotify:")) {
+        if (uri.endsWith(":")) uri = uri.substring(0, uri.length - 1);
+        return uri;
+    }
+
+    // If it's just an ID (no colons or slashes), assume it's a playlist ID
+    if (uri.length > 0 && uri.indexOf(":") === -1 && uri.indexOf("/") === -1) {
+        return "spotify:playlist:" + uri;
+    }
+
     return uri;
 }
 
@@ -2378,48 +2033,7 @@ function setProgress(percent) {
     progressBar.setAttribute("aria-valuenow", percent);
 }
 
-function initTables() {
-    theTrackTable = new google.visualization.Table(document.getElementById("gthe-track-table"));
 
-    google.visualization.events.addListener(theTrackTable, "ready", function () {
-        updateHeaderCheckbox(theTrackTable);
-        addEventHandlers(theTrackTable.getContainer(), theTrackTable);
-        enhancePagerUI(theTrackTable);
-    });
-
-    google.visualization.events.addListener(theTrackTable, "sort", function (props) {
-        // Redraw will trigger 'ready'
-    });
-    google.visualization.events.addListener(theTrackTable, "page", function (props) {
-        if (props && typeof props.page === "number") {
-            theTrackTable.currentPage = props.page;
-        }
-        enhancePagerUI(theTrackTable);
-    });
-
-    theStagingTable = new google.visualization.Table(document.getElementById("gthe-staging-table"));
-
-    google.visualization.events.addListener(theStagingTable, "ready", function () {
-        updateHeaderCheckbox(theStagingTable);
-        addEventHandlers(theStagingTable.getContainer(), theStagingTable);
-        enhancePagerUI(theStagingTable);
-    });
-
-    google.visualization.events.addListener(theStagingTable, "sort", function (props) {
-        // Redraw will trigger 'ready'
-    });
-    google.visualization.events.addListener(theStagingTable, "page", function (props) {
-        if (props && typeof props.page === "number") {
-            theStagingTable.currentPage = props.page;
-        }
-        enhancePagerUI(theStagingTable);
-    });
-
-    if (curNode) {
-        showPlaylist(curNode);
-        plotPlaylist(curNode);
-    }
-}
 
 function initPlot() {
     addPlotSelect(document.getElementById("select-xaxis"), "energy");
@@ -2513,9 +2127,26 @@ document.addEventListener("DOMContentLoaded", function () {
         // Native Tabs setup
         initNativeTabs();
 
-        google.charts.load("current", { packages: ["table"] });
-        google.charts.setOnLoadCallback(initTables);
+        // google.charts.load("current", { packages: ["table"] });
+        // google.charts.setOnLoadCallback(initTables);
+        initTables();
         initPlot();
+
+        function initTables() {
+            // Tables are now handled by React
+            theTrackTable = {
+                getContainer: function () { return document.getElementById("gthe-track-table"); },
+                draw: function () { },
+                currentPage: 0,
+                totalRows: 0
+            };
+            theStagingTable = {
+                getContainer: function () { return document.getElementById("gthe-staging-table"); },
+                draw: function () { },
+                currentPage: 0,
+                totalRows: 0
+            };
+        }
 
         fetchCurrentUserProfile().then(function (user) {
             if (user) {

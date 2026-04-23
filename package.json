@@ -23,6 +23,8 @@
     "@tailwindcss/vite": "^4.2.2",
     "cors": "^2.8.6",
     "express": "^4.22.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   }
 }
