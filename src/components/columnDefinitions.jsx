@@ -135,16 +135,23 @@ const getLastPlayedAt = (track) => {
 
 const getContextType = (track) => {
     const base = getBaseTrack(track);
-    return base?.context_type || getTopLevelMeta(track, 'context')?.type || track?.feats?.source || null;
+    let source = null;
+    if (track?.feats?.sources instanceof Set && track.feats.sources.size > 0) {
+        source = Array.from(track.feats.sources)[0];
+    } else if (Array.isArray(track?.feats?.sources) && track.feats.sources.length > 0) {
+        source = track.feats.sources[0];
+    }
+
+    return base?.context_type || getTopLevelMeta(track, 'context')?.type || source || track?.feats?.source || null;
 };
 
 const getGenres = (track) => {
     const genres = getField(track, 'genres');
     if (genres instanceof Set) {
-        return Array.from(genres).join(', ') || '-';
+        return Array.from(genres)[0] || '-';
     }
     if (Array.isArray(genres)) {
-        return genres.join(', ') || '-';
+        return genres[0] || '-';
     }
     return getField(track, 'topGenre') || '-';
 };

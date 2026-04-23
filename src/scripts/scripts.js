@@ -686,16 +686,20 @@ function addTracks(tracks) {
     }
 
     // 4. Sources
-    if (track.feats.source && !(track.feats.source in nodeMap)) {
-      var node = makeNode(
-        track.feats.source,
-        "Sources",
-        featSourceFilter(track.feats.source),
-        featSourceGetter(track.feats.source),
-        featSorter("popularity", true),
-        false,
-      );
-      theWorld[sourceIndex].nodes.push(node);
+    if (track.feats.sources) {
+      track.feats.sources.forEach(function (source) {
+        if (!(source in nodeMap)) {
+          var node = makeNode(
+            source,
+            "Sources",
+            featSourceFilter(source),
+            featSourceGetter(source),
+            featSorter("popularity", true),
+            false,
+          );
+          theWorld[sourceIndex].nodes.push(node);
+        }
+      });
     }
 
     track.feats.year = getYearForTrack(track);
@@ -993,12 +997,15 @@ function getGlobalSearchTracks(query) {
         return (genre || "").toLowerCase();
       },
     );
-    var sourceName = (track.feats.source || "").toLowerCase();
+    var sources = Array.from(track.feats.sources || []);
+    var sourceMatch = sources.some(function (source) {
+      return (source || "").toLowerCase().includes(searchQuery);
+    });
     var topGenre = (track.feats.topGenre || "").toLowerCase();
     if (
       trackName.includes(searchQuery) ||
       albumName.includes(searchQuery) ||
-      sourceName.includes(searchQuery) ||
+      sourceMatch ||
       topGenre.includes(searchQuery)
     )
       return true;
@@ -1581,12 +1588,12 @@ function featGenreSorter() {
 
 function featSourceFilter(source) {
   return function (track) {
-    return track.feats.source == source;
+    return track.feats.sources && track.feats.sources.has(source);
   };
 }
 function featSourceGetter(source) {
   return function (track) {
-    return track.feats.source;
+    return Array.from(track.feats.sources || []).join(", ");
   };
 }
 
@@ -2482,37 +2489,41 @@ async function getTracksFromAPI(source, uri) {
       var diffMs = now.getTime() - addedAtDate.getTime();
       var diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-      const track = {
-        id: item.track.id,
-        feats: {
-          date_added: addedAtDate,
-          age: diffDays,
-          explicit: item.track.explicit,
-          duration_ms: item.track.duration_ms,
-          popularity: item.track.popularity,
-          source: source,
-          count: 1,
-        },
-        details: {
-          name: item.track.name,
-          album_id: item.track.album.id,
-          uri: item.track.uri,
-          preview_url: item.track.preview_url,
-          artists: tinyArtists(item.track.artists),
-        },
-      };
-
-      if (track.id in curTracks) {
-        curTracks[track.id].feats.count += 1;
-        if (curTracks[track.id].feats.count > topTrackCount) {
-          topTrackCount = curTracks[track.id].feats.count;
+      if (item.track.id in curTracks) {
+        curTracks[item.track.id].feats.count += 1;
+        if (curTracks[item.track.id].feats.sources) {
+          curTracks[item.track.id].feats.sources.add(source);
+        }
+        if (curTracks[item.track.id].feats.count > topTrackCount) {
+          topTrackCount = curTracks[item.track.id].feats.count;
           topTrackName = item.track.name;
         }
       } else {
+        const track = {
+          id: item.track.id,
+          feats: {
+            date_added: addedAtDate,
+            age: diffDays,
+            explicit: item.track.explicit,
+            duration_ms: item.track.duration_ms,
+            popularity: item.track.popularity,
+            sources: new Set([source]),
+            count: 1,
+          },
+          details: {
+            name: item.track.name,
+            album_id: item.track.album.id,
+            uri: item.track.uri,
+            preview_url: item.track.preview_url,
+            artists: tinyArtists(item.track.artists),
+          },
+        };
+
         const ntrack = loadTrack(track.id);
         if (ntrack != null) {
           curTracks[track.id] = ntrack;
           curTracks[track.id].feats.count = 1;
+          curTracks[track.id].feats.sources = new Set([source]);
         } else {
           curTracks[track.id] = track;
         }
@@ -2771,7 +2782,7 @@ function buildTrackFromSpotifyItem(item, source) {
       explicit: item.track.explicit,
       duration_ms: item.track.duration_ms,
       popularity: item.track.popularity,
-      source: source,
+      sources: new Set([source]),
       count: 1,
     },
     details: {
@@ -2821,7 +2832,11 @@ async function collectTracksByIds(trackRefs) {
         if (trackRef && trackRef.feats) {
           if (trackRef.feats.date_added)
             track.feats.date_added = new Date(trackRef.feats.date_added);
-          if (trackRef.feats.source) track.feats.source = trackRef.feats.source;
+          if (trackRef.feats.sources) {
+            track.feats.sources = new Set(trackRef.feats.sources);
+          } else if (trackRef.feats.source) {
+            track.feats.sources = new Set([trackRef.feats.source]);
+          }
           if (trackRef.feats.count) track.feats.count = trackRef.feats.count;
           var now = new Date();
           track.feats.age =

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { trackColumns } from './columnDefinitions';
 
 const getBaseTrack = (track) => (track?.track && track?.track?.id ? track.track : track);
@@ -19,6 +19,10 @@ const getPreviewUrl = (track) => {
     const base = getBaseTrack(track);
     return base?.preview_url || track?.details?.preview_url || null;
 };
+const getTrackImage = (track) => {
+    const base = getBaseTrack(track);
+    return base?.image_url || track?.details?.image_url || track?.image_url || null;
+};
 
 const TrackTable = ({
     tracks,
@@ -35,6 +39,9 @@ const TrackTable = ({
     const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState(initialPageSize);
     const [searchQuery, setSearchQuery] = useState('');
+    const [hoveredImage, setHoveredImage] = useState(null);
+    const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+    const tableScrollRef = useRef(null);
 
     // Filter and Reorder columns based on context and relevancy (sorting)
     const activeColumns = useMemo(() => {
@@ -120,6 +127,12 @@ const TrackTable = ({
         setCurrentPage(0);
     }, [searchQuery, tracks.length]);
 
+    // Keep sorted results anchored to the beginning of the scroll container.
+    useEffect(() => {
+        if (!tableScrollRef.current) return;
+        tableScrollRef.current.scrollTo({ left: 0, behavior: 'auto' });
+    }, [sortConfig]);
+
     const requestSort = (key) => {
         let direction = 'desc';
         if (sortConfig.key === key && sortConfig.direction === 'desc') {
@@ -140,11 +153,15 @@ const TrackTable = ({
 
     return (
         <div className="flex flex-col w-full">
-            <div className="overflow-x-auto snap-x snap-mandatory" style={{ scrollPaddingLeft: `${totalStickyWidth}px` }}>
-                <table className="google-visualization-table-table w-full border-collapse">
+            <div
+                ref={tableScrollRef}
+                className="overflow-x-auto snap-x snap-mandatory"
+                style={{ scrollPaddingLeft: `${totalStickyWidth}px` }}
+            >
+                <table className="google-visualization-table-table w-full border-separate border-spacing-0">
                     <thead>
                         <tr className="google-visualization-table-tr-head">
-                            <th className="track-header-cell w-12 sticky left-0 z-30 bg-zinc-900 border-r border-zinc-800 snap-start snap-always">
+                            <th className="track-header-cell w-12 sticky left-0 z-30 bg-zinc-900 shadow-[1px_0_0_0_#2d2d2d] snap-start snap-always">
                                 <div className="flex items-center justify-center">
                                     <input
                                         type="checkbox"
@@ -163,7 +180,7 @@ const TrackTable = ({
                                 let stickyClass = "";
                                 let style = {};
                                 if (col.sticky) {
-                                    stickyClass = "sticky z-20 bg-zinc-900/80 backdrop-blur-md border-r border-zinc-800";
+                                    stickyClass = "sticky z-20 bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d]";
                                     if (col.id === 'title') {
                                         style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
                                     } else if (col.id === 'artist') {
@@ -208,7 +225,7 @@ const TrackTable = ({
                                         }
                                     }}
                                 >
-                                <td className={`track-table-cell text-center! w-12 sticky left-0 z-20 transition-colors border-r border-zinc-800/50 ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${glassClass}`}>
+                                    <td className={`track-table-cell text-center! w-12 sticky left-0 z-20 transition-colors ${baseBgClass} ${selectedBgClass} ${hoverBgClass} shadow-[1px_0_0_0_#242424]`}>
                                         <input
                                             type="checkbox"
                                             className="track-select hidden"
@@ -219,6 +236,23 @@ const TrackTable = ({
                                         {getPreviewUrl(track) ? (
                                             <i
                                                 className={`track-play fa ${nowPlayingId === rowId && isPlaying ? 'fa-pause text-spotify-green' : 'fa-play text-zinc-500'} hover:text-white cursor-pointer transition-colors`}
+                                                onMouseEnter={(e) => {
+                                                    const img = getTrackImage(track);
+                                                    if (img) {
+                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                        setHoveredImage(img);
+                                                        // Center horizontally above the button (w-56 = 224px)
+                                                        setHoverPosition({
+                                                            x: rect.left + (rect.width / 2) - 112,
+                                                            y: rect.top - 224 - 15
+                                                        });
+                                                    }
+                                                }}
+                                                onMouseMove={(e) => {
+                                                    // Optional: make it follow mouse vertically if desired
+                                                    // setHoverPosition(prev => ({ ...prev, y: e.clientY - 80 }));
+                                                }}
+                                                onMouseLeave={() => setHoveredImage(null)}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     onPlayTrack(track.details ? track : {
@@ -237,7 +271,7 @@ const TrackTable = ({
                                         let stickyClass = "";
                                         let style = {};
                                         if (col.sticky) {
-                                            stickyClass = `sticky z-10 transition-colors border-r border-zinc-800/50 ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${glassClass}`;
+                                            stickyClass = `sticky z-10 transition-colors ${baseBgClass} ${selectedBgClass} ${hoverBgClass} shadow-[1px_0_0_0_#242424]`;
                                             if (col.id === 'title') {
                                                 style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
                                             } else if (col.id === 'artist') {
@@ -320,6 +354,37 @@ const TrackTable = ({
                     </button>
                 </div>
             </div>
+
+            {/* Album Art Hover Preview (Modal-like) */}
+            {hoveredImage && (
+                <div
+                    className="fixed z-9999 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-200"
+                    style={{
+                        left: `${hoverPosition.x}px`,
+                        top: `${hoverPosition.y}px`,
+                    }}
+                >
+                    <div className="relative">
+                        {/* Glow effect */}
+                        <div className="absolute -inset-1 bg-linear-to-r from-spotify-green to-emerald-500 rounded-xl blur opacity-25"></div>
+
+                        {/* Main container */}
+                        <div className="relative bg-zinc-900 ring-1 ring-white/10 rounded-xl overflow-hidden shadow-2xl">
+                            <img
+                                src={hoveredImage}
+                                className="w-56 h-56 object-cover"
+                                alt="Album Art Preview"
+                                onError={(e) => e.target.style.display = 'none'}
+                            />
+                        </div>
+
+                        {/* Triangle pointing down */}
+                        <div
+                            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-900 rotate-45 border-r border-b border-white/10 shadow-xl"
+                        ></div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
