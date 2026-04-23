@@ -1,3 +1,5 @@
+import normalizeSpotifyTracks from "./spotifyTransformer.js";
+
 "use strict";
 console.log("Organize Your Music - scripts.js loaded");
 var accessToken = null;
@@ -5,6 +7,7 @@ var ACCESS_TOKEN_STORAGE_KEY = "access_token";
 var REFRESH_TOKEN_STORAGE_KEY = "refresh_token";
 var curUserID = null;
 var curTracks = {};
+var curRawTrackItems = [];
 var curArtists = {};
 var curAlbums = {};
 var curTypeName = null;
@@ -40,6 +43,12 @@ var sidebarExpanded = true;
 // NEW: Global search state
 var currentSearchQuery = "";
 var quickMode = false;
+window.normalizedTrackData = [];
+window.getNormalizedTrackData = function () {
+  return Array.isArray(window.normalizedTrackData)
+    ? window.normalizedTrackData
+    : [];
+};
 
 window.addEventListener("unhandledrejection", function (event) {
   console.error("Unhandled promise rejection:", event.reason);
@@ -1050,14 +1059,104 @@ function getDuration(val) {
   return getInt(num / 1000);
 }
 
+function buildAudioFeaturesPayload(track) {
+  var feats = (track && track.feats) || {};
+  return {
+    id: track ? track.id : null,
+    danceability: toFiniteNumber(feats.danceability),
+    energy: toFiniteNumber(feats.energy),
+    valence: toFiniteNumber(feats.valence),
+    tempo: toFiniteNumber(feats.tempo),
+    loudness: toFiniteNumber(feats.loudness),
+    speechiness: toFiniteNumber(feats.speechiness),
+    acousticness: toFiniteNumber(feats.acousticness),
+    instrumentalness: toFiniteNumber(feats.instrumentalness),
+    liveness: toFiniteNumber(feats.liveness),
+    key: toFiniteNumber(feats.key),
+    mode: toFiniteNumber(feats.mode),
+    time_signature: toFiniteNumber(feats.time_signature),
+  };
+}
+
+function refreshNormalizedTrackData() {
+  var tracks = Object.values(curTracks || {});
+  var audioFeatures = tracks.map(buildAudioFeaturesPayload);
+
+  var normalizedRows = normalizeSpotifyTracks(
+    curRawTrackItems,
+    audioFeatures,
+  );
+  window.normalizedTrackData = normalizedRows;
+
+  var normalizedById = {};
+  normalizedRows.forEach(function (row) {
+    if (row && row.id) {
+      normalizedById[row.id] = row;
+    }
+  });
+
+  tracks.forEach(function (track) {
+    if (!track || !track.id || !(track.id in normalizedById)) return;
+    var normalized = normalizedById[track.id];
+
+    // Keep the legacy nested shape, but copy the flattened fields onto the
+    // live track object so all downstream renderers can read them directly.
+    Object.keys(normalized).forEach(function (key) {
+      if (key === 'id') return;
+      track[key] = normalized[key];
+    });
+
+    track.feats = track.feats || {};
+    track.details = track.details || {};
+  });
+
+  return window.normalizedTrackData;
+}
+
+function mergeTracksWithNormalizedRows(tracks) {
+  var normalizedRows = Array.isArray(window.normalizedTrackData)
+    ? window.normalizedTrackData
+    : [];
+
+  if (normalizedRows.length === 0) {
+    return tracks;
+  }
+
+  var normalizedById = {};
+  normalizedRows.forEach(function (row) {
+    if (row && row.id) {
+      normalizedById[row.id] = row;
+    }
+  });
+
+  return (tracks || []).map(function (track) {
+    if (!track || !track.id) return track;
+    var normalized = normalizedById[track.id];
+    if (!normalized) return track;
+
+    return {
+      ...track,
+      ...normalized,
+      details: {
+        ...(track.details || {}),
+      },
+      feats: {
+        ...(track.feats || {}),
+      },
+    };
+  });
+}
+
 function showTracksInTable(table, tracks, getter, label, isStagingList) {
+  var mergedTracks = mergeTracksWithNormalizedRows(tracks);
+
   if (isStagingList) {
     if (window.renderStagingTable) {
-      window.renderStagingTable(tracks);
+      window.renderStagingTable(mergedTracks);
     }
   } else {
     if (window.renderTrackTable) {
-      window.renderTrackTable(tracks);
+      window.renderTrackTable(mergedTracks);
     }
   }
 }
@@ -2326,6 +2425,8 @@ async function getTracksFromAPI(source, uri) {
 
   // 3. Process the collected track objects into our global map
   allItems.forEach((item) => {
+    curRawTrackItems.push(item);
+
     if (!item.is_local && item.track && "id" in item.track) {
       var addedAtDate = item.added_at ? new Date(item.added_at) : new Date();
       var diffMs = now.getTime() - addedAtDate.getTime();
@@ -2395,6 +2496,8 @@ async function finalizeCollection() {
     );
     await collectAllMetadata(tracksToEnrich);
   }
+
+  refreshNormalizedTrackData();
 
   addTracks(allTracks);
   filterTracks(allTracks);
@@ -2516,12 +2619,12 @@ async function getPlaylistFromURI(name, uri) {
   const playlist = { name, uri };
   try {
     await getPlaylistTracks(playlist);
+    await finalizeCollection();
   } catch (err) {
     console.error("Error in getPlaylistFromURI:", err);
     error("Trouble fetching playlist: " + err.message);
   } finally {
     stopShowingTracks();
-    refreshTheWorld(false);
     showLoadedState();
   }
 }
@@ -2584,6 +2687,7 @@ function clearWorldState() {
 
 function resetCollectionState() {
   curTracks = {};
+  curRawTrackItems = [];
   curArtists = {};
   curAlbums = {};
   topArtistCount = 0;
@@ -2601,6 +2705,7 @@ function resetCollectionState() {
   elements.forEach(function (el) {
     el.textContent = "0";
   });
+  window.normalizedTrackData = [];
 }
 
 function buildTrackFromSpotifyItem(item, source) {

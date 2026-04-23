@@ -1,6 +1,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { trackColumns } from './columnDefinitions';
 
+const getBaseTrack = (track) => (track?.track && track?.track?.id ? track.track : track);
+const getTrackId = (track) => track?.id || track?.track?.id || null;
+const getTrackName = (track) => {
+    const base = getBaseTrack(track);
+    return base?.name || track?.details?.name || '';
+};
+const getTrackArtists = (track) => {
+    const base = getBaseTrack(track);
+    if (typeof base?.artists === 'string') return base.artists;
+    const artists = Array.isArray(base?.artists)
+        ? base.artists
+        : (track?.details?.artists || []);
+    return artists.map((a) => a?.name).filter(Boolean).join(', ');
+};
+const getPreviewUrl = (track) => {
+    const base = getBaseTrack(track);
+    return base?.preview_url || track?.details?.preview_url || null;
+};
+
 const TrackTable = ({
     tracks,
     selectedIds,
@@ -9,7 +28,7 @@ const TrackTable = ({
     onPlayTrack,
     nowPlayingId,
     isPlaying,
-    pageSize: initialPageSize = 200,
+    pageSize: initialPageSize = 50,
     isStaging = false
 }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'popularity', direction: 'desc' });
@@ -17,10 +36,40 @@ const TrackTable = ({
     const [pageSize, setPageSize] = useState(initialPageSize);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Filter columns based on context
+    // Filter and Reorder columns based on context and relevancy (sorting)
     const activeColumns = useMemo(() => {
-        return trackColumns.filter(col => !isStaging || !col.isExtra);
-    }, [isStaging]);
+        let cols = trackColumns.filter(col => !isStaging || !col.isExtra);
+
+        // Rearrange by relevancy: move sorted column to the front of non-sticky section
+        if (sortConfig.key) {
+            const sortIdx = cols.findIndex(c => c.sortKey === sortConfig.key || c.id === sortConfig.key);
+            if (sortIdx !== -1 && !cols[sortIdx].sticky) {
+                const sortedCol = cols[sortIdx];
+                const otherCols = cols.filter((_, i) => i !== sortIdx);
+                const stickyCount = otherCols.filter(c => c.sticky).length;
+
+                // Insert after sticky columns
+                cols = [
+                    ...otherCols.slice(0, stickyCount),
+                    sortedCol,
+                    ...otherCols.slice(stickyCount)
+                ];
+            }
+        }
+        return cols;
+    }, [isStaging, sortConfig]);
+
+    // Calculate total width of all sticky columns for scroll padding
+    const totalStickyWidth = useMemo(() => {
+        let width = 48; // Base checkbox/play column
+        activeColumns.forEach(col => {
+            if (col.sticky) {
+                if (col.id === 'title') width += 280;
+                else if (col.id === 'artist') width += 200;
+            }
+        });
+        return width;
+    }, [activeColumns]);
 
     // Sort tracks
     const sortedTracks = useMemo(() => {
@@ -36,8 +85,8 @@ const TrackTable = ({
                     bVal = column.getValue(b);
                 } else {
                     // Fallback for keys that might not be in trackColumns but are in feats
-                    aVal = a.feats[sortConfig.key];
-                    bVal = b.feats[sortConfig.key];
+                    aVal = a?.[sortConfig.key] ?? a?.feats?.[sortConfig.key];
+                    bVal = b?.[sortConfig.key] ?? b?.feats?.[sortConfig.key];
                 }
 
                 if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -53,8 +102,8 @@ const TrackTable = ({
         if (!searchQuery) return sortedTracks;
         const q = searchQuery.toLowerCase();
         return sortedTracks.filter(t =>
-            t.details.name.toLowerCase().includes(q) ||
-            t.details.artists[0].name.toLowerCase().includes(q)
+            getTrackName(t).toLowerCase().includes(q) ||
+            getTrackArtists(t).toLowerCase().includes(q)
         );
     }, [sortedTracks, searchQuery]);
 
@@ -86,16 +135,16 @@ const TrackTable = ({
             : <i className="fa fa-sort-desc ml-2 text-spotify-green"></i>;
     };
 
-    const isAllSelected = tracks.length > 0 && tracks.every(t => selectedIds.has(t.id));
-    const isSomeSelected = !isAllSelected && tracks.some(t => selectedIds.has(t.id));
+    const isAllSelected = tracks.length > 0 && tracks.every(t => selectedIds.has(getTrackId(t)));
+    const isSomeSelected = !isAllSelected && tracks.some(t => selectedIds.has(getTrackId(t)));
 
     return (
         <div className="flex flex-col w-full">
-            <div className="overflow-x-auto snap-x snap-mandatory scroll-pl-[528px]">
+            <div className="overflow-x-auto snap-x snap-mandatory" style={{ scrollPaddingLeft: `${totalStickyWidth}px` }}>
                 <table className="google-visualization-table-table w-full border-collapse">
                     <thead>
                         <tr className="google-visualization-table-tr-head">
-                            <th className="track-header-cell w-[48px] sticky left-0 z-30 bg-zinc-900 border-r border-zinc-800 snap-start snap-always">
+                            <th className="track-header-cell w-12 sticky left-0 z-30 bg-zinc-900 border-r border-zinc-800 snap-start snap-always">
                                 <div className="flex items-center justify-center">
                                     <input
                                         type="checkbox"
@@ -114,7 +163,7 @@ const TrackTable = ({
                                 let stickyClass = "";
                                 let style = {};
                                 if (col.sticky) {
-                                    stickyClass = "sticky z-20 bg-zinc-900 border-r border-zinc-800";
+                                    stickyClass = "sticky z-20 bg-zinc-900/80 backdrop-blur-md border-r border-zinc-800";
                                     if (col.id === 'title') {
                                         style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
                                     } else if (col.id === 'artist') {
@@ -125,9 +174,10 @@ const TrackTable = ({
                                 return (
                                     <th
                                         key={col.id}
-                                        className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-colors ${col.width || ''} ${stickyClass} snap-start snap-always`}
+                                        className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-colors ${col.width || ''} ${stickyClass} ${col.sticky ? '' : 'snap-start snap-always'}`}
                                         style={style}
                                         onClick={() => requestSort(col.sortKey)}
+                                        title={col.tooltip || col.label}
                                     >
                                         <div className={`flex items-center justify-${col.align === 'center' ? 'center' : 'start'}`}>
                                             {col.label} {getSortIcon(col.sortKey)}
@@ -138,56 +188,75 @@ const TrackTable = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {paginatedTracks.map((track, idx) => (
-                            <tr key={track.id}
-                                className={`group hover:bg-zinc-800/80 transition-colors ${idx % 2 === 0 ? 'google-visualization-table-tr-even bg-zinc-900' : 'google-visualization-table-tr-odd bg-zinc-950'} ${selectedIds.has(track.id) ? 'google-visualization-table-tr-sel bg-spotify-green/10' : ''}`}
-                                onClick={(e) => {
-                                    if (e.target.type !== 'checkbox' && !e.target.classList.contains('track-play')) {
-                                        onToggleSelection(track.id, !selectedIds.has(track.id));
-                                    }
-                                }}
-                            >
-                                <td className="track-table-cell text-center! w-[48px] sticky left-0 z-10 bg-inherit group-hover:bg-zinc-800/80 transition-colors border-r border-zinc-800/50 snap-start snap-always">
-                                    <input
-                                        type="checkbox"
-                                        className="track-select hidden"
-                                        checked={selectedIds.has(track.id)}
-                                        onChange={(e) => onToggleSelection(track.id, e.target.checked)}
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                    {track.details.preview_url ? (
-                                        <i
-                                            className={`track-play fa ${nowPlayingId === track.id && isPlaying ? 'fa-pause text-spotify-green' : 'fa-play text-zinc-500'} hover:text-white cursor-pointer transition-colors`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onPlayTrack(track);
-                                            }}
-                                        ></i>
-                                    ) : null}
-                                </td>
-                                {activeColumns.map((col, colIdx) => {
-                                    let stickyClass = "";
-                                    let style = {};
-                                    if (col.sticky) {
-                                        stickyClass = "sticky z-10 bg-inherit group-hover:bg-zinc-800/80 transition-colors border-r border-zinc-800/50";
-                                        if (col.id === 'title') {
-                                            style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
-                                        } else if (col.id === 'artist') {
-                                            style = { left: '328px', minWidth: '200px', maxWidth: '200px' };
+                        {paginatedTracks.map((track, idx) => {
+                            const rowId = getTrackId(track);
+                            const isSelected = selectedIds.has(rowId);
+                            const isEven = idx % 2 === 0;
+
+                            // Use semi-transparent backgrounds with backdrop-blur for a "glass" effect
+                            const baseBgClass = isEven ? 'bg-zinc-900/60' : 'bg-zinc-950/60';
+                            const selectedBgClass = isSelected ? 'bg-spotify-green/10' : '';
+                            const hoverBgClass = 'group-hover:bg-zinc-800/60';
+                            const glassClass = 'backdrop-blur-md';
+
+                            return (
+                                <tr key={rowId || idx}
+                                    className={`group transition-colors ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${isSelected ? 'google-visualization-table-tr-sel' : ''}`}
+                                    onClick={(e) => {
+                                        if (e.target.type !== 'checkbox' && !e.target.classList.contains('track-play')) {
+                                            onToggleSelection(rowId, !selectedIds.has(rowId));
                                         }
-                                    }
-                                    return (
-                                        <td
-                                            key={col.id}
-                                            className={`track-table-cell ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${stickyClass} snap-start snap-always`}
-                                            style={style}
-                                        >
-                                            <div className="truncate">{col.render(track)}</div>
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
+                                    }}
+                                >
+                                <td className={`track-table-cell text-center! w-12 sticky left-0 z-20 transition-colors border-r border-zinc-800/50 ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${glassClass}`}>
+                                        <input
+                                            type="checkbox"
+                                            className="track-select hidden"
+                                            checked={selectedIds.has(rowId)}
+                                            onChange={(e) => onToggleSelection(rowId, e.target.checked)}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                        {getPreviewUrl(track) ? (
+                                            <i
+                                                className={`track-play fa ${nowPlayingId === rowId && isPlaying ? 'fa-pause text-spotify-green' : 'fa-play text-zinc-500'} hover:text-white cursor-pointer transition-colors`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onPlayTrack(track.details ? track : {
+                                                        ...track,
+                                                        id: rowId,
+                                                        details: {
+                                                            ...(track.details || {}),
+                                                            preview_url: getPreviewUrl(track)
+                                                        }
+                                                    });
+                                                }}
+                                            ></i>
+                                        ) : null}
+                                    </td>
+                                    {activeColumns.map((col, colIdx) => {
+                                        let stickyClass = "";
+                                        let style = {};
+                                        if (col.sticky) {
+                                            stickyClass = `sticky z-10 transition-colors border-r border-zinc-800/50 ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${glassClass}`;
+                                            if (col.id === 'title') {
+                                                style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
+                                            } else if (col.id === 'artist') {
+                                                style = { left: '328px', minWidth: '200px', maxWidth: '200px' };
+                                            }
+                                        }
+                                        return (
+                                            <td
+                                                key={col.id}
+                                                className={`track-table-cell ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${stickyClass} ${col.sticky ? '' : 'snap-start snap-always'}`}
+                                                style={style}
+                                            >
+                                                <div className="truncate">{col.render(track)}</div>
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
             </div>
