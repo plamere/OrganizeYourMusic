@@ -588,14 +588,14 @@ function refreshHeader() {
   if (totalPlaylists > 0) {
     linfo(
       "Found " +
-        ntracks +
-        " unique tracks by " +
-        nArtists +
-        " artists in " +
-        processedPlaylists +
-        " of " +
-        totalPlaylists +
-        " playlists",
+      ntracks +
+      " unique tracks by " +
+      nArtists +
+      " artists in " +
+      processedPlaylists +
+      " of " +
+      totalPlaylists +
+      " playlists",
     );
     var progress = (processedPlaylists * 100) / totalPlaylists;
     setProgress(progress);
@@ -606,19 +606,43 @@ function refreshHeader() {
     }
     linfo(
       "Found " +
-        ntracks +
-        " tracks by " +
-        nArtists +
-        " artists in your collection.",
+      ntracks +
+      " tracks by " +
+      nArtists +
+      " artists in your collection.",
     );
   }
 }
 
 function addTracks(tracks) {
+  const AUDIO_FEATURE_FIELDS = [
+    'danceability', 'energy', 'valence', 'tempo', 'loudness',
+    'speechiness', 'acousticness', 'instrumentalness', 'liveness',
+    'key', 'mode', 'time_signature'
+  ];
+
   tracks.forEach(function (track) {
+    track.feats = track.feats || {};
+
+    // 1. Copy audio features from track root to track.feats
+    AUDIO_FEATURE_FIELDS.forEach(field => {
+      if (track[field] !== undefined && track[field] !== null) {
+        track.feats[field] = track[field];
+      }
+    });
+
+    // 2. Calculate Moods (happiness, sadness, anger) if energy and valence exist
+    if (track.feats.energy !== undefined && track.feats.valence !== undefined) {
+      track.feats.sadness = (1 - track.feats.energy) * (1 - track.feats.valence);
+      track.feats.happiness = track.feats.energy * track.feats.valence;
+      track.feats.anger = track.feats.energy * (1 - track.feats.valence);
+    }
+
+    // 3. Handle Genres
     var genres = getGenresForTrack(track);
     track.feats.genres = new Set();
     track.feats.topGenre = "";
+
     genres.forEach(function (genre) {
       if (isGoodGenre(genre)) {
         track.feats.genres.add(genre);
@@ -628,10 +652,11 @@ function addTracks(tracks) {
         ) {
           track.feats.topGenre = genre;
         }
+
         if (!(genre in nodeMap)) {
           var node = makeNode(
             genre,
-            "Genre",
+            "Genres",
             featGenreFilter(genre),
             featGenreGetter(genre),
             featSorter("popularity", true),
@@ -639,20 +664,43 @@ function addTracks(tracks) {
           );
           theWorld[genreIndex].nodes.push(node);
         }
-        if (!(track.feats.source in nodeMap)) {
-          var node = makeNode(
-            track.feats.source,
-            "Source",
-            featSourceFilter(track.feats.source),
-            featSourceGetter(track.feats.source),
-            featSorter("popularity", true),
-            false,
-          );
-          theWorld[sourceIndex].nodes.push(node);
-        }
       }
     });
+
+    // Fallback for unclassified if no good genres found
+    if (track.feats.genres.size === 0) {
+      const unclassified = "(unclassified genre)";
+      track.feats.genres.add(unclassified);
+      track.feats.topGenre = unclassified;
+      if (!(unclassified in nodeMap)) {
+        var node = makeNode(
+          unclassified,
+          "Genres",
+          featGenreFilter(unclassified),
+          featGenreGetter(unclassified),
+          featSorter("popularity", true),
+          false,
+        );
+        theWorld[genreIndex].nodes.push(node);
+      }
+    }
+
+    // 4. Sources
+    if (track.feats.source && !(track.feats.source in nodeMap)) {
+      var node = makeNode(
+        track.feats.source,
+        "Sources",
+        featSourceFilter(track.feats.source),
+        featSourceGetter(track.feats.source),
+        featSorter("popularity", true),
+        false,
+      );
+      theWorld[sourceIndex].nodes.push(node);
+    }
+
     track.feats.year = getYearForTrack(track);
+    track.feats.popularity = track.popularity;
+    track.feats.duration_ms = track.duration_ms;
   });
 }
 
@@ -863,8 +911,10 @@ function showPlaylist(node) {
 
   var nTracks = displayTracks.length;
   var nArtists = new Set(
-    displayTracks.map(function (t) {
-      return t.details.artists[0].id;
+    displayTracks.flatMap(function (t) {
+      return (t.details.artists || []).map(function (a) {
+        return a.id;
+      });
     }),
   ).size;
 
@@ -1799,7 +1849,7 @@ async function callSpotify(type, url, json, callback) {
   async function doCall() {
     var backendUrl =
       window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"
+        window.location.hostname === "127.0.0.1"
         ? "http://localhost:8000/api/spotify"
         : "/api/spotify";
 
@@ -1867,7 +1917,7 @@ async function getSpotifyP(url, data) {
   async function go() {
     var backendUrl =
       window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"
+        window.location.hostname === "127.0.0.1"
         ? "http://localhost:8000/api/spotify"
         : "/api/spotify";
 
@@ -1980,7 +2030,7 @@ class SpotifyDataFetcher {
     // Automatically determine the correct backend URL (local vs prod)
     this.proxyUrl =
       window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"
+        window.location.hostname === "127.0.0.1"
         ? "http://localhost:8000/api/spotify"
         : "/api/spotify";
     this.queue = [];
@@ -2491,8 +2541,8 @@ async function finalizeCollection() {
       "Enriching Metadata...";
     linfo(
       "Fetching audio features and genres for " +
-        tracksToEnrich.length +
-        " tracks...",
+      tracksToEnrich.length +
+      " tracks...",
     );
     await collectAllMetadata(tracksToEnrich);
   }
@@ -3040,7 +3090,7 @@ document.addEventListener("DOMContentLoaded", function () {
         getContainer: function () {
           return document.getElementById("gthe-track-table");
         },
-        draw: function () {},
+        draw: function () { },
         currentPage: 0,
         totalRows: 0,
       };
@@ -3048,7 +3098,7 @@ document.addEventListener("DOMContentLoaded", function () {
         getContainer: function () {
           return document.getElementById("gthe-staging-table");
         },
-        draw: function () {},
+        draw: function () { },
         currentPage: 0,
         totalRows: 0,
       };

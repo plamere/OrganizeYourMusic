@@ -138,6 +138,17 @@ const getContextType = (track) => {
     return base?.context_type || getTopLevelMeta(track, 'context')?.type || track?.feats?.source || null;
 };
 
+const getGenres = (track) => {
+    const genres = getField(track, 'genres');
+    if (genres instanceof Set) {
+        return Array.from(genres).join(', ') || '-';
+    }
+    if (Array.isArray(genres)) {
+        return genres.join(', ') || '-';
+    }
+    return getField(track, 'topGenre') || '-';
+};
+
 const getPercentLabel = (val) => {
     const n = asNumber(val);
     return n === null ? '-' : `${Math.round(n * 100)}%`;
@@ -208,15 +219,15 @@ export const trackColumns = [
         tooltip: 'The album the track belongs to'
     },
     {
-        id: 'genre',
-        label: 'Genre',
-        sortKey: 'topGenre',
-        align: 'center',
+        id: 'genres',
+        label: 'Genres',
+        sortKey: 'genres',
+        align: 'left',
         isExtra: true,
-        getValue: (track) => getField(track, 'topGenre') || '',
-        render: (track) => getField(track, 'topGenre') || '-',
+        getValue: (track) => getGenres(track),
+        render: (track) => getGenres(track),
         className: 'text-zinc-400',
-        tooltip: 'The primary genre classification'
+        tooltip: 'All genre classifications associated with the track'
     },
     {
         id: 'year',
@@ -317,17 +328,6 @@ export const trackColumns = [
         render: (track) => getField(track, 'disc_number') ?? '-',
         className: 'text-zinc-400',
         tooltip: 'The disc number on the album'
-    },
-    {
-        id: 'isrc',
-        label: 'ISRC',
-        sortKey: 'isrc',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => getField(track, 'isrc') || '-',
-        render: (track) => getField(track, 'isrc') || '-',
-        className: 'text-zinc-400',
-        tooltip: 'International Standard Recording Code'
     },
     {
         id: 'tempo',
@@ -482,5 +482,16 @@ export const trackColumns = [
         render: (track) => getField(track, 'popularity') ?? '-',
         className: 'text-zinc-400',
         tooltip: 'Popularity of the track (0-100)'
+    },
+    {
+        id: 'isrc',
+        label: 'ISRC',
+        sortKey: 'isrc',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => getField(track, 'isrc') || '-',
+        render: (track) => getField(track, 'isrc') || '-',
+        className: 'text-zinc-400',
+        tooltip: 'International Standard Recording Code'
     }
 ];
