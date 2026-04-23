@@ -692,6 +692,15 @@ function toggleSidebarSections() {
     else expandAllSidebar();
 }
 
+// Make shared variables and functions available to other modules
+window.curSelected = curSelected;
+window.nowPlaying = nowPlaying;
+window.audio = audio;
+window.playTrack = playTrack;
+window.toggleSidebarSections = toggleSidebarSections;
+window.collapseAllSidebar = collapseAllSidebar;
+window.expandAllSidebar = expandAllSidebar;
+
 function updateSidebarToggleButton() {
     var button = document.getElementById("sidebar-toggle-btn");
     if (!button) return;
@@ -2289,28 +2298,6 @@ function showTab(selector) {
     }
 }
 
-function toggleSidebarSections() {
-    sidebarExpanded = !sidebarExpanded;
-    var heads = document.querySelectorAll("#sidebar h4 i");
-    var uls = document.querySelectorAll("#sidebar ul.playlist-list");
-
-    uls.forEach(function (ul, i) {
-        if (sidebarExpanded) {
-            ul.style.display = "block";
-            if (heads[i]) {
-                heads[i].classList.remove("fa-chevron-down");
-                heads[i].classList.add("fa-chevron-up");
-            }
-        } else {
-            ul.style.display = "none";
-            if (heads[i]) {
-                heads[i].classList.remove("fa-chevron-up");
-                heads[i].classList.add("fa-chevron-down");
-            }
-        }
-    });
-    updateSidebarToggleButton();
-}
 
 function saveTrack(track) { return; }
 function loadTrack(id) { return null; }
