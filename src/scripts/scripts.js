@@ -1463,6 +1463,42 @@ function updateViewOfTheWorld(quick) {
           showPlaylist(node);
         };
         
+        // Image preview for Sources
+        if (bin.name === "Sources" && tracks.length > 0) {
+          li.onmouseenter = function(e) {
+            const imgUrl = tracks[0].image_url;
+            if (imgUrl) {
+              const preview = document.getElementById('sidebar-image-preview');
+              const previewImg = document.getElementById('sidebar-preview-img');
+              if (!preview || !previewImg) return;
+
+              const rect = li.getBoundingClientRect();
+              
+              previewImg.src = imgUrl;
+              preview.style.left = (rect.right + 20) + 'px';
+              preview.style.top = (rect.top + (rect.height / 2) - 112) + 'px';
+              
+              preview.classList.remove('hidden');
+              // Force reflow
+              preview.offsetHeight;
+              preview.classList.remove('opacity-0', 'scale-95');
+              preview.classList.add('opacity-100', 'scale-100');
+            }
+          };
+          
+          li.onmouseleave = function() {
+            const preview = document.getElementById('sidebar-image-preview');
+            if (!preview) return;
+            preview.classList.remove('opacity-100', 'scale-100');
+            preview.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+              if (preview.classList.contains('opacity-0')) {
+                preview.classList.add('hidden');
+              }
+            }, 300);
+          };
+        }
+
         if (isFirstPlaylist) {
           isFirstPlaylist = false;
           li.classList.add("active");

@@ -180,6 +180,16 @@ const getNumberLabel = (val) => {
  */
 export const trackColumns = [
     {
+        id: 'index',
+        label: '#',
+        align: 'center',
+        render: (_track, index) => index,
+        className: 'text-zinc-500 font-mono text-[10px]',
+        width: 'w-12',
+        sticky: true,
+        tooltip: 'Index'
+    },
+    {
         id: 'title',
         label: 'Title',
         sortKey: 'title',

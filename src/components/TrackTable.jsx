@@ -99,7 +99,11 @@ const TrackTable = ({
         let currentLeft = 48; // Base checkbox/play column
         return cols.map(col => {
             if (col.sticky) {
-                const width = col.id === 'title' ? 240 : (col.id === 'artist' ? 200 : 150);
+                let width = 150;
+                if (col.id === 'title') width = 240;
+                else if (col.id === 'artist') width = 200;
+                else if (col.id === 'index') width = 48;
+                
                 const colWithOffset = { ...col, stickyLeft: currentLeft, widthPx: width };
                 currentLeft += width;
                 return colWithOffset;
@@ -311,7 +315,14 @@ const TrackTable = ({
                         <tr className="google-visualization-table-tr-head">
                             <th 
                                 className="track-header-cell w-12 sticky left-0 bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d] snap-start snap-always box-border"
-                                style={{ minWidth: '48px', maxWidth: '48px', top: 0, zIndex: 30 }}
+                                style={{ 
+                                    minWidth: '48px', 
+                                    maxWidth: '48px', 
+                                    top: 0, 
+                                    zIndex: 35,
+                                    transform: 'translateZ(0)',
+                                    opacity: 1
+                                }}
                             >
                                 <div className="flex items-center justify-center">
                                     <input
@@ -325,15 +336,20 @@ const TrackTable = ({
                             </th>
                             {activeColumns.map((col, colIdx) => {
                                 let stickyClass = "";
-                                let style = {};
+                                let style = {
+                                    zIndex: 30,
+                                    transform: 'translateZ(0)',
+                                    opacity: 1
+                                };
                                 if (col.sticky) {
                                     stickyClass = "sticky bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d]";
                                     style = { 
+                                        ...style,
                                         left: `${col.stickyLeft}px`, 
                                         minWidth: `${col.widthPx}px`, 
                                         maxWidth: `${col.widthPx}px`,
                                         top: 0,
-                                        zIndex: 30
+                                        zIndex: 35
                                     };
                                 }
 
@@ -348,7 +364,7 @@ const TrackTable = ({
                                         onDragOver={(e) => onDragOver(e, col.id)}
                                         onDrop={(e) => onDrop(e, col.id)}
                                         onDragEnd={clearDragState}
-                                        className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-all duration-200 ${col.width || ''} ${stickyClass} ${col.sticky ? '' : 'snap-start snap-always'} ${isDragging ? 'opacity-30 bg-zinc-800 shadow-inner' : ''} relative`}
+                                        className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-all duration-200 snap-start snap-always ${col.width || ''} ${stickyClass} ${isDragging ? 'opacity-30 bg-zinc-800 shadow-inner' : ''} relative`}
                                         style={style}
                                         onClick={() => requestSort(col.sortKey)}
                                         title={col.tooltip || col.label}
@@ -373,20 +389,46 @@ const TrackTable = ({
                             const isEven = idx % 2 === 0;
 
                             // Opaque backgrounds to ensure sticky columns hide content behind them
-                            const baseBgClass = isEven ? 'bg-[#18181b]' : 'bg-[#121212]';
-                            const selectedBgClass = isSelected ? 'bg-[#1db954]/20' : '';
-                            const hoverBgClass = 'group-hover:bg-[#2a2a2a]';
+                            // We use exact opaque colors that match the blended result of green overlay on base
+                            // Base: Even #18181b, Odd #121212
+                            // Selection: #1db954 at 20% opacity
+                            // Hover: #2a2a2a
+                            
+                            const rowBg = isSelected 
+                                ? (isEven ? '#193826' : '#14331f') 
+                                : (isEven ? '#18181b' : '#121212');
+                            
+                            const rowHoverBg = isSelected
+                                ? '#274732' // Composite of #2a2a2a and green@20%
+                                : '#2a2a2a';
 
-                            // Sticky cells must have the same opaque background as the row to cover scrolling content
-                            // We use explicit hex colors for the composite state to ensure 100% opacity
-                            const stickyBgClass = isSelected 
-                                ? (isEven ? 'bg-[#223629]' : 'bg-[#1a2d21]') // Composite of green overlay + base
-                                : baseBgClass;
-                            const stickyHoverBgClass = 'group-hover:bg-[#2a2a2a]';
+                            const stickyStyleBase = {
+                                zIndex: 25,
+                                transform: 'translateZ(0)',
+                                opacity: 1,
+                                boxShadow: '1px 0 0 0 #2d2d2d',
+                                backgroundColor: rowBg
+                            };
 
                             return (
                                 <tr key={rowId || idx}
-                                    className={`group transition-colors select-none ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${isSelected ? 'google-visualization-table-tr-sel' : ''}`}
+                                    className={`group transition-colors select-none snap-start snap-always ${isSelected ? 'google-visualization-table-tr-sel bg-[#1db954]/10!' : ''}`}
+                                    style={{ 
+                                        backgroundColor: rowBg,
+                                        '--row-hover-bg': rowHoverBg
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = rowHoverBg;
+                                        // Update all sticky cells in this row
+                                        const stickyCells = e.currentTarget.querySelectorAll('.sticky');
+                                        stickyCells.forEach(cell => cell.style.backgroundColor = rowHoverBg);
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = rowBg;
+                                        // Update all sticky cells in this row
+                                        const stickyCells = e.currentTarget.querySelectorAll('.sticky');
+                                        stickyCells.forEach(cell => cell.style.backgroundColor = rowBg);
+                                    }}
                                     onClick={(e) => {
                                         const rowId = getTrackId(track);
                                         const isSelectionAction = e.target.type === 'checkbox' || e.target.closest('.track-play') === null;
@@ -412,14 +454,15 @@ const TrackTable = ({
                                     }}
                                 >
                                     <td 
-                                        className={`track-table-cell text-center! w-12 sticky left-0 transition-colors group-hover:bg-[#2a2a2a]! shadow-[1px_0_0_0_#2d2d2d] box-border`}
+                                        className="track-table-cell text-center! w-12 sticky left-0 transition-colors shadow-[1px_0_0_0_#2d2d2d] box-border"
                                         style={{ 
                                             minWidth: '48px', 
                                             maxWidth: '48px', 
-                                            zIndex: 20,
-                                            backgroundColor: isSelected 
-                                                ? (isEven ? '#223629' : '#1a2d21') 
-                                                : (isEven ? '#18181b' : '#121212')
+                                            zIndex: 25,
+                                            transform: 'translateZ(0)',
+                                            opacity: 1,
+                                            boxShadow: '1px 0 0 0 #2d2d2d',
+                                            backgroundColor: rowBg
                                         }}
                                     >
                                         <input
@@ -499,29 +542,18 @@ const TrackTable = ({
                                         ) : null}
                                     </td>
                                     {activeColumns.map((col, colIdx) => {
-                                        let stickyStyle = col.sticky ? { 
-                                            left: `${col.stickyLeft}px`, 
-                                            minWidth: `${col.widthPx}px`, 
-                                            maxWidth: `${col.widthPx}px`,
-                                            zIndex: 20,
-                                            boxShadow: '1px 0 0 0 #2d2d2d'
-                                        } : { zIndex: 1 };
-
-                                        if (col.sticky) {
-                                            // Handle background in style to ensure it overrides and stays opaque
-                                            const bgColor = isSelected 
-                                                ? (isEven ? '#223629' : '#1a2d21') 
-                                                : (isEven ? '#18181b' : '#121212');
-                                            stickyStyle.backgroundColor = bgColor;
-                                        }
-
                                         return (
                                             <td
                                                 key={col.id}
-                                                className={`track-table-cell ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky transition-colors group-hover:bg-[#2a2a2a]!' : 'snap-start snap-always'}`}
-                                                style={stickyStyle}
+                                                className={`track-table-cell ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky transition-colors' : 'snap-start snap-always'}`}
+                                                style={col.sticky ? { 
+                                                    ...stickyStyleBase,
+                                                    left: `${col.stickyLeft}px`, 
+                                                    minWidth: `${col.widthPx}px`, 
+                                                    maxWidth: `${col.widthPx}px`
+                                                } : { zIndex: 1 }}
                                             >
-                                                <div className="truncate">{col.render(track)}</div>
+                                                <div className="truncate">{col.render(track, currentPage * pageSize + idx + 1)}</div>
                                             </td>
                                         );
                                     })}

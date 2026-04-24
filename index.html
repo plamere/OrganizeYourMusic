@@ -130,7 +130,6 @@
     }
 
     .google-visualization-table-tr-sel {
-      background-color: rgba(29, 185, 84, 0.15) !important;
       color: #ffffff !important;
     }
 
@@ -162,11 +161,9 @@
       font-size: 0.8rem !important;
       text-align: left !important;
       color: #b3b3b3 !important;
-      transition: all 0.2s ease !important;
     }
 
     .google-visualization-table-table tr:hover td {
-      background-color: rgba(255, 255, 255, 0.05);
       color: #ffffff !important;
     }
 
@@ -411,17 +408,19 @@
     <div id="main" class="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-black text-center relative">
 
 
-      <h1 id="title" class="text-5xl md:text-7xl font-black text-white tracking-tight mb-6 relative z-10">
+      <h1 id="title"
+        class="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tight mb-4 sm:mb-6 relative z-10">
         Organize Your Music
       </h1>
-      <p id="ttext" class="text-lg md:text-xl text-zinc-300 max-w-2xl mb-12 leading-relaxed relative z-10">
+      <p id="ttext"
+        class="text-base sm:text-lg md:text-xl text-zinc-300 max-w-2xl mb-8 sm:mb-12 leading-relaxed relative z-10">
         Organize your Spotify music collection by any of a wide range of
         musical attributes including genres, mood, decade of release and more.
       </p>
 
       <!-- Stage 0: Login -->
       <div id="login-state" class="w-full max-w-md relative z-10">
-        <div class="bg-zinc-900 p-8 md:p-12 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
+        <div class="bg-zinc-900 p-6 sm:p-12 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
           <p class="text-zinc-400 text-sm mb-8 text-center leading-relaxed">
             To organize your collection, we first need your permission to access your Spotify library.
           </p>
@@ -435,7 +434,7 @@
 
       <!-- Stage 1: Selection (Home) -->
       <div id="selection-state" class="w-full max-w-md relative z-10 hidden">
-        <div class="bg-zinc-900 p-8 md:p-10 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
+        <div class="bg-zinc-900 p-6 sm:p-10 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
           <div class="form-group mb-6 text-left">
             <label id="what-label" for="collection-type"
               class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest">
@@ -660,7 +659,7 @@
     <div id="main-wrapper" class="flex-1 p-3 md:p-6 w-full overflow-hidden flex flex-col bg-black">
       <div class="work hidden w-full flex-1 flex-col" id="main-area">
         <div id="loading"
-          class="max-w-2xl mx-auto w-full bg-zinc-900 p-10 rounded-2xl shadow-2xl border border-zinc-800 mt-10">
+          class="max-w-2xl mx-auto w-full bg-zinc-900 p-6 sm:p-10 rounded-2xl shadow-2xl border border-zinc-800 my-auto">
           <h3 id="section-title" class="text-2xl font-black text-center mb-8 text-white">
             Loading your collection...
           </h3>
@@ -943,6 +942,19 @@
           class="text-zinc-400 hover:text-spotify-green underline transition-colors font-medium">Curtis Wong</a>
         (2026).
       </p>
+    </div>
+  </div>
+
+  <!-- Sidebar Image Preview Modal -->
+  <div id="sidebar-image-preview"
+    class="fixed z-9999 pointer-events-none hidden opacity-0 transition-all duration-300 transform scale-95 origin-left">
+    <div class="relative">
+      <!-- Glow effect -->
+      <div class="absolute -inset-1 bg-linear-to-r from-spotify-green to-emerald-500 rounded-xl blur opacity-25"></div>
+      <!-- Main container -->
+      <div class="relative bg-zinc-900 ring-1 ring-white/10 rounded-xl overflow-hidden shadow-2xl">
+        <img id="sidebar-preview-img" class="w-56 h-56 object-cover" src="" alt="Source Preview">
+      </div>
     </div>
   </div>
 
