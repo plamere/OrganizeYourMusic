@@ -923,15 +923,21 @@ function showPlaylist(node) {
     }),
   ).size;
 
+  const resetBtn = document.getElementById("reset-column-order");
   if (isSearching) {
     playlistTitle("Search results");
     playlistSubtitle(
       "Search Results: " + nTracks + " tracks / " + nArtists + " artists",
     );
+    if (resetBtn) resetBtn.classList.add("hidden");
   } else {
-    if (node.name == "All results")
+    if (node.name == "All results") {
       playlistTitle("All results in this collection");
-    else playlistTitle("Your " + uname(node.name) + " tracks");
+      if (resetBtn) resetBtn.classList.remove("hidden");
+    } else {
+      playlistTitle("Your " + uname(node.name) + " tracks");
+      if (resetBtn) resetBtn.classList.add("hidden");
+    }
     playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
   }
 
