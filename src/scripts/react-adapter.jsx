@@ -39,20 +39,22 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
         return () => clearInterval(interval);
     }, [selectedIds, nowPlayingId, isPlaying]);
 
-    const handleToggleSelection = (id, isSelected) => {
-        if (isSelected) {
-            window.curSelected.add(id);
-        } else {
-            window.curSelected.delete(id);
-        }
+    const handleToggleSelection = (ids, isSelected) => {
+        const idList = Array.isArray(ids) ? ids : [ids];
+        
+        idList.forEach(id => {
+            if (isSelected) {
+                window.curSelected.add(id);
+            } else {
+                window.curSelected.delete(id);
+            }
+        });
+        
         setSelectedIds(new Set(window.curSelected));
         
         // Update staging counts in UI
         const elements = document.querySelectorAll(".nstaging-tracks");
         elements.forEach(function (el) { el.textContent = window.curSelected.size; });
-        
-        // If we are in staging view, we might need to refresh the staging list
-        // but since this IS the staging list or the main list, it will re-render
     };
 
     const handleToggleAll = (isSelected, trackList) => {

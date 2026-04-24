@@ -11,3 +11,46 @@
 	--color-spotify-light: #b3b3b3;
 	--font-sans: "Circular", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
+
+@layer components {
+	.sidebar-controls-card {
+		@apply mb-4 rounded-xl border border-zinc-800/50 bg-zinc-900/40 p-3 shadow-sm transition-all hover:border-zinc-700/50 hover:bg-zinc-900/60;
+	}
+
+	.sidebar-section-header {
+		@apply mt-3 mb-1.5 flex cursor-pointer items-center justify-between px-2 text-[12px] font-black uppercase tracking-[0.2em] text-zinc-400 transition-colors hover:text-white;
+	}
+
+	.sidebar-section-header i {
+		@apply text-[10px] transition-transform duration-300;
+	}
+
+	.sidebar-item {
+		@apply flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1 text-[15px] font-semibold text-zinc-400 transition-all duration-200 hover:bg-white/5 hover:text-white active:scale-[0.98];
+	}
+
+	.sidebar-item.active {
+		@apply bg-white/10 text-white;
+	}
+
+	.sidebar-item-count {
+		@apply text-[13px] font-bold text-zinc-500;
+	}
+
+	.sidebar-item:hover .sidebar-item-count {
+		@apply text-zinc-300;
+	}
+
+	.playlist-list {
+		@apply space-y-0;
+	}
+
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+}

@@ -191,18 +191,18 @@ export const trackColumns = [
         width: 'w-[240px]',
         tooltip: 'The name of the track'
     },
-    // {
-    //     id: 'artist',
-    //     label: 'Artist',
-    //     sortKey: 'artist',
-    //     align: 'left',
-    //     getValue: (track) => getPrimaryArtist(track),
-    //     render: (track) => getPrimaryArtist(track),
-    //     className: 'text-zinc-400',
-    //     sticky: true,
-    //     width: 'w-[200px]',
-    //     tooltip: 'The primary artist of the track'
-    // },
+    {
+        id: 'artist',
+        label: 'Artist',
+        sortKey: 'artist',
+        align: 'left',
+        getValue: (track) => getPrimaryArtist(track),
+        render: (track) => getPrimaryArtist(track),
+        className: 'text-zinc-400',
+        sticky: true,
+        width: 'w-[200px]',
+        tooltip: 'The primary artist of the track'
+    },
     {
         id: 'artists',
         label: 'Artists',
@@ -219,7 +219,6 @@ export const trackColumns = [
         label: 'Album',
         sortKey: 'album',
         align: 'left',
-        isExtra: true,
         getValue: (track) => getAlbumName(track),
         render: (track) => getAlbumName(track),
         className: 'text-zinc-400',
@@ -241,7 +240,6 @@ export const trackColumns = [
         label: 'Year',
         sortKey: 'year',
         align: 'center',
-        isExtra: true,
         getValue: (track) => getAlbumYear(track) || track?.year || track?.feats?.year || -1,
         render: (track) => {
             const val = getAlbumYear(track) || track?.year || track?.feats?.year;
@@ -473,7 +471,6 @@ export const trackColumns = [
         label: 'Dur',
         sortKey: 'duration_ms',
         align: 'center',
-        isExtra: true,
         getValue: (track) => getField(track, 'duration_ms') ?? 0,
         render: (track) => formatDuration(getField(track, 'duration_ms')),
         className: 'text-zinc-400',
@@ -484,7 +481,6 @@ export const trackColumns = [
         label: 'Pop',
         sortKey: 'popularity',
         align: 'center',
-        isExtra: true,
         getValue: (track) => getField(track, 'popularity') ?? -1,
         render: (track) => getField(track, 'popularity') ?? '-',
         className: 'text-zinc-400',

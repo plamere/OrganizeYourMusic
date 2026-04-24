@@ -41,6 +41,7 @@ const TrackTable = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [hoveredImage, setHoveredImage] = useState(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+    const [lastClickedId, setLastClickedId] = useState(null);
     const [draggedColId, setDraggedColId] = useState(null);
     const [dropTargetColId, setDropTargetColId] = useState(null);
     const [dropSide, setDropSide] = useState(null); // 'left' or 'right'
@@ -49,9 +50,11 @@ const TrackTable = ({
     const tableScrollRef = useRef(null);
     const scrollIntervalRef = useRef(null);
 
+    const storageKey = isStaging ? 'oym_column_order_staging' : 'oym_column_order_main';
+    
     // Load/Save Column Order
     const [columnOrder, setColumnOrder] = useState(() => {
-        const saved = localStorage.getItem('oym_column_order');
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -63,19 +66,19 @@ const TrackTable = ({
     });
 
     useEffect(() => {
-        localStorage.setItem('oym_column_order', JSON.stringify(columnOrder));
-    }, [columnOrder]);
+        localStorage.setItem(storageKey, JSON.stringify(columnOrder));
+    }, [columnOrder, storageKey]);
 
     // Handle Reset Event from legacy UI
     useEffect(() => {
         const handleReset = () => {
             const defaultOrder = trackColumns.map(c => c.id);
             setColumnOrder(defaultOrder);
-            localStorage.removeItem('oym_column_order');
+            localStorage.removeItem(storageKey);
         };
         window.addEventListener('oym_reset_columns', handleReset);
         return () => window.removeEventListener('oym_reset_columns', handleReset);
-    }, []);
+    }, [storageKey]);
 
     // Filter and Reorder columns based on context and relevancy (sorting)
     const activeColumns = useMemo(() => {
@@ -96,7 +99,7 @@ const TrackTable = ({
         let currentLeft = 48; // Base checkbox/play column
         return cols.map(col => {
             if (col.sticky) {
-                const width = col.id === 'title' ? 240 : (col.id === 'artist' ? 180 : 150);
+                const width = col.id === 'title' ? 240 : (col.id === 'artist' ? 200 : 150);
                 const colWithOffset = { ...col, stickyLeft: currentLeft, widthPx: width };
                 currentLeft += width;
                 return colWithOffset;
@@ -163,7 +166,8 @@ const TrackTable = ({
     // Reset page when search or tracks change
     useEffect(() => {
         setCurrentPage(0);
-    }, [searchQuery, tracks.length]);
+        setLastClickedId(null);
+    }, [searchQuery, tracks.length, sortConfig]);
 
     // Keep sorted results anchored to the beginning of the scroll container.
     useEffect(() => {
@@ -382,10 +386,28 @@ const TrackTable = ({
 
                             return (
                                 <tr key={rowId || idx}
-                                    className={`group transition-colors ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${isSelected ? 'google-visualization-table-tr-sel' : ''}`}
+                                    className={`group transition-colors select-none ${baseBgClass} ${selectedBgClass} ${hoverBgClass} ${isSelected ? 'google-visualization-table-tr-sel' : ''}`}
                                     onClick={(e) => {
-                                        if (e.target.type !== 'checkbox' && !e.target.classList.contains('track-play')) {
+                                        const rowId = getTrackId(track);
+                                        const isSelectionAction = e.target.type === 'checkbox' || e.target.closest('.track-play') === null;
+                                        
+                                        if (isSelectionAction && e.target.type !== 'checkbox') {
+                                            if (e.shiftKey && lastClickedId) {
+                                                const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
+                                                const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
+                                                
+                                                if (lastIdx !== -1 && currentIdx !== -1) {
+                                                    const start = Math.min(lastIdx, currentIdx);
+                                                    const end = Math.max(lastIdx, currentIdx);
+                                                    const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
+                                                    const newState = !selectedIds.has(rowId);
+                                                    onToggleSelection(rangeIds, newState);
+                                                    setLastClickedId(rowId);
+                                                    return;
+                                                }
+                                            }
                                             onToggleSelection(rowId, !selectedIds.has(rowId));
+                                            setLastClickedId(rowId);
                                         }
                                     }}
                                 >
@@ -404,8 +426,28 @@ const TrackTable = ({
                                             type="checkbox"
                                             className="track-select hidden"
                                             checked={selectedIds.has(rowId)}
-                                            onChange={(e) => onToggleSelection(rowId, e.target.checked)}
-                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={() => {}} // Handled by onClick for shift support
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const rowId = getTrackId(track);
+                                                const newState = !selectedIds.has(rowId);
+
+                                                if (e.shiftKey && lastClickedId) {
+                                                    const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
+                                                    const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
+
+                                                    if (lastIdx !== -1 && currentIdx !== -1) {
+                                                        const start = Math.min(lastIdx, currentIdx);
+                                                        const end = Math.max(lastIdx, currentIdx);
+                                                        const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
+                                                        onToggleSelection(rangeIds, newState);
+                                                        setLastClickedId(rowId);
+                                                        return;
+                                                    }
+                                                }
+                                                onToggleSelection(rowId, newState);
+                                                setLastClickedId(rowId);
+                                            }}
                                         />
                                         {getPreviewUrl(track) ? (
                                             <i

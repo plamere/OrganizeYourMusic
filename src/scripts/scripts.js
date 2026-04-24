@@ -1356,53 +1356,64 @@ function updateViewOfTheWorld(quick) {
   updateFavs();
   var renderWorld = theWorld.slice();
   if (renderWorld.length > 0) {
+    // Put "All Results" or last bin first if it's the top category
     renderWorld = [renderWorld[renderWorld.length - 1]].concat(
       renderWorld.slice(0, renderWorld.length - 1),
     );
   }
 
+  // Library Bins Controls Card
   var sidebarControls = document.createElement("div");
-  sidebarControls.className =
-    "mb-4 flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/20 px-3 py-3";
+  sidebarControls.className = "sidebar-controls-card";
+
+  var controlsContent = document.createElement("div");
+  controlsContent.className = "flex items-center justify-between gap-3";
 
   var controlsLeft = document.createElement("div");
   controlsLeft.className = "min-w-0";
   var controlsTitle = document.createElement("div");
-  controlsTitle.className =
-    "text-xs font-bold uppercase tracking-wider text-zinc-400";
-  controlsTitle.textContent = "Library bins";
+  controlsTitle.className = "text-[12px] font-black uppercase tracking-[0.1em] text-white";
+  controlsTitle.textContent = "Library Bins";
   var controlsSub = document.createElement("div");
-  controlsSub.className = "text-[11px] text-zinc-500";
-  controlsSub.textContent = "Top result first, categories below.";
-  controlsTitle.appendChild(controlsSub);
+  controlsSub.className = "mt-0.5 text-[10px] font-medium text-zinc-500 uppercase tracking-wider";
+  controlsSub.textContent = "Smart Categorization";
+  
   controlsLeft.appendChild(controlsTitle);
+  controlsLeft.appendChild(controlsSub);
 
   var toggleButton = document.createElement("button");
   toggleButton.type = "button";
   toggleButton.id = "sidebar-toggle-btn";
-  toggleButton.className =
-    "inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 transition-colors hover:border-spotify-green hover:text-spotify-green";
+  toggleButton.className = "inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700/50 bg-zinc-800/50 text-zinc-400 transition-all hover:border-spotify-green hover:bg-zinc-800 hover:text-spotify-green shadow-sm";
   var toggleIcon = document.createElement("i");
-  toggleIcon.className = "fa fa-angle-double-up text-xs";
+  toggleIcon.className = "fa fa-angle-double-up text-[10px]";
   toggleButton.appendChild(toggleIcon);
-  toggleButton.onclick = function () {
+  toggleButton.onclick = function (e) {
+    e.stopPropagation();
     toggleSidebarSections();
   };
 
-  sidebarControls.appendChild(controlsLeft);
-  sidebarControls.appendChild(toggleButton);
+  controlsContent.appendChild(controlsLeft);
+  controlsContent.appendChild(toggleButton);
+  sidebarControls.appendChild(controlsContent);
   sidebar.appendChild(sidebarControls);
 
   renderWorld.forEach(function (bin) {
     var nodes = sortedNodes(bin.nodes);
+    
+    // Filter out nodes with too few tracks
+    var visibleNodes = nodes.filter(n => n.tracks.length >= minTracksForSection);
+    if (visibleNodes.length === 0 && bin.name !== "All Results") return;
 
-    var head = document.createElement("h4");
-    head.textContent = uname(bin.name);
-    head.className =
-      "mt-4 mb-2 pb-1 border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-400 cursor-pointer hover:text-white flex justify-between items-center transition-colors";
+    var head = document.createElement("div");
+    head.className = "sidebar-section-header group";
+    
+    var headTitle = document.createElement("span");
+    headTitle.textContent = uname(bin.name);
+    head.appendChild(headTitle);
+
     var headIcon = document.createElement("i");
-    headIcon.className =
-      "fa fa-chevron-down text-zinc-500 text-[10px] transition-transform duration-200";
+    headIcon.className = "fa fa-chevron-up opacity-40 group-hover:opacity-100";
     head.appendChild(headIcon);
     sidebar.appendChild(head);
 
@@ -1415,51 +1426,62 @@ function updateViewOfTheWorld(quick) {
       var isHidden = ul.style.display === "none";
       if (isHidden) {
         ul.style.display = "block";
-        headIcon.classList.remove("fa-chevron-down");
-        headIcon.classList.add("fa-chevron-up");
+        headIcon.className = "fa fa-chevron-up opacity-100";
       } else {
         ul.style.display = "none";
-        headIcon.classList.remove("fa-chevron-up");
-        headIcon.classList.add("fa-chevron-down");
+        headIcon.className = "fa fa-chevron-down opacity-40";
       }
     };
 
-    nodes.forEach(function (node) {
+    visibleNodes.forEach(function (node) {
       node.tracks = node.sorter(node.tracks);
       var tracks = node.tracks;
-      if (tracks.length >= minTracksForSection) {
-        var header = document.createElement("li");
-        header.textContent = uname(node.name);
-        header.className =
-          "py-1 px-2 text-sm text-zinc-300 cursor-pointer hover:text-white hover:bg-[#3E3E3E] rounded transition-colors duration-150 flex justify-between items-center";
-        var stats = document.createElement("span");
-        stats.className = "stats text-xs text-zinc-500 ml-2";
-        stats.textContent = "(" + tracks.length + ")";
-        header.appendChild(stats);
-        if (!quick) {
-          header.onclick = function () {
-            plotPlaylist(node);
-            showPlaylist(node);
-          };
-          if (isFirstPlaylist) {
-            isFirstPlaylist = false;
-            showPlaylist(node);
-            plotPlaylist(node);
-          }
-        }
-        ul.appendChild(header);
+      
+      var li = document.createElement("li");
+      li.className = "sidebar-item";
+      if (curNode && curNode.name === node.name) {
+        li.classList.add("active");
       }
+
+      var nameSpan = document.createElement("span");
+      nameSpan.className = "truncate mr-2";
+      nameSpan.textContent = uname(node.name);
+      li.appendChild(nameSpan);
+
+      var stats = document.createElement("span");
+      stats.className = "sidebar-item-count";
+      stats.textContent = tracks.length;
+      li.appendChild(stats);
+
+      if (!quick) {
+        li.onclick = function () {
+          // Remove active class from all items
+          document.querySelectorAll(".sidebar-item").forEach(el => el.classList.remove("active"));
+          li.classList.add("active");
+          
+          plotPlaylist(node);
+          showPlaylist(node);
+        };
+        
+        if (isFirstPlaylist) {
+          isFirstPlaylist = false;
+          li.classList.add("active");
+          showPlaylist(node);
+          plotPlaylist(node);
+        }
+      }
+      ul.appendChild(li);
     });
 
     if (!sidebarExpanded) {
       ul.style.display = "none";
-      headIcon.classList.remove("fa-chevron-up");
-      headIcon.classList.add("fa-chevron-down");
+      headIcon.className = "fa fa-chevron-down opacity-40";
     }
   });
 
   updateSidebarToggleButton();
 }
+
 
 var plottableData = {
   energy: {

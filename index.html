@@ -139,6 +139,10 @@
       cursor: pointer;
     }
 
+    .google-visualization-table-table tr {
+      user-select: none;
+    }
+
     /* Style for the new Select All checkbox in header */
     .header-select-all {
       margin: 0 !important;
@@ -650,7 +654,7 @@
 
   <div class="flex flex-col md:flex-row w-full flex-1">
     <div id="sidebar"
-      class="sidebar work hidden md:w-72 shrink-0 bg-zinc-900/50 border-r border-zinc-800 p-5 overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-4rem)] z-40">
+      class="sidebar work hidden md:w-72 shrink-0 bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-800/50 px-4 py-6 overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-4rem)] z-40 no-scrollbar">
     </div>
 
     <div id="main-wrapper" class="flex-1 p-3 md:p-6 w-full overflow-hidden flex flex-col bg-black">
@@ -698,28 +702,28 @@
 
         <div id="loaded" class="work hidden h-full flex-col w-full transition-all duration-300">
           <div
-            class="mb-12 rounded-3xl bg-linear-to-b from-zinc-900/40 to-transparent p-8 md:p-10 border border-zinc-800/30">
-            <div class="flex flex-col gap-8">
-              <div class="text-center md:text-left">
+            class="mb-4 rounded-2xl bg-linear-to-r from-zinc-900/40 to-zinc-900/10 p-4 md:p-5 border border-zinc-800/30">
+            <div class="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+              <div class="flex flex-col">
                 <h3 id="section-title-inline"
-                  class="text-4xl md:text-6xl font-black text-white tracking-tighter leading-tight mb-3">
+                  class="text-xl md:text-2xl font-black text-white tracking-tighter leading-tight">
                   Organize Your Music
                 </h3>
-                <p class="text-zinc-400 text-base md:text-lg font-medium max-w-none opacity-90">
+                <p class="text-zinc-500 text-xs font-medium opacity-90 hidden md:block">
                   Browse, visualize, and stage your music with precision audio filters.
                 </p>
               </div>
 
-              <div class="flex flex-col sm:flex-row items-center gap-4 w-full">
-                <div class="relative flex-1 w-full group">
+              <div class="flex flex-1 items-center gap-3 max-w-2xl w-full">
+                <div class="relative flex-1 group">
                   <i
-                    class="fa fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-spotify-green transition-colors"></i>
+                    class="fa fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-spotify-green transition-colors text-xs"></i>
                   <input type="text" id="global-search" placeholder="Search tracks, artists, albums..."
-                    class="w-full rounded-full border border-zinc-700 bg-zinc-900/80 py-4 pl-12 pr-6 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-spotify-green transition-all shadow-2xl" />
+                    class="w-full rounded-full border border-zinc-800 bg-black/40 py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-spotify-green/50 transition-all" />
                 </div>
                 <button id="refetch-button"
-                  class="w-full sm:w-auto whitespace-nowrap rounded-full border border-zinc-700 bg-zinc-900/80 px-10 py-4 text-[11px] font-black uppercase tracking-widest text-zinc-300 transition-all hover:text-white hover:bg-zinc-800 hover:border-zinc-500 shadow-2xl active:scale-95 shrink-0">
-                  <i class="fa fa-refresh text-spotify-green mr-2"></i> Reload Tracks
+                  class="whitespace-nowrap rounded-full border border-zinc-800 bg-zinc-900/80 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-all hover:text-white hover:bg-zinc-800 hover:border-zinc-700 active:scale-95 shrink-0">
+                  <i class="fa fa-refresh text-spotify-green mr-1.5"></i> Reload
                 </button>
               </div>
             </div>
@@ -747,14 +751,14 @@
                   <i class="fa fa-music text-sm"></i>
                   <span>Staging</span>
                   <span
-                    class="bg-spotify-green/20 text-spotify-green px-2 py-0.5 rounded-full text-[10px] font-black nstaging-tracks shadow-sm">0</span>
+                    class="bg-spotify-green/20 text-spotify-green px-2 py-0.5 rounded-full text-[12px] font-black nstaging-tracks shadow-sm">0</span>
                 </a>
               </li>
             </ul>
 
             <div class="tab-content flex-1 min-h-0 overflow-y-auto custom-scrollbar">
               <div class="tab-pane active" id="the-track-list">
-                <div class="flex flex-col mb-6">
+                <div class="flex flex-col mb-4">
                   <div class="flex items-center gap-3">
                     <h4 id="playlist-title" class="text-2xl font-black text-white mb-1"></h4>
                     <button id="reset-column-order" title="Reset column order to default"
@@ -768,7 +772,7 @@
 
                 <div id="track-table-empty"
                   class="hidden items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 px-6 py-20 text-center">
-                  <div class="text-zinc-500 mb-2">
+                  <div class="text-zinc-500 m-2">
                     <i class="fa fa-search text-4xl"></i>
                   </div>
                   <div class="text-zinc-400 font-medium">
