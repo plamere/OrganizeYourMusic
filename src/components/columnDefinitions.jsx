@@ -188,7 +188,7 @@ export const trackColumns = [
         render: (track) => getName(track),
         className: 'font-medium text-white',
         sticky: true,
-        width: 'w-[280px]',
+        width: 'w-[240px]',
         tooltip: 'The name of the track'
     },
     // {

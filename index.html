@@ -98,8 +98,6 @@
       border-right: none !important;
       border-left: none !important;
       background-color: #1a1a1a !important;
-      padding: 12px 16px;
-      font-size: 0.75rem !important;
       text-transform: uppercase !important;
       font-weight: 800 !important;
       letter-spacing: 0.12em !important;
@@ -148,17 +146,37 @@
     }
 
     .track-table-cell,
-    .google-visualization-table-table td {
-      padding: 12px 16px;
-      border-bottom: 1px solid #242424 !important;
+    .google-visualization-table-table td,
+    .track-header-cell {
+      box-sizing: border-box !important;
+      padding: 12px 16px !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
       border-top: none !important;
       border-left: none !important;
       border-right: none !important;
       vertical-align: middle !important;
-      font-size: 0.875rem !important;
+      font-size: 0.8rem !important;
       text-align: left !important;
-      color: #e4e4e7 !important;
-      min-width: 40px;
+      color: #b3b3b3 !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .google-visualization-table-table tr:hover td {
+      background-color: rgba(255, 255, 255, 0.05) !important;
+      color: #ffffff !important;
+    }
+
+    .track-header-cell {
+      font-size: 0.75rem !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.1em !important;
+      color: #a7a7a7 !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      background-color: #121212 !important;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 10 !important;
     }
 
     /* Force centering on numeric columns which Google Table right-aligns */
@@ -361,23 +379,33 @@
 
 <body class="min-h-screen flex flex-col pt-16 bg-spotify-base text-spotify-light font-sans antialiased">
   <nav
-    class="fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-lg border-b border-zinc-800 z-50 flex items-center justify-between px-6 shadow-sm">
-    <a class="text-white text-xl font-bold flex items-center gap-3 hover:text-spotify-green transition-colors"
-      href="index.html">
-      <i class="fa fa-spotify text-spotify-green text-3xl"></i>
-      Organize Your Music
-    </a>
-    <span id="info"
-      class="text-sm font-medium text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">A simple tool
-      used to organize your Spotify music collection.</span>
+    class="fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-lg border-b border-zinc-800 z-50 flex items-center justify-between px-4 md:px-6 shadow-sm">
+    <div class="flex items-center gap-2 md:gap-4">
+      <button id="toggle-sidebar"
+        class="text-zinc-400 hover:text-white transition-all p-2 rounded-full hover:bg-zinc-800 flex items-center justify-center w-10 h-10"
+        title="Toggle Sidebar">
+        <i class="fa fa-bars text-lg"></i>
+      </button>
+      <a class="text-white text-xl md:text-2xl font-black flex items-center gap-3 hover:text-spotify-green transition-all overflow-hidden tracking-tighter"
+        href="/">
+        <i class="fa fa-spotify text-spotify-green text-3xl"></i>
+        <span class="truncate">Organize <span class="text-zinc-500 font-bold">Your Music</span></span>
+      </a>
+    </div>
+
+    <div id="info"
+      class="flex items-center gap-3 bg-zinc-900/80 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-zinc-800 transition-all hover:bg-zinc-800/90">
+      <i class="fa fa-user text-zinc-500"></i>
+      <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged in
+        as</span>
+      <span id="who" class="text-xs md:text-sm font-bold text-zinc-200 truncate max-w-[100px] md:max-w-none">Not logged
+        in</span>
+    </div>
   </nav>
 
-  <div id="intro" class="flex flex-col">
-    <div id="main"
-      class="flex-1 flex flex-col justify-center items-center px-4 py-24 bg-linear-to-b from-zinc-800/50 to-black text-center relative overflow-hidden">
-      <div
-        class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-spotify-green/10 blur-[100px] pointer-events-none rounded-full">
-      </div>
+  <div id="intro" class="flex flex-col min-h-[calc(100vh-4rem)]">
+    <div id="main" class="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-black text-center relative">
+
 
       <h1 id="title" class="text-5xl md:text-7xl font-black text-white tracking-tight mb-6 relative z-10">
         Organize Your Music
@@ -388,12 +416,8 @@
       </p>
 
       <!-- Stage 0: Login -->
-      <div id="login-state" class="group w-full max-w-md relative z-10">
-        <div
-          class="absolute -inset-0.5 bg-linear-to-r from-spotify-green to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
-        </div>
-        <div
-          class="relative bg-zinc-900/90 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-zinc-700/50 w-full">
+      <div id="login-state" class="w-full max-w-md relative z-10">
+        <div class="bg-zinc-900 p-8 md:p-12 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
           <p class="text-zinc-400 text-sm mb-8 text-center leading-relaxed">
             To organize your collection, we first need your permission to access your Spotify library.
           </p>
@@ -406,15 +430,8 @@
       </div>
 
       <!-- Stage 1: Selection (Home) -->
-      <div id="selection-state" class="group w-full max-w-md relative z-10 hidden">
-        <div
-          class="absolute -inset-0.5 bg-linear-to-r from-spotify-green to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200">
-        </div>
-        <div
-          class="relative bg-zinc-900/90 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-zinc-700/50 w-full">
-          <div id="account-pill"
-            class="hidden mb-5 text-[11px] leading-5 text-zinc-400 bg-zinc-950/80 border border-zinc-800 rounded-full px-3 py-1 truncate"
-            aria-live="polite"></div>
+      <div id="selection-state" class="w-full max-w-md relative z-10 hidden">
+        <div class="bg-zinc-900 p-8 md:p-10 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
           <div class="form-group mb-6 text-left">
             <label id="what-label" for="collection-type"
               class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest">
@@ -636,7 +653,7 @@
       class="sidebar work hidden md:w-72 shrink-0 bg-zinc-900/50 border-r border-zinc-800 p-5 overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-4rem)] z-40">
     </div>
 
-    <div id="main-wrapper" class="flex-1 p-6 lg:p-10 w-full overflow-hidden flex flex-col bg-black">
+    <div id="main-wrapper" class="flex-1 p-3 md:p-6 w-full overflow-hidden flex flex-col bg-black">
       <div class="work hidden w-full flex-1 flex-col" id="main-area">
         <div id="loading"
           class="max-w-2xl mx-auto w-full bg-zinc-900 p-10 rounded-2xl shadow-2xl border border-zinc-800 mt-10">
@@ -679,55 +696,58 @@
           </div>
         </div>
 
-        <div id="loaded" class="work hidden h-full flex-col w-full max-w-7xl mx-auto">
+        <div id="loaded" class="work hidden h-full flex-col w-full transition-all duration-300">
           <div
-            class="flex flex-col gap-6 mb-8 lg:flex-row lg:items-end lg:justify-between bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800/50">
-            <div class="min-w-0 flex-1">
-              <h3 id="section-title-inline" class="text-3xl font-black text-white">
-                Organize Your Music
-              </h3>
-              <p class="text-zinc-400 text-sm mt-2 mb-5">
-                Browse, visualize, and stage your music.
-              </p>
-            </div>
+            class="mb-12 rounded-3xl bg-linear-to-b from-zinc-900/40 to-transparent p-8 md:p-10 border border-zinc-800/30">
+            <div class="flex flex-col gap-8">
+              <div class="text-center md:text-left">
+                <h3 id="section-title-inline"
+                  class="text-4xl md:text-6xl font-black text-white tracking-tighter leading-tight mb-3">
+                  Organize Your Music
+                </h3>
+                <p class="text-zinc-400 text-base md:text-lg font-medium max-w-none opacity-90">
+                  Browse, visualize, and stage your music with precision audio filters.
+                </p>
+              </div>
 
-            <div class="w-full max-w-xl lg:mr-4">
-              <label for="global-search" class="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
-                Refine Results
-              </label>
-              <div class="relative group">
-                <i
-                  class="fa fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-spotify-green transition-colors"></i>
-                <input type="text" id="global-search" placeholder="Search tracks, artists, or albums..."
-                  class="w-full rounded-full border border-zinc-700 bg-zinc-900 py-3 pl-11 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-spotify-green focus:ring-1 focus:ring-spotify-green transition-all" />
+              <div class="flex flex-col sm:flex-row items-center gap-4 w-full">
+                <div class="relative flex-1 w-full group">
+                  <i
+                    class="fa fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-spotify-green transition-colors"></i>
+                  <input type="text" id="global-search" placeholder="Search tracks, artists, albums..."
+                    class="w-full rounded-full border border-zinc-700 bg-zinc-900/80 py-4 pl-12 pr-6 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-spotify-green transition-all shadow-2xl" />
+                </div>
+                <button id="refetch-button"
+                  class="w-full sm:w-auto whitespace-nowrap rounded-full border border-zinc-700 bg-zinc-900/80 px-10 py-4 text-[11px] font-black uppercase tracking-widest text-zinc-300 transition-all hover:text-white hover:bg-zinc-800 hover:border-zinc-500 shadow-2xl active:scale-95 shrink-0">
+                  <i class="fa fa-refresh text-spotify-green mr-2"></i> Reload Tracks
+                </button>
               </div>
             </div>
-
-            <button id="refetch-button"
-              class="mt-2 lg:mt-0 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-zinc-700 bg-zinc-800 px-5 py-3 text-sm font-bold text-white transition-all hover:bg-zinc-700 hover:border-zinc-600 shadow-sm shrink-0">
-              <i class="fa fa-refresh"></i> Refetch Data
-            </button>
           </div>
 
           <div id="exTab3" class="w-full h-full flex flex-col min-h-0">
-            <ul class="nav nav-tabs flex border-b border-zinc-800 mb-6 gap-2 px-2 overflow-x-auto">
+            <ul class="nav nav-tabs flex border-b border-zinc-800/50 mb-4 gap-1 px-1 overflow-x-auto no-scrollbar">
               <li class="active group">
                 <a id="the-track-list-tab" href="#the-track-list" data-toggle="tab"
-                  class="block px-6 py-4 text-sm font-bold uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-zinc-900/50 rounded-t-lg group-[.active]:text-spotify-green group-[.active]:border-b-2 group-[.active]:border-spotify-green group-[.active]:bg-transparent transition-all">
-                  <i class="fa fa-list mr-2"></i> The Track List
+                  class="flex items-center gap-2 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/30 rounded-t-xl group-[.active]:text-white group-[.active]:border-b-2 group-[.active]:border-spotify-green transition-all duration-200">
+                  <i class="fa fa-list text-sm"></i>
+                  <span>Track List</span>
                 </a>
               </li>
               <li class="group">
                 <a id="the-plots-tab" href="#the-plots" data-toggle="tab"
-                  class="block px-6 py-4 text-sm font-bold uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-zinc-900/50 rounded-t-lg group-[.active]:text-spotify-green group-[.active]:border-b-2 group-[.active]:border-spotify-green group-[.active]:bg-transparent transition-all">
-                  <i class="fa fa-bar-chart mr-2"></i> The Plots
+                  class="flex items-center gap-2 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/30 rounded-t-xl group-[.active]:text-white group-[.active]:border-b-2 group-[.active]:border-spotify-green transition-all duration-200">
+                  <i class="fa fa-bar-chart text-sm"></i>
+                  <span>Plots</span>
                 </a>
               </li>
               <li class="group">
                 <a href="#staging" id="staging-tab" data-toggle="tab"
-                  class="block px-6 py-4 text-sm font-bold uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-zinc-900/50 rounded-t-lg group-[.active]:text-spotify-green group-[.active]:border-b-2 group-[.active]:border-spotify-green group-[.active]:bg-transparent transition-all">
-                  <i class="fa fa-music mr-2"></i> Staging
-                  <span class="bg-zinc-800 text-white px-2 py-0.5 rounded-full ml-1 text-xs nstaging-tracks">0</span>
+                  class="flex items-center gap-2 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/30 rounded-t-xl group-[.active]:text-white group-[.active]:border-b-2 group-[.active]:border-spotify-green transition-all duration-200">
+                  <i class="fa fa-music text-sm"></i>
+                  <span>Staging</span>
+                  <span
+                    class="bg-spotify-green/20 text-spotify-green px-2 py-0.5 rounded-full text-[10px] font-black nstaging-tracks shadow-sm">0</span>
                 </a>
               </li>
             </ul>
@@ -776,8 +796,8 @@
                       </div>
                     </div>
                     <button id="plot-clear" title="Clear all tracks from the plot"
-                      class="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-5 py-2.5 text-sm font-bold text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300">
-                      <i class="fa fa-trash"></i> Clear Plot
+                      class="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/5 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/15 hover:text-red-300 hover:border-red-500/40">
+                      <i class="fa fa-trash text-xs"></i> Clear Plot
                     </button>
                   </div>
 
@@ -787,19 +807,19 @@
                       <label for="select-xaxis"
                         class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">X axis</label>
                       <select id="select-xaxis"
-                        class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg py-2.5 px-4 text-sm focus:ring-1 focus:ring-spotify-green focus:outline-none cursor-pointer"></select>
+                        class="w-full bg-zinc-950/50 text-white border border-zinc-800 rounded-xl py-3 px-4 text-xs font-bold focus:ring-1 focus:ring-spotify-green/50 focus:border-spotify-green/50 focus:outline-none cursor-pointer hover:bg-zinc-900 transition-all"></select>
                     </div>
                     <div class="flex-1 min-w-30">
                       <label for="select-yaxis"
                         class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Y axis</label>
                       <select id="select-yaxis"
-                        class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg py-2.5 px-4 text-sm focus:ring-1 focus:ring-spotify-green focus:outline-none cursor-pointer"></select>
+                        class="w-full bg-zinc-950/50 text-white border border-zinc-800 rounded-xl py-3 px-4 text-xs font-bold focus:ring-1 focus:ring-spotify-green/50 focus:border-spotify-green/50 focus:outline-none cursor-pointer hover:bg-zinc-900 transition-all"></select>
                     </div>
                     <div class="flex-1 min-w-30">
                       <label for="select-size"
                         class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Size</label>
                       <select id="select-size"
-                        class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg py-2.5 px-4 text-sm focus:ring-1 focus:ring-spotify-green focus:outline-none cursor-pointer"></select>
+                        class="w-full bg-zinc-950/50 text-white border border-zinc-800 rounded-xl py-3 px-4 text-xs font-bold focus:ring-1 focus:ring-spotify-green/50 focus:border-spotify-green/50 focus:outline-none cursor-pointer hover:bg-zinc-900 transition-all"></select>
                     </div>
                   </div>
                 </div>
@@ -868,8 +888,8 @@
                       </a>
                     </div>
                     <button id="save-button"
-                      class="bg-spotify-green hover:bg-spotify-green-hover text-black font-extrabold py-3.5 px-8 rounded-full flex items-center gap-3 transition-transform transform hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.3)] shrink-0">
-                      <i class="fa fa-spotify text-xl"></i> Save to Spotify
+                      class="bg-spotify-green hover:bg-spotify-green-hover text-black font-black py-4 px-10 rounded-full flex items-center gap-3 transition-all transform hover:scale-105 active:scale-95 shadow-[0_8px_20px_rgba(29,185,84,0.3)] shrink-0 uppercase tracking-widest text-xs">
+                      <i class="fa fa-spotify text-lg"></i> Save to Spotify
                     </button>
                   </div>
 
@@ -891,7 +911,7 @@
     </div>
   </div>
 
-  <div id="footer" class="bg-zinc-950 border-t border-zinc-900 py-8 mt-auto z-50">
+  <div id="footer" class="bg-black border-t border-zinc-900 py-12 mt-auto z-50">
     <div class="container mx-auto px-6 text-center">
       <p class="text-sm text-zinc-500 leading-relaxed">
         Powered by the

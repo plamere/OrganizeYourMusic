@@ -71,8 +71,8 @@ const TrackTable = ({
         let width = 48; // Base checkbox/play column
         activeColumns.forEach(col => {
             if (col.sticky) {
-                if (col.id === 'title') width += 280;
-                else if (col.id === 'artist') width += 200;
+                if (col.id === 'title') width += 240;
+                else if (col.id === 'artist') width += 180;
             }
         });
         return width;
@@ -161,7 +161,10 @@ const TrackTable = ({
                 <table className="google-visualization-table-table w-full border-separate border-spacing-0">
                     <thead>
                         <tr className="google-visualization-table-tr-head">
-                            <th className="track-header-cell w-12 sticky left-0 z-30 bg-zinc-900 shadow-[1px_0_0_0_#2d2d2d] snap-start snap-always">
+                            <th 
+                                className="track-header-cell w-12 sticky left-0 z-30 bg-zinc-900 shadow-[1px_0_0_0_#2d2d2d] snap-start snap-always box-border"
+                                style={{ minWidth: '48px', maxWidth: '48px' }}
+                            >
                                 <div className="flex items-center justify-center">
                                     <input
                                         type="checkbox"
@@ -182,9 +185,9 @@ const TrackTable = ({
                                 if (col.sticky) {
                                     stickyClass = "sticky z-20 bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d]";
                                     if (col.id === 'title') {
-                                        style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
+                                        style = { left: '48px', minWidth: '240px', maxWidth: '240px' };
                                     } else if (col.id === 'artist') {
-                                        style = { left: '328px', minWidth: '200px', maxWidth: '200px' }; // 48 + 280
+                                        style = { left: '288px', minWidth: '180px', maxWidth: '180px' };
                                     }
                                 }
 
@@ -233,7 +236,10 @@ const TrackTable = ({
                                         }
                                     }}
                                 >
-                                    <td className={`track-table-cell text-center! w-12 sticky left-0 z-20 transition-colors ${stickyBaseBgClass} ${stickySelectedBgClass} ${stickyHoverBgClass} shadow-[1px_0_0_0_#242424]`}>
+                                    <td 
+                                        className={`track-table-cell text-center! w-12 sticky left-0 z-20 transition-colors ${stickyBaseBgClass} ${stickySelectedBgClass} ${stickyHoverBgClass} shadow-[1px_0_0_0_#242424] box-border`}
+                                        style={{ minWidth: '48px', maxWidth: '48px' }}
+                                    >
                                         <input
                                             type="checkbox"
                                             className="track-select hidden"
@@ -281,9 +287,9 @@ const TrackTable = ({
                                         if (col.sticky) {
                                             stickyClass = `sticky z-10 transition-colors ${stickyBaseBgClass} ${stickySelectedBgClass} ${stickyHoverBgClass} shadow-[1px_0_0_0_#242424]`;
                                             if (col.id === 'title') {
-                                                style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
+                                                style = { left: '48px', minWidth: '240px', maxWidth: '240px' };
                                             } else if (col.id === 'artist') {
-                                                style = { left: '328px', minWidth: '200px', maxWidth: '200px' };
+                                                style = { left: '288px', minWidth: '180px', maxWidth: '180px' };
                                             }
                                         }
                                         return (
@@ -304,7 +310,7 @@ const TrackTable = ({
             </div>
 
             {/* Pagination UI */}
-            <div className="google-visualization-table-div-page flex items-center justify-between p-4 border-t border-zinc-800">
+            <div className="google-visualization-table-div-page flex items-center justify-between p-2 border-t border-zinc-800">
                 <div id="page-size-selector-container" className="flex items-center gap-2">
                     <span className="text-zinc-500 text-sm">Show:</span>
                     <select

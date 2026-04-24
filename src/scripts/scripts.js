@@ -37,8 +37,9 @@ var theTrackTable = null;
 var theStagingTable = null;
 var stagingIsVisible = false;
 var maxTracksShown = 20000;
-var defaultTablePageSize = 200;
 var sidebarExpanded = true;
+var SIDEBAR_VISIBLE_KEY = "oym_sidebar_visible";
+var SIDEBAR_EXPANDED_KEY = "oym_sidebar_expanded";
 
 // NEW: Global search state
 var currentSearchQuery = "";
@@ -1291,6 +1292,7 @@ function collapseAllSidebar() {
     icon.classList.add("fa-chevron-down");
   });
   updateSidebarToggleButton();
+  window.localStorage.setItem(SIDEBAR_EXPANDED_KEY, "false");
 }
 
 function expandAllSidebar() {
@@ -1305,6 +1307,7 @@ function expandAllSidebar() {
     icon.classList.add("fa-chevron-up");
   });
   updateSidebarToggleButton();
+  window.localStorage.setItem(SIDEBAR_EXPANDED_KEY, "true");
 }
 
 function toggleSidebarSections() {
@@ -2230,8 +2233,22 @@ function showLoadingState() {
     mainArea.style.setProperty("display", "flex", "important");
   }
 
+  var mainWrapper = document.getElementById("main-wrapper");
+  if (mainWrapper) {
+    mainWrapper.classList.remove("hidden");
+    mainWrapper.classList.add("flex");
+    mainWrapper.style.setProperty("display", "flex", "important");
+  }
+
   var intro = document.getElementById("intro");
   if (intro) intro.style.setProperty("display", "none", "important");
+
+  // Hide the sidebar toggle button
+  var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.classList.add("hidden");
+    toggleSidebarBtn.classList.remove("md:flex");
+  }
 }
 
 function showLoadedState() {
@@ -2268,6 +2285,44 @@ function showLoadedState() {
     mainArea.classList.remove("hidden");
     mainArea.classList.add("flex");
     mainArea.style.removeProperty("display");
+  }
+
+  var mainWrapper = document.getElementById("main-wrapper");
+  if (mainWrapper) {
+    mainWrapper.classList.remove("hidden");
+    mainWrapper.classList.add("flex");
+    mainWrapper.style.removeProperty("display");
+  }
+
+  var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.classList.remove("hidden");
+    toggleSidebarBtn.classList.add("md:flex");
+  }
+
+  // Restore sidebar visibility state
+  var sidebarVisible = window.localStorage.getItem(SIDEBAR_VISIBLE_KEY);
+  if (sidebarVisible === "false") {
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+      sidebar.classList.add("hidden");
+      sidebar.classList.remove("md:block", "md:flex", "flex");
+      sidebar.style.setProperty("display", "none", "important");
+
+      var icon = toggleSidebarBtn?.querySelector("i");
+      if (icon) {
+        icon.classList.remove("fa-bars");
+        icon.classList.add("fa-arrow-right");
+      }
+    }
+  }
+
+  // Restore sidebar sections state
+  var sectionsExpanded = window.localStorage.getItem(SIDEBAR_EXPANDED_KEY);
+  if (sectionsExpanded === "false") {
+    collapseAllSidebar();
+  } else if (sectionsExpanded === "true") {
+    expandAllSidebar();
   }
 
   var intro = document.getElementById("intro");
@@ -2982,15 +3037,21 @@ function initPlot() {
 }
 
 function renderLoggedInEmail(user) {
-  var accountPill = document.getElementById("account-pill");
-  if (!accountPill) return;
-
   var identity = null;
   if (user && user.email) {
     identity = user.email;
   } else if (user && user.id) {
     identity = user.id;
   }
+
+  // Update top-right navigation info
+  var whoElem = document.getElementById("who");
+  if (whoElem) {
+    whoElem.textContent = identity || "Not logged in";
+  }
+
+  var accountPill = document.getElementById("account-pill");
+  if (!accountPill) return;
 
   if (!identity) {
     accountPill.classList.add("hidden");
@@ -3021,6 +3082,44 @@ document.addEventListener("DOMContentLoaded", function () {
   var urlParams = new URLSearchParams(window.location.search);
   var code = urlParams.get("code");
   var authError = urlParams.get("error");
+
+  var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.onclick = function () {
+      var sidebar = document.getElementById("sidebar");
+      if (sidebar) {
+        // More forceful check and toggle
+        var isCurrentlyHidden = sidebar.classList.contains("hidden") ||
+          sidebar.style.getPropertyValue("display") === "none";
+
+        if (isCurrentlyHidden) {
+          sidebar.classList.remove("hidden");
+          sidebar.classList.add("md:block");
+          sidebar.style.removeProperty("display");
+          window.localStorage.setItem(SIDEBAR_VISIBLE_KEY, "true");
+          // Update icon to bars
+          var icon = toggleSidebarBtn.querySelector("i");
+          if (icon) {
+            icon.classList.remove("fa-arrow-right");
+            icon.classList.add("fa-bars");
+          }
+        } else {
+          sidebar.classList.add("hidden");
+          sidebar.classList.remove("md:block", "md:flex", "flex");
+          sidebar.style.setProperty("display", "none", "important");
+          window.localStorage.setItem(SIDEBAR_VISIBLE_KEY, "false");
+          // Update icon to something that suggests showing it back
+          var icon = toggleSidebarBtn.querySelector("i");
+          if (icon) {
+            icon.classList.remove("fa-bars");
+            icon.classList.add("fa-arrow-right");
+          }
+        }
+        // Force a window resize event to trigger table/chart re-layouts
+        window.dispatchEvent(new Event("resize"));
+      }
+    };
+  }
 
   var collectionType = document.getElementById("collection-type");
   if (collectionType) {
@@ -3072,6 +3171,26 @@ document.addEventListener("DOMContentLoaded", function () {
     if (selectionState) {
       selectionState.classList.remove("hidden");
       selectionState.style.display = "block";
+    }
+
+    // Hide sidebar and toggle button on home screen
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+      sidebar.classList.add("hidden");
+      sidebar.classList.remove("md:block", "md:flex", "flex");
+      sidebar.style.setProperty("display", "none", "important");
+    }
+    var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+    if (toggleSidebarBtn) {
+      toggleSidebarBtn.classList.add("hidden");
+      toggleSidebarBtn.classList.remove("md:flex");
+    }
+
+    var mainWrapper = document.getElementById("main-wrapper");
+    if (mainWrapper) {
+      mainWrapper.classList.add("hidden");
+      mainWrapper.classList.remove("flex");
+      mainWrapper.style.setProperty("display", "none", "important");
     }
 
     thePlot = document.getElementById("the-plot");
