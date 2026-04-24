@@ -210,11 +210,19 @@ const TrackTable = ({
                             const isSelected = selectedIds.has(rowId);
                             const isEven = idx % 2 === 0;
 
-                            // Use semi-transparent backgrounds with backdrop-blur for a "glass" effect
+                            // Non-sticky cells can stay slightly translucent for depth.
                             const baseBgClass = isEven ? 'bg-zinc-900/60' : 'bg-zinc-950/60';
                             const selectedBgClass = isSelected ? 'bg-spotify-green/10' : '';
                             const hoverBgClass = 'group-hover:bg-zinc-800/60';
-                            const glassClass = 'backdrop-blur-md';
+
+                            // Selected sticky cells stay non-opaque by design while keeping legibility.
+                            const stickyBaseBgClass = isSelected
+                                ? (isEven ? 'bg-zinc-900/70' : 'bg-zinc-950/70')
+                                : (isEven ? 'bg-zinc-900' : 'bg-zinc-950');
+                            const stickySelectedBgClass = isSelected ? 'bg-[rgba(29,185,84,0.30)] backdrop-blur-md' : '';
+                            const stickyHoverBgClass = isSelected
+                                ? 'group-hover:bg-[rgba(29,185,84,0.36)]'
+                                : 'group-hover:bg-zinc-800';
 
                             return (
                                 <tr key={rowId || idx}
@@ -225,7 +233,7 @@ const TrackTable = ({
                                         }
                                     }}
                                 >
-                                    <td className={`track-table-cell text-center! w-12 sticky left-0 z-20 transition-colors ${baseBgClass} ${selectedBgClass} ${hoverBgClass} shadow-[1px_0_0_0_#242424]`}>
+                                    <td className={`track-table-cell text-center! w-12 sticky left-0 z-20 transition-colors ${stickyBaseBgClass} ${stickySelectedBgClass} ${stickyHoverBgClass} shadow-[1px_0_0_0_#242424]`}>
                                         <input
                                             type="checkbox"
                                             className="track-select hidden"
@@ -271,7 +279,7 @@ const TrackTable = ({
                                         let stickyClass = "";
                                         let style = {};
                                         if (col.sticky) {
-                                            stickyClass = `sticky z-10 transition-colors ${baseBgClass} ${selectedBgClass} ${hoverBgClass} shadow-[1px_0_0_0_#242424]`;
+                                            stickyClass = `sticky z-10 transition-colors ${stickyBaseBgClass} ${stickySelectedBgClass} ${stickyHoverBgClass} shadow-[1px_0_0_0_#242424]`;
                                             if (col.id === 'title') {
                                                 style = { left: '48px', minWidth: '280px', maxWidth: '280px' };
                                             } else if (col.id === 'artist') {

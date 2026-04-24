@@ -49,7 +49,7 @@ app.post('/api/spotify', async (req, res) => {
             finalUrl = `${url}?${params.toString()}`;
         }
 
-        console.log(`Proxying ${method} request to: ${finalUrl}`);
+        // console.log(`Proxying ${method} request to: ${finalUrl}`);
         const response = await fetch(finalUrl, options);
 
         if (!response.ok) {
