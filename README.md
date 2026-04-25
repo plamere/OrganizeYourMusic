@@ -78,8 +78,14 @@ To help you organize your music more effectively, the app provides access to dee
 Create a `.env` file in the root directory and add your Spotify credentials:
 ```env
 VITE_SPOTIFY_CLIENT_ID=your_client_id_here
+VITE_SPOTIFY_DEV_FALLBACK_CLIENT_ID=optional_secondary_client_id_for_dev_mode_fallback
 VITE_SPOTIFY_REDIRECT_URI=http://localhost:5173/
 ```
+
+`VITE_SPOTIFY_DEV_FALLBACK_CLIENT_ID` is optional. If set, the app will automatically
+switch to this client ID when Spotify returns a development-mode allowlist 403
+error (for example, when the current app's Users and Access list does not include
+the logged-in account).
 
 ### Running Locally
 To start the development environment (both frontend and backend proxy):

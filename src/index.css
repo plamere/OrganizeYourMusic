@@ -201,4 +201,45 @@ body.is-loading #loading {
 	margin-bottom: 10vh;
 }
 
-
+.who-carousel {
+	position: relative;
+	overflow: hidden;
+	white-space: nowrap;
+	line-height: 1.1;
+	--who-duration: 12s;
+	--who-shift: 120px;
+}
+
+.who-carousel-track {
+	display: inline-flex;
+	align-items: center;
+	min-width: max-content;
+	gap: 0.6rem;
+	will-change: transform;
+}
+
+.who-carousel-divider,
+#who-clone {
+	display: none;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+.who-carousel--scrolling .who-carousel-divider,
+.who-carousel--scrolling #who-clone {
+	display: inline;
+}
+
+.who-carousel--scrolling .who-carousel-track {
+	animation: who-carousel-scroll var(--who-duration) linear infinite;
+}
+
+@keyframes who-carousel-scroll {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(calc(-1 * var(--who-shift)));
+	}
+}
+
+

@@ -415,8 +415,13 @@
       <i class="fa fa-user text-zinc-500"></i>
       <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged in
         as</span>
-      <span id="who"
-        class="text-xs md:text-sm font-bold text-zinc-200 truncate max-w-[100px] md:max-w-none">Connecting...</span>
+      <div id="who-carousel" class="who-carousel text-xs md:text-sm font-bold text-zinc-200 max-w-25 md:max-w-56">
+        <span id="who-track" class="who-carousel-track">
+          <span id="who" class="who-carousel-text">Connecting...</span>
+          <span id="who-divider" class="who-carousel-divider" aria-hidden="true">&bull;</span>
+          <span id="who-clone" class="who-carousel-text" aria-hidden="true">Connecting...</span>
+        </span>
+      </div>
     </div>
   </nav>
 
@@ -429,7 +434,7 @@
       <div class="hero-glow"></div>
       <div class="mesh-gradient"></div>
       <div
-        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-linear-to-b from-spotify-green/10 to-transparent pointer-events-none">
+        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-150 bg-linear-to-b from-spotify-green/10 to-transparent pointer-events-none">
       </div>
 
       <!-- Floating Elements for depth -->
@@ -449,7 +454,7 @@
 
         <div class="flex flex-col md:flex-row items-center justify-center gap-6 w-full max-w-5xl mx-auto">
           <!-- Stage 0: Login -->
-          <div id="login-state" class="w-full max-w-[380px] hidden">
+          <div id="login-state" class="w-full max-w-95 hidden">
             <div class="spotify-glass p-10 rounded-3xl w-full text-left relative overflow-hidden group">
               <div
                 class="absolute -top-24 -right-24 w-48 h-48 bg-spotify-green/10 rounded-full blur-3xl transition-all group-hover:bg-spotify-green/20">
@@ -489,7 +494,7 @@
           </div>
 
           <!-- Stage 1: Selection (Home) -->
-          <div id="selection-state" class="w-full max-w-[380px] hidden">
+          <div id="selection-state" class="w-full max-w-95 hidden">
             <div class="spotify-glass p-10 rounded-3xl w-full text-left relative overflow-hidden group">
               <div
                 class="absolute -top-24 -left-24 w-48 h-48 bg-spotify-green/10 rounded-full blur-3xl transition-all group-hover:bg-spotify-green/20">
@@ -947,7 +952,7 @@
                 <div id="track-table-shell"
                   class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden border border-zinc-800">
                   <div class="overflow-x-auto w-full">
-                    <div id="gthe-track-table" class="w-full text-left min-h-[500px] border border-red-500/10"></div>
+                    <div id="gthe-track-table" class="w-full text-left min-h-125 border border-red-500/10"></div>
                   </div>
                   <div id="gthe-track-table-truncated"
                     class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
@@ -999,7 +1004,7 @@
                 </div>
 
                 <div class="bg-zinc-900 rounded-xl shadow-xl p-4 border border-zinc-800 w-full relative">
-                  <div id="the-plot" class="w-full min-h-[500px]"></div>
+                  <div id="the-plot" class="w-full min-h-125"></div>
                 </div>
               </div>
 
@@ -1157,6 +1162,7 @@
   <script type="text/javascript">
     // Configuration injected by Vite during build/dev
     window.SPOTIFY_CLIENT_ID = "%VITE_SPOTIFY_CLIENT_ID%";
+    window.SPOTIFY_DEV_FALLBACK_CLIENT_ID = "%VITE_SPOTIFY_DEV_FALLBACK_CLIENT_ID%";
     window.SPOTIFY_REDIRECT_URI = "%VITE_SPOTIFY_REDIRECT_URI%";
     window.isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   </script>

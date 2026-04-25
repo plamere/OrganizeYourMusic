@@ -52,6 +52,116 @@ import normalizeSpotifyTracks from "./spotifyTransformer.js";
 var accessToken = null;
 var ACCESS_TOKEN_STORAGE_KEY = "access_token";
 var REFRESH_TOKEN_STORAGE_KEY = "refresh_token";
+var ACTIVE_CLIENT_ID_STORAGE_KEY = "omy_active_client_id";
+
+function sanitizeInjectedValue(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  var trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  // Keep placeholder values from being treated as real runtime config.
+  if (/^%VITE_[A-Z0-9_]+%$/.test(trimmed)) {
+    return "";
+  }
+
+  return trimmed;
+}
+
+var configuredPrimarySpotifyClientId = sanitizeInjectedValue(
+  window.SPOTIFY_CLIENT_ID,
+);
+var configuredFallbackSpotifyClientId = sanitizeInjectedValue(
+  window.SPOTIFY_DEV_FALLBACK_CLIENT_ID,
+);
+var configuredSpotifyRedirectUri = sanitizeInjectedValue(
+  window.SPOTIFY_REDIRECT_URI,
+);
+var activeSpotifyClientId = null;
+
+function getConfiguredSpotifyClientIds() {
+  var ids = [];
+  if (configuredPrimarySpotifyClientId) {
+    ids.push(configuredPrimarySpotifyClientId);
+  }
+  if (
+    configuredFallbackSpotifyClientId &&
+    configuredFallbackSpotifyClientId !== configuredPrimarySpotifyClientId
+  ) {
+    ids.push(configuredFallbackSpotifyClientId);
+  }
+  return ids;
+}
+
+function hydrateActiveSpotifyClientId() {
+  var configuredIds = getConfiguredSpotifyClientIds();
+  var storedClientId = window.localStorage.getItem(ACTIVE_CLIENT_ID_STORAGE_KEY);
+
+  if (storedClientId && configuredIds.indexOf(storedClientId) !== -1) {
+    activeSpotifyClientId = storedClientId;
+    return;
+  }
+
+  activeSpotifyClientId = configuredIds[0] || "";
+
+  if (activeSpotifyClientId) {
+    window.localStorage.setItem(
+      ACTIVE_CLIENT_ID_STORAGE_KEY,
+      activeSpotifyClientId,
+    );
+  } else {
+    window.localStorage.removeItem(ACTIVE_CLIENT_ID_STORAGE_KEY);
+  }
+}
+
+function getActiveSpotifyClientId() {
+  if (!activeSpotifyClientId) {
+    hydrateActiveSpotifyClientId();
+  }
+  return activeSpotifyClientId;
+}
+
+function getSpotifyRedirectUri() {
+  return configuredSpotifyRedirectUri;
+}
+
+function canUseSpotifyDevModeFallback() {
+  return (
+    configuredFallbackSpotifyClientId &&
+    configuredFallbackSpotifyClientId !== configuredPrimarySpotifyClientId
+  );
+}
+
+function switchToSpotifyDevModeFallback() {
+  if (!canUseSpotifyDevModeFallback()) {
+    return false;
+  }
+
+  var currentClientId = getActiveSpotifyClientId();
+  if (currentClientId === configuredFallbackSpotifyClientId) {
+    return false;
+  }
+
+  activeSpotifyClientId = configuredFallbackSpotifyClientId;
+  window.localStorage.setItem(
+    ACTIVE_CLIENT_ID_STORAGE_KEY,
+    configuredFallbackSpotifyClientId,
+  );
+  window.localStorage.setItem("omy_last_client_id", configuredFallbackSpotifyClientId);
+
+  // Tokens and verifier are bound to client ID. Reset before reauth.
+  accessToken = null;
+  window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem("code_verifier");
+
+  return true;
+}
+
 var curUserID = null;
 var curTracks = {};
 var curRawTrackItems = [];
@@ -92,6 +202,9 @@ var SIDEBAR_EXPANDED_KEY = "oym_sidebar_expanded";
 // NEW: Global search state
 var currentSearchQuery = "";
 var quickMode = false;
+var headerIdentityText = "Not logged in";
+var headerStatusText = null;
+var headerStatusTimer = null;
 window.normalizedTrackData = [];
 window.getNormalizedTrackData = function () {
   return Array.isArray(window.normalizedTrackData)
@@ -104,7 +217,11 @@ window.addEventListener("unhandledrejection", function (event) {
 });
 
 function isSpotifyScopeError(resp) {
-  var payload = resp && resp.responseJSON;
+  var payload = resp || null;
+  if (payload && payload.responseJSON) {
+    payload = payload.responseJSON;
+  }
+
   if (!payload && resp && resp.responseText) {
     try {
       payload = JSON.parse(resp.responseText);
@@ -150,6 +267,56 @@ function isSpotifyTokenExpiredError(payload) {
     lower.indexOf("access token expired") !== -1 ||
     lower.indexOf("the access token expired") !== -1 ||
     lower.indexOf("expired token") !== -1
+  );
+}
+
+function isSpotifyDevModeAllowlistError(payload) {
+  var msg = getSpotifyErrorMessage(payload);
+  if (!msg) {
+    return false;
+  }
+
+  var lower = String(msg).toLowerCase();
+  return (
+    lower.indexOf("development mode") !== -1 ||
+    lower.indexOf("allowlist") !== -1 ||
+    lower.indexOf("users and access") !== -1 ||
+    lower.indexOf("registered users") !== -1 ||
+    lower.indexOf("is not authorized") !== -1
+  );
+}
+
+function shouldAttemptSpotifyDevModeFallback(responseStatus, payload) {
+  if (responseStatus !== 403 || !canUseSpotifyDevModeFallback()) {
+    return false;
+  }
+
+  var currentClientId = getActiveSpotifyClientId();
+  if (!currentClientId || currentClientId === configuredFallbackSpotifyClientId) {
+    return false;
+  }
+
+  if (isSpotifyScopeError(payload)) {
+    return false;
+  }
+
+  if (isSpotifyDevModeAllowlistError(payload)) {
+    return true;
+  }
+
+  var msg = getSpotifyErrorMessage(payload);
+  if (!msg) {
+    // Generic 403 with no message from custom client IDs is commonly a dev-mode access block.
+    return true;
+  }
+
+  var lower = String(msg).toLowerCase();
+  return (
+    lower === "forbidden" ||
+    lower === "access forbidden" ||
+    lower.indexOf("forbidden") !== -1 ||
+    lower.indexOf("not allowed") !== -1 ||
+    lower.indexOf("unauthorized") !== -1
   );
 }
 
@@ -1619,13 +1786,45 @@ function isGoodGenre(genre) {
 }
 
 function error(msg) {
-  info(msg);
+  var message = msg || "";
+
+  // Route user-facing errors to inline error areas instead of navbar identity.
+  var errs = document.querySelectorAll(".err-txt");
+  errs.forEach(function (el) {
+    el.textContent = message;
+  });
+
+  var loadingInfo = document.getElementById("linfo");
+  if (loadingInfo) {
+    loadingInfo.textContent = message;
+  }
+
+  setHeaderStatusMessage(message, 14000);
+
+  if (message) {
+    console.error(message);
+  }
 }
 function info(msg) {
-  document.getElementById("info").textContent = msg;
+  var message = msg || "";
+
+  // Keep lightweight status updates out of the navbar identity pill.
+  var loadingInfo = document.getElementById("linfo");
+  if (loadingInfo) {
+    loadingInfo.textContent = message;
+  }
+
+  setHeaderStatusMessage(message, 8000);
+
+  if (message) {
+    console.log(message);
+  }
 }
 function linfo(msg) {
-  document.getElementById("linfo").textContent = msg;
+  var loadingInfo = document.getElementById("linfo");
+  if (loadingInfo) {
+    loadingInfo.textContent = msg || "";
+  }
 }
 
 
@@ -1653,6 +1852,15 @@ function base64encode(input) {
 
 function authorizeUser() {
   console.log("Initiating Authorize User flow...");
+  var clientId = getActiveSpotifyClientId();
+  var redirectUri = getSpotifyRedirectUri();
+  if (!clientId || !redirectUri) {
+    error(
+      "Spotify configuration missing. Set VITE_SPOTIFY_CLIENT_ID and VITE_SPOTIFY_REDIRECT_URI.",
+    );
+    return;
+  }
+
   var scopes =
     "user-library-read user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public";
   var codeVerifier = generateRandomString(64);
@@ -1664,11 +1872,11 @@ function authorizeUser() {
       var authUrl =
         "https://accounts.spotify.com/authorize?" +
         "client_id=" +
-        encodeURIComponent(SPOTIFY_CLIENT_ID) +
+        encodeURIComponent(clientId) +
         "&response_type=code&show_dialog=false&scope=" +
         encodeURIComponent(scopes) +
         "&redirect_uri=" +
-        encodeURIComponent(SPOTIFY_REDIRECT_URI) +
+        encodeURIComponent(redirectUri) +
         "&code_challenge_method=S256&code_challenge=" +
         encodeURIComponent(codeChallenge);
 
@@ -1697,15 +1905,21 @@ function persistSpotifyTokens(data) {
 }
 
 async function exchangeCodeForToken(code) {
+  var clientId = getActiveSpotifyClientId();
+  var redirectUri = getSpotifyRedirectUri();
+  if (!clientId || !redirectUri) {
+    throw new Error("Spotify client configuration is missing");
+  }
+
   var codeVerifier = window.localStorage.getItem("code_verifier");
   const response = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: SPOTIFY_CLIENT_ID,
+      client_id: clientId,
       grant_type: "authorization_code",
       code: code,
-      redirect_uri: SPOTIFY_REDIRECT_URI,
+      redirect_uri: redirectUri,
       code_verifier: codeVerifier,
     }).toString(),
   });
@@ -1720,6 +1934,11 @@ async function exchangeCodeForToken(code) {
 }
 
 async function refreshAccessToken() {
+  var clientId = getActiveSpotifyClientId();
+  if (!clientId) {
+    throw new Error("Spotify client configuration is missing");
+  }
+
   var refreshToken = window.localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
   if (!refreshToken) {
     throw new Error("Refresh token is missing");
@@ -1729,7 +1948,7 @@ async function refreshAccessToken() {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: SPOTIFY_CLIENT_ID,
+      client_id: clientId,
       grant_type: "refresh_token",
       refresh_token: refreshToken,
     }).toString(),
@@ -1843,6 +2062,20 @@ class SpotifyDataFetcher {
             var errorData = await readSpotifyErrorPayload(response);
             if (errorData) {
               console.error(`Spotify ${response.status} Error:`, errorData);
+            }
+
+            if (
+              shouldAttemptSpotifyDevModeFallback(response.status, errorData) &&
+              switchToSpotifyDevModeFallback()
+            ) {
+              restartAuthorization(
+                "This Spotify app is in Development Mode and this account is not on its Users and Access allowlist. Switched to fallback Client ID. Please connect again.",
+              );
+              authorizeUser();
+              return {
+                type: "error",
+                message: "Switched to fallback Spotify Client ID",
+              };
             }
 
             if (response.status === 403 && isSpotifyScopeError(errorData)) {
@@ -2664,6 +2897,85 @@ function initPlot() {
   clearPlot();
 }
 
+function updateWhoCarousel(identityText) {
+  var carousel = document.getElementById("who-carousel");
+  var track = document.getElementById("who-track");
+  var whoElem = document.getElementById("who");
+  var whoClone = document.getElementById("who-clone");
+  var whoDivider = document.getElementById("who-divider");
+  if (!carousel || !track || !whoElem || !whoClone || !whoDivider) {
+    return;
+  }
+
+  var value = identityText || "Not logged in";
+  whoElem.textContent = value;
+  whoClone.textContent = value;
+
+  carousel.classList.remove("who-carousel--scrolling");
+  carousel.style.removeProperty("--who-duration");
+  carousel.style.removeProperty("--who-shift");
+
+  // Reset hidden duplicated ticker pieces before measuring overflow.
+  whoDivider.style.display = "none";
+  whoClone.style.display = "none";
+
+  if (!value) {
+    return;
+  }
+
+  // Measure against the compact container and enable ticker only when needed.
+  var overflows = whoElem.scrollWidth > carousel.clientWidth;
+  if (!overflows) {
+    return;
+  }
+
+  whoDivider.style.display = "inline";
+  whoClone.style.display = "inline";
+
+  var shift = whoElem.scrollWidth + whoDivider.scrollWidth + 12;
+  var duration = Math.max(8, Math.round(shift / 28));
+  carousel.style.setProperty("--who-shift", shift + "px");
+  carousel.style.setProperty("--who-duration", duration + "s");
+  carousel.classList.add("who-carousel--scrolling");
+}
+
+function refreshHeaderCarouselText() {
+  var currentText = headerStatusText || headerIdentityText || "Not logged in";
+  updateWhoCarousel(currentText);
+}
+
+function setHeaderIdentityText(value) {
+  headerIdentityText = value || "Not logged in";
+  if (!headerStatusText) {
+    refreshHeaderCarouselText();
+  }
+}
+
+function setHeaderStatusMessage(message, durationMs) {
+  if (headerStatusTimer) {
+    clearTimeout(headerStatusTimer);
+    headerStatusTimer = null;
+  }
+
+  var text = message || "";
+  if (!text) {
+    headerStatusText = null;
+    refreshHeaderCarouselText();
+    return;
+  }
+
+  headerStatusText = text;
+  refreshHeaderCarouselText();
+
+  if (durationMs && durationMs > 0) {
+    headerStatusTimer = setTimeout(function () {
+      headerStatusText = null;
+      headerStatusTimer = null;
+      refreshHeaderCarouselText();
+    }, durationMs);
+  }
+}
+
 function renderLoggedInEmail(user) {
   var identity = null;
   if (user && user.email) {
@@ -2672,11 +2984,7 @@ function renderLoggedInEmail(user) {
     identity = user.id;
   }
 
-  // Update top-right navigation info
-  var whoElem = document.getElementById("who");
-  if (whoElem) {
-    whoElem.textContent = identity || "Not logged in";
-  }
+  setHeaderIdentityText(identity || "Not logged in");
 
   var infoPill = document.getElementById("info");
   if (!infoPill) return;
@@ -2692,12 +3000,15 @@ function renderLoggedInEmail(user) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  hydrateActiveSpotifyClientId();
+
   // Hydrate in-memory token so API calls always use the latest persisted value.
   accessToken = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 
   // Detect Client ID changes to prevent using incompatible tokens
   var lastClientId = window.localStorage.getItem("omy_last_client_id");
-  if (lastClientId && lastClientId !== SPOTIFY_CLIENT_ID) {
+  var currentClientId = getActiveSpotifyClientId();
+  if (lastClientId && lastClientId !== currentClientId) {
     console.warn("Client ID change detected. Clearing stored session.");
     window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
@@ -2705,7 +3016,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // Access token will be cleared upon first failure or manual reset
     accessToken = null;
   }
-  window.localStorage.setItem("omy_last_client_id", SPOTIFY_CLIENT_ID);
+  if (currentClientId) {
+    window.localStorage.setItem("omy_last_client_id", currentClientId);
+    window.localStorage.setItem(ACTIVE_CLIENT_ID_STORAGE_KEY, currentClientId);
+  }
 
   var urlParams = new URLSearchParams(window.location.search);
   var code = urlParams.get("code");
@@ -2914,6 +3228,16 @@ document.addEventListener("DOMContentLoaded", function () {
       go();
     };
   }
+
+  var whoResizeFrame = null;
+  window.addEventListener("resize", function () {
+    if (whoResizeFrame) {
+      cancelAnimationFrame(whoResizeFrame);
+    }
+    whoResizeFrame = requestAnimationFrame(function () {
+      refreshHeaderCarouselText();
+    });
+  });
 });
 
 function initNativePlaylistEdit() {
