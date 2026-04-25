@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { trackColumns } from './columnDefinitions';
+import Tooltip from './Tooltip';
 
 const getBaseTrack = (track) => (track?.track && track?.track?.id ? track.track : track);
 const getTrackId = (track) => track?.id || track?.track?.id || null;
@@ -35,41 +36,57 @@ const TrackTable = ({
     pageSize: initialPageSize = 50,
     isStaging = false
 }) => {
-    const [sortConfig, setSortConfig] = useState({ key: 'popularity', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState(initialPageSize);
     const [searchQuery, setSearchQuery] = useState('');
     const [hoveredImage, setHoveredImage] = useState(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
     const [lastClickedId, setLastClickedId] = useState(null);
+
+    // Column Drag and Drop State
     const [draggedColId, setDraggedColId] = useState(null);
     const [dropTargetColId, setDropTargetColId] = useState(null);
     const [dropSide, setDropSide] = useState(null); // 'left' or 'right'
+
+    // Row Drag and Drop State
+    const [draggedRowId, setDraggedRowId] = useState(null);
+    const [dropTargetRowId, setDropTargetRowId] = useState(null);
+    const [rowDropSide, setRowDropSide] = useState(null); // 'top' or 'bottom'
+
     const [autoScrollDir, setAutoScrollDir] = useState(null); // 'left', 'right', or null
     const [scrollVelocity, setScrollVelocity] = useState(0);
     const tableScrollRef = useRef(null);
     const scrollIntervalRef = useRef(null);
 
+    useEffect(() => {
+        console.log("[TrackTable] Component Mounted with", tracks?.length, "tracks");
+    }, []);
+
     const storageKey = isStaging ? 'oym_column_order_staging' : 'oym_column_order_main';
-    
+
     // Load/Save Column Order
+    // Load/Save Column Order with robust fallback
     const [columnOrder, setColumnOrder] = useState(() => {
+        const defaultOrder = trackColumns.map(c => c.id);
         const saved = localStorage.getItem(storageKey);
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                }
             } catch (e) {
-                return trackColumns.map(c => c.id);
+                console.warn("Failed to parse saved column order:", e);
             }
         }
-        return trackColumns.map(c => c.id);
+        return defaultOrder;
     });
 
     useEffect(() => {
         localStorage.setItem(storageKey, JSON.stringify(columnOrder));
     }, [columnOrder, storageKey]);
 
-    // Handle Reset Event from legacy UI
     useEffect(() => {
         const handleReset = () => {
             const defaultOrder = trackColumns.map(c => c.id);
@@ -79,6 +96,54 @@ const TrackTable = ({
         window.addEventListener('oym_reset_columns', handleReset);
         return () => window.removeEventListener('oym_reset_columns', handleReset);
     }, [storageKey]);
+
+    useEffect(() => {
+        const handleResetRows = () => {
+            setManualRowOrder(tracks.map(t => getTrackId(t)));
+        };
+        window.addEventListener('oym_reset_rows', handleResetRows);
+        return () => window.removeEventListener('oym_reset_rows', handleResetRows);
+    }, [tracks]);
+
+    // Manual Row Order State
+    const manualOrderStorageKey = isStaging ? 'oym_manual_row_order_staging' : 'oym_manual_row_order_main';
+    const [manualRowOrder, setManualRowOrder] = useState(() => {
+        const saved = localStorage.getItem(manualOrderStorageKey);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            } catch (e) {
+                console.warn("Failed to parse manual row order:", e);
+            }
+        }
+        return tracks.map(t => getTrackId(t));
+    });
+
+    // Sync manualRowOrder with tracks prop
+    useEffect(() => {
+        if (!tracks || tracks.length === 0) return;
+
+        const trackIds = tracks.map(t => getTrackId(t));
+        const currentIdSet = new Set(trackIds);
+
+        setManualRowOrder(prev => {
+            // Filter out IDs that are no longer in the input tracks
+            const filteredPrev = prev.filter(id => currentIdSet.has(id));
+            const filteredSet = new Set(filteredPrev);
+            // Add new IDs that are not in the manual order yet
+            const addedIds = trackIds.filter(id => !filteredSet.has(id));
+
+            if (addedIds.length === 0 && filteredPrev.length === prev.length) {
+                return prev;
+            }
+            return [...filteredPrev, ...addedIds];
+        });
+    }, [tracks]);
+
+    useEffect(() => {
+        localStorage.setItem(manualOrderStorageKey, JSON.stringify(manualRowOrder));
+    }, [manualRowOrder, manualOrderStorageKey]);
 
     // Filter and Reorder columns based on context and relevancy (sorting)
     const activeColumns = useMemo(() => {
@@ -103,7 +168,7 @@ const TrackTable = ({
                 if (col.id === 'title') width = 240;
                 else if (col.id === 'artist') width = 200;
                 else if (col.id === 'index') width = 48;
-                
+
                 const colWithOffset = { ...col, stickyLeft: currentLeft, widthPx: width };
                 currentLeft += width;
                 return colWithOffset;
@@ -125,29 +190,39 @@ const TrackTable = ({
 
     // Sort tracks
     const sortedTracks = useMemo(() => {
-        let sortableTracks = [...tracks];
-        if (sortConfig.key) {
-            const column = trackColumns.find(c => c.sortKey === sortConfig.key || c.id === sortConfig.key);
-
-            sortableTracks.sort((a, b) => {
-                let aVal, bVal;
-
-                if (column && column.getValue) {
-                    aVal = column.getValue(a);
-                    bVal = column.getValue(b);
-                } else {
-                    // Fallback for keys that might not be in trackColumns but are in feats
-                    aVal = a?.[sortConfig.key] ?? a?.feats?.[sortConfig.key];
-                    bVal = b?.[sortConfig.key] ?? b?.feats?.[sortConfig.key];
-                }
-
-                if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-                return 0;
+        if (!sortConfig.key) {
+            // Restore manual order
+            const trackMap = new Map();
+            tracks.forEach(t => {
+                const id = getTrackId(t);
+                if (id) trackMap.set(id, t);
             });
+
+            return manualRowOrder
+                .map(id => trackMap.get(id))
+                .filter(Boolean);
         }
+
+        let sortableTracks = [...tracks];
+        const column = trackColumns.find(c => c.sortKey === sortConfig.key || c.id === sortConfig.key);
+
+        sortableTracks.sort((a, b) => {
+            let aVal, bVal;
+
+            if (column && column.getValue) {
+                aVal = column.getValue(a);
+                bVal = column.getValue(b);
+            } else {
+                aVal = a?.[sortConfig.key] ?? a?.feats?.[sortConfig.key];
+                bVal = b?.[sortConfig.key] ?? b?.feats?.[sortConfig.key];
+            }
+
+            if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
         return sortableTracks;
-    }, [tracks, sortConfig]);
+    }, [tracks, sortConfig, manualRowOrder]);
 
     // Filter tracks
     const filteredTracks = useMemo(() => {
@@ -180,11 +255,17 @@ const TrackTable = ({
     }, [sortConfig]);
 
     const requestSort = (key) => {
-        let direction = 'desc';
-        if (sortConfig.key === key && sortConfig.direction === 'desc') {
-            direction = 'asc';
+        let direction = 'asc';
+        let newKey = key;
+
+        if (sortConfig.key === key) {
+            if (sortConfig.direction === 'asc') {
+                direction = 'desc';
+            } else if (sortConfig.direction === 'desc') {
+                newKey = null; // None state
+            }
         }
-        setSortConfig({ key, direction });
+        setSortConfig({ key: newKey, direction });
     };
 
     const getSortIcon = (key) => {
@@ -223,11 +304,12 @@ const TrackTable = ({
         e.dataTransfer.effectAllowed = 'move';
         // HTML5 DND sometimes needs this to work well
         e.dataTransfer.setData('text/plain', colId);
-        
+
         // Custom ghost image if needed, but browser default is okay for now
     };
 
     const onDragOver = (e, colId) => {
+        if (!draggedColId) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
 
@@ -258,7 +340,7 @@ const TrackTable = ({
             const rect = e.currentTarget.getBoundingClientRect();
             const midpoint = rect.left + rect.width / 2;
             const side = e.clientX < midpoint ? 'left' : 'right';
-            
+
             setDropTargetColId(colId);
             setDropSide(side);
         } else if (colId === draggedColId) {
@@ -270,7 +352,7 @@ const TrackTable = ({
     const onDrop = (e, targetColId) => {
         e.preventDefault();
         setAutoScrollDir(null);
-        
+
         if (!draggedColId || !targetColId || draggedColId === targetColId) {
             clearDragState();
             return;
@@ -283,15 +365,69 @@ const TrackTable = ({
         if (draggedIdx !== -1 && targetIdx !== -1) {
             // Remove from old position
             newOrder.splice(draggedIdx, 1);
-            
+
             // Re-calculate target index after removal
             targetIdx = newOrder.indexOf(targetColId);
             const finalIdx = dropSide === 'right' ? targetIdx + 1 : targetIdx;
-            
+
             newOrder.splice(finalIdx, 0, draggedColId);
             setColumnOrder(newOrder);
         }
         clearDragState();
+    };
+
+    // Row Drag and Drop Handlers
+    const onRowDragStart = (e, rowId) => {
+        if (sortConfig.key) return;
+        setDraggedRowId(rowId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', rowId);
+    };
+
+    const onRowDragOver = (e, rowId) => {
+        if (!draggedRowId || sortConfig.key) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        if (rowId && rowId !== draggedRowId) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            const side = e.clientY < midpoint ? 'top' : 'bottom';
+            setDropTargetRowId(rowId);
+            setRowDropSide(side);
+        } else {
+            setDropTargetRowId(null);
+            setRowDropSide(null);
+        }
+    };
+
+    const onRowDrop = (e, targetRowId) => {
+        if (sortConfig.key) return;
+        e.preventDefault();
+
+        if (!draggedRowId || !targetRowId || draggedRowId === targetRowId) {
+            clearRowDragState();
+            return;
+        }
+
+        const newOrder = [...manualRowOrder];
+        const draggedIdx = newOrder.indexOf(draggedRowId);
+        let targetIdx = newOrder.indexOf(targetRowId);
+
+        if (draggedIdx !== -1 && targetIdx !== -1) {
+            newOrder.splice(draggedIdx, 1);
+            targetIdx = newOrder.indexOf(targetRowId);
+            const finalIdx = rowDropSide === 'bottom' ? targetIdx + 1 : targetIdx;
+            newOrder.splice(finalIdx, 0, draggedRowId);
+            setManualRowOrder(newOrder);
+        }
+        clearRowDragState();
+    };
+
+    const clearRowDragState = () => {
+        setDraggedRowId(null);
+        setDropTargetRowId(null);
+        setRowDropSide(null);
     };
 
     const clearDragState = () => {
@@ -313,12 +449,12 @@ const TrackTable = ({
                 <table className="google-visualization-table-table w-full border-separate border-spacing-0">
                     <thead>
                         <tr className="google-visualization-table-tr-head">
-                            <th 
+                            <th
                                 className="track-header-cell w-12 sticky left-0 bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d] snap-start snap-always box-border"
-                                style={{ 
-                                    minWidth: '48px', 
-                                    maxWidth: '48px', 
-                                    top: 0, 
+                                style={{
+                                    minWidth: '48px',
+                                    maxWidth: '48px',
+                                    top: 0,
                                     zIndex: 35,
                                     transform: 'translateZ(0)',
                                     opacity: 1
@@ -343,10 +479,10 @@ const TrackTable = ({
                                 };
                                 if (col.sticky) {
                                     stickyClass = "sticky bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d]";
-                                    style = { 
+                                    style = {
                                         ...style,
-                                        left: `${col.stickyLeft}px`, 
-                                        minWidth: `${col.widthPx}px`, 
+                                        left: `${col.stickyLeft}px`,
+                                        minWidth: `${col.widthPx}px`,
                                         maxWidth: `${col.widthPx}px`,
                                         top: 0,
                                         zIndex: 35
@@ -365,17 +501,18 @@ const TrackTable = ({
                                         onDrop={(e) => onDrop(e, col.id)}
                                         onDragEnd={clearDragState}
                                         className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-all duration-200 snap-start snap-always ${col.width || ''} ${stickyClass} ${isDragging ? 'opacity-30 bg-zinc-800 shadow-inner' : ''} relative`}
-                                        style={style}
+                                        style={{ ...style, backgroundColor: '#1a1a1a' }}
                                         onClick={() => requestSort(col.sortKey)}
-                                        title={col.tooltip || col.label}
                                     >
-                                        <div className={`flex items-center justify-${col.align === 'center' ? 'center' : 'start'} pointer-events-none transition-transform ${isDragging ? 'scale-95' : ''}`}>
-                                            {col.label} {getSortIcon(col.sortKey)}
-                                        </div>
-                                        
+                                        <Tooltip text={col.tooltip || col.label}>
+                                            <div className={`flex items-center justify-${col.align === 'center' ? 'center' : 'start'} pointer-events-none transition-transform ${isDragging ? 'scale-95' : ''}`}>
+                                                {col.label} {getSortIcon(col.sortKey)}
+                                            </div>
+                                        </Tooltip>
+
                                         {/* Drop Indicator */}
                                         {isDropTarget && (
-                                            <div className={`absolute top-0 bottom-0 w-1 bg-spotify-green shadow-[0_0_8px_rgba(29,185,84,0.8)] z-50 pointer-events-none animate-pulse ${dropSide === 'left' ? 'left-0' : 'right-0'}`} />
+                                            <div className={`absolute top-0 bottom-0 w-[2px] bg-spotify-green shadow-[0_0_8px_rgba(29,185,84,0.8)] z-50 pointer-events-none animate-pulse ${dropSide === 'left' ? 'left-0' : 'right-0'}`} />
                                         )}
                                     </th>
                                 );
@@ -393,27 +530,34 @@ const TrackTable = ({
                             // Base: Even #18181b, Odd #121212
                             // Selection: #1db954 at 20% opacity
                             // Hover: #2a2a2a
-                            
-                            const rowBg = isSelected 
-                                ? (isEven ? '#193826' : '#14331f') 
+
+                            const rowBg = isSelected
+                                ? (isEven ? '#193826' : '#14331f')
                                 : (isEven ? '#18181b' : '#121212');
-                            
+
                             const rowHoverBg = isSelected
                                 ? '#274732' // Composite of #2a2a2a and green@20%
                                 : '#2a2a2a';
 
+                            const isDraggingRow = draggedRowId === rowId;
+
                             const stickyStyleBase = {
                                 zIndex: 25,
                                 transform: 'translateZ(0)',
-                                opacity: 1,
+                                opacity: isDraggingRow ? 0.3 : 1,
                                 boxShadow: '1px 0 0 0 #2d2d2d',
                                 backgroundColor: rowBg
                             };
 
                             return (
                                 <tr key={rowId || idx}
-                                    className={`group transition-colors select-none snap-start snap-always ${isSelected ? 'google-visualization-table-tr-sel bg-[#1db954]/10!' : ''}`}
-                                    style={{ 
+                                    draggable={!sortConfig.key}
+                                    onDragStart={(e) => onRowDragStart(e, rowId)}
+                                    onDragOver={(e) => onRowDragOver(e, rowId)}
+                                    onDrop={(e) => onRowDrop(e, rowId)}
+                                    onDragEnd={clearRowDragState}
+                                    className={`group transition-colors select-none snap-start snap-always relative ${isSelected ? 'google-visualization-table-tr-sel' : ''} ${isDraggingRow ? 'opacity-30' : ''}`}
+                                    style={{
                                         backgroundColor: rowBg,
                                         '--row-hover-bg': rowHoverBg
                                     }}
@@ -432,12 +576,12 @@ const TrackTable = ({
                                     onClick={(e) => {
                                         const rowId = getTrackId(track);
                                         const isSelectionAction = e.target.type === 'checkbox' || e.target.closest('.track-play') === null;
-                                        
+
                                         if (isSelectionAction && e.target.type !== 'checkbox') {
                                             if (e.shiftKey && lastClickedId) {
                                                 const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
                                                 const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
-                                                
+
                                                 if (lastIdx !== -1 && currentIdx !== -1) {
                                                     const start = Math.min(lastIdx, currentIdx);
                                                     const end = Math.max(lastIdx, currentIdx);
@@ -453,14 +597,14 @@ const TrackTable = ({
                                         }
                                     }}
                                 >
-                                    <td 
+                                    <td
                                         className="track-table-cell text-center! w-12 sticky left-0 transition-colors shadow-[1px_0_0_0_#2d2d2d] box-border"
-                                        style={{ 
-                                            minWidth: '48px', 
-                                            maxWidth: '48px', 
+                                        style={{
+                                            minWidth: '48px',
+                                            maxWidth: '48px',
                                             zIndex: 25,
                                             transform: 'translateZ(0)',
-                                            opacity: 1,
+                                            opacity: isDraggingRow ? 0.3 : 1,
                                             boxShadow: '1px 0 0 0 #2d2d2d',
                                             backgroundColor: rowBg
                                         }}
@@ -469,7 +613,7 @@ const TrackTable = ({
                                             type="checkbox"
                                             className="track-select hidden"
                                             checked={selectedIds.has(rowId)}
-                                            onChange={() => {}} // Handled by onClick for shift support
+                                            onChange={() => { }} // Handled by onClick for shift support
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 const rowId = getTrackId(track);
@@ -498,33 +642,20 @@ const TrackTable = ({
                                                 onMouseEnter={(e) => {
                                                     const img = getTrackImage(track);
                                                     if (img) {
-                                                        const rect = e.currentTarget.getBoundingClientRect();
                                                         setHoveredImage(img);
-                                                        
-                                                        // Detect if sidebar is closed (hidden or narrow)
-                                                        const sidebar = document.getElementById('sidebar');
-                                                        const isSidebarClosed = sidebar?.classList.contains('hidden') || sidebar?.offsetWidth < 100;
-                                                        
-                                                        if (isSidebarClosed) {
-                                                            // Position to the right of the button
-                                                            setHoverPosition({
-                                                                x: rect.right + 15,
-                                                                y: rect.top + (rect.height / 2) - 112,
-                                                                side: 'right'
-                                                            });
-                                                        } else {
-                                                            // Center horizontally above the button (w-56 = 224px)
-                                                            setHoverPosition({
-                                                                x: rect.left + (rect.width / 2) - 112,
-                                                                y: rect.top - 224 - 15,
-                                                                side: 'top'
-                                                            });
-                                                        }
+                                                        setHoverPosition({
+                                                            x: e.clientX,
+                                                            y: e.clientY
+                                                        });
                                                     }
                                                 }}
                                                 onMouseMove={(e) => {
-                                                    // Optional: make it follow mouse vertically if desired
-                                                    // setHoverPosition(prev => ({ ...prev, y: e.clientY - 80 }));
+                                                    if (hoveredImage) {
+                                                        setHoverPosition({
+                                                            x: e.clientX,
+                                                            y: e.clientY
+                                                        });
+                                                    }
                                                 }}
                                                 onMouseLeave={() => setHoveredImage(null)}
                                                 onClick={(e) => {
@@ -540,20 +671,36 @@ const TrackTable = ({
                                                 }}
                                             ></i>
                                         ) : null}
+
+                                        {/* Row Drop Indicator - Rendered in every cell to overcome sticky stacking context */}
+                                        {dropTargetRowId === rowId && (
+                                            <div
+                                                className={`absolute left-0 right-0 h-[2px] bg-spotify-green z-100 pointer-events-none`}
+                                                style={{ [rowDropSide === 'top' ? 'top' : 'bottom']: 0 }}
+                                            />
+                                        )}
                                     </td>
                                     {activeColumns.map((col, colIdx) => {
                                         return (
                                             <td
                                                 key={col.id}
                                                 className={`track-table-cell ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky transition-colors' : 'snap-start snap-always'}`}
-                                                style={col.sticky ? { 
+                                                style={col.sticky ? {
                                                     ...stickyStyleBase,
-                                                    left: `${col.stickyLeft}px`, 
-                                                    minWidth: `${col.widthPx}px`, 
+                                                    left: `${col.stickyLeft}px`,
+                                                    minWidth: `${col.widthPx}px`,
                                                     maxWidth: `${col.widthPx}px`
                                                 } : { zIndex: 1 }}
                                             >
                                                 <div className="truncate">{col.render(track, currentPage * pageSize + idx + 1)}</div>
+
+                                                {/* Row Drop Indicator - Rendered in every cell to overcome sticky stacking context */}
+                                                {dropTargetRowId === rowId && (
+                                                    <div
+                                                        className={`absolute left-0 right-0 h-[2px] bg-spotify-green z-100 pointer-events-none`}
+                                                        style={{ [rowDropSide === 'top' ? 'top' : 'bottom']: 0 }}
+                                                    />
+                                                )}
                                             </td>
                                         );
                                     })}
@@ -627,7 +774,7 @@ const TrackTable = ({
             {/* Album Art Hover Preview (Modal-like) */}
             {hoveredImage && (
                 <div
-                    className={`fixed z-9999 pointer-events-none animate-in fade-in duration-200 ${hoverPosition.side === 'right' ? 'slide-in-from-left-2' : 'slide-in-from-bottom-2'}`}
+                    className="fixed z-9999 pointer-events-none animate-in fade-in zoom-in-95 duration-200"
                     style={{
                         left: `${hoverPosition.x}px`,
                         top: `${hoverPosition.y}px`,
@@ -647,16 +794,10 @@ const TrackTable = ({
                             />
                         </div>
 
-                        {/* Triangle indicator */}
-                        {hoverPosition.side === 'right' ? (
-                            <div
-                                className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-zinc-900 rotate-45 border-l border-b border-white/10 shadow-xl"
-                            ></div>
-                        ) : (
-                            <div
-                                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-900 rotate-45 border-r border-b border-white/10 shadow-xl"
-                            ></div>
-                        )}
+                        {/* Triangle indicator - always at bottom now */}
+                        <div
+                            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-900 rotate-45 border-r border-b border-white/10 shadow-xl"
+                        ></div>
                     </div>
                 </div>
             )}

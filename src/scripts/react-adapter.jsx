@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import TrackTable from '../components/TrackTable';
+import Sidebar from '../components/Sidebar';
 
 // Wrapper component to manage state that comes from legacy JS
 const TableWrapper = ({ initialTracks, isStaging }) => {
@@ -11,8 +12,9 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
 
     // Sync with tracks prop change
     useEffect(() => {
+        console.log("TableWrapper received new tracks:", initialTracks?.length, "isStaging:", isStaging);
         setTracks(initialTracks || []);
-    }, [initialTracks]);
+    }, [initialTracks, isStaging]);
 
     // Sync with global state changes from legacy JS
     useEffect(() => {
@@ -74,16 +76,84 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
         }
     };
 
+    try {
+        return (
+            <TrackTable 
+                tracks={tracks}
+                selectedIds={selectedIds}
+                onToggleSelection={handleToggleSelection}
+                onToggleAll={handleToggleAll}
+                onPlayTrack={handlePlayTrack}
+                nowPlayingId={nowPlayingId}
+                isPlaying={isPlaying}
+                isStaging={isStaging}
+            />
+        );
+    } catch (e) {
+        console.error("TrackTable crashed:", e);
+        return <div className="p-10 text-center text-red-500 font-bold bg-zinc-900 rounded-xl border border-red-500/20">
+            <i className="fa fa-exclamation-triangle mr-2"></i>
+            Something went wrong rendering the track table. Check console for details.
+        </div>;
+    }
+};
+
+// Sidebar Wrapper component
+const SidebarWrapper = ({ initialWorld }) => {
+    const [world, setWorld] = useState(initialWorld || window.theWorld || []);
+    const [activeNode, setActiveNode] = useState(window.curNode);
+    
+    // Read from localStorage directly for initial state if global var is not ready
+    const [isExpandedGlobally, setIsExpandedGlobally] = useState(() => {
+        if (typeof window.sidebarExpanded === 'boolean') return window.sidebarExpanded;
+        const saved = window.localStorage.getItem('oym_sidebar_expanded');
+        return saved !== 'false';
+    });
+
+    // Sync with initialWorld prop change
+    useEffect(() => {
+        if (initialWorld && initialWorld.length > 0) {
+            setWorld([...initialWorld]);
+        }
+    }, [initialWorld]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // Update active node from legacy state
+            if (window.curNode !== activeNode) {
+                setActiveNode(window.curNode);
+            }
+            // Update expanded state from legacy state
+            if (window.sidebarExpanded !== undefined && window.sidebarExpanded !== isExpandedGlobally) {
+                setIsExpandedGlobally(window.sidebarExpanded);
+            }
+            
+            // Periodically sync with global theWorld to catch mutations
+            const currentWorld = window.theWorld || [];
+            if (currentWorld.length > 0) {
+                setWorld([...currentWorld]);
+            }
+        }, 500);
+        return () => clearInterval(interval);
+    }, [activeNode, isExpandedGlobally]);
+
+    const handleNodeClick = (node) => {
+        if (window.plotPlaylist) window.plotPlaylist(node);
+        if (window.showPlaylist) window.showPlaylist(node);
+        setActiveNode(node);
+    };
+
+    const handleToggleAll = () => {
+        if (window.toggleSidebarSections) window.toggleSidebarSections();
+    };
+
     return (
-        <TrackTable 
-            tracks={tracks}
-            selectedIds={selectedIds}
-            onToggleSelection={handleToggleSelection}
-            onToggleAll={handleToggleAll}
-            onPlayTrack={handlePlayTrack}
-            nowPlayingId={nowPlayingId}
-            isPlaying={isPlaying}
-            isStaging={isStaging}
+        <Sidebar 
+            theWorld={world}
+            activeNode={activeNode}
+            onNodeClick={handleNodeClick}
+            onToggleAllSections={handleToggleAll}
+            isExpandedGlobally={isExpandedGlobally}
         />
     );
 };
@@ -91,11 +161,39 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
 // Global roots
 let trackTableRoot = null;
 let stagingTableRoot = null;
+let sidebarRoot = null;
 
 window.renderTrackTable = (tracks) => {
-    const container = document.getElementById('gthe-track-table');
-    if (!container) return;
+    const trackCount = tracks?.length || 0;
+    console.log(`[ReactAdapter] Attempting to render Track Table with ${trackCount} tracks`);
     
+    let container = document.getElementById('gthe-track-table');
+    if (!container) {
+        console.warn("[ReactAdapter] Container 'gthe-track-table' not found! Searching for shell...");
+        trackTableRoot = null; // Reset root reference
+        const shell = document.getElementById('track-table-shell');
+        if (shell) {
+            console.log("[ReactAdapter] Found shell, recreating container div");
+            const inner = shell.querySelector('.overflow-x-auto');
+            if (inner) {
+                inner.innerHTML = '<div id="gthe-track-table" class="w-full text-left"></div>';
+                container = document.getElementById('gthe-track-table');
+            }
+        }
+    }
+    
+    if (!container) {
+        console.error("[ReactAdapter] FATAL: Could not find or recreate track table container");
+        return;
+    }
+
+    // Force parent shell to be visible
+    const shell = document.getElementById('track-table-shell');
+    if (shell) shell.classList.remove('hidden');
+    const emptyState = document.getElementById('track-table-empty');
+    if (emptyState) emptyState.classList.add('hidden');
+
+    console.log("[ReactAdapter] Container ready, mounting TrackTable root");
     if (!trackTableRoot) {
         trackTableRoot = createRoot(container);
     }
@@ -103,11 +201,16 @@ window.renderTrackTable = (tracks) => {
     trackTableRoot.render(
         <TableWrapper initialTracks={tracks} isStaging={false} />
     );
+    console.log("[ReactAdapter] TrackTable.render() called");
 };
 
 window.renderStagingTable = (tracks) => {
+    console.log("Rendering Staging Table with", tracks?.length, "tracks");
     const container = document.getElementById('gthe-staging-table');
-    if (!container) return;
+    if (!container) {
+        console.error("Staging table container not found!");
+        return;
+    }
     
     if (!stagingTableRoot) {
         stagingTableRoot = createRoot(container);
@@ -118,4 +221,42 @@ window.renderStagingTable = (tracks) => {
     );
 };
 
-console.log("React Table Adapter loaded");
+window.renderSidebar = (theWorld) => {
+    console.log("Rendering Sidebar with", theWorld?.length, "categories");
+    const container = document.getElementById('sidebar');
+    if (!container) {
+        console.error("Sidebar container not found!");
+        return;
+    }
+    
+    if (!sidebarRoot) {
+        sidebarRoot = createRoot(container);
+    }
+    
+    sidebarRoot.render(
+        <SidebarWrapper initialWorld={theWorld} />
+    );
+};
+
+// Initial proactive render check
+const proactiveRender = () => {
+    console.log("Proactive render check...");
+    if (window.theWorld && window.theWorld.length > 0) {
+        window.renderSidebar(window.theWorld);
+    }
+    if (window.curNode && window.curNode.tracks) {
+        window.renderTrackTable(window.curNode.tracks);
+    } else if (window.allTracks && window.allTracks.length > 0) {
+        // Fallback to all tracks if no node selected but data exists
+        window.renderTrackTable(window.allTracks);
+    }
+};
+
+// Handle multiple ready states
+if (document.readyState === 'complete') {
+    proactiveRender();
+} else {
+    window.addEventListener('load', proactiveRender);
+}
+
+console.log("React Adapter loaded with Sidebar support, enhanced logging, and proactive rendering");

@@ -214,17 +214,6 @@ export const trackColumns = [
         tooltip: 'The primary artist of the track'
     },
     {
-        id: 'artists',
-        label: 'Artists',
-        sortKey: 'artists',
-        align: 'left',
-        isExtra: true,
-        getValue: (track) => getArtists(track),
-        render: (track) => getArtists(track),
-        className: 'text-zinc-400',
-        tooltip: 'All artists associated with the track'
-    },
-    {
         id: 'album',
         label: 'Album',
         sortKey: 'album',
@@ -259,15 +248,24 @@ export const trackColumns = [
         tooltip: 'The year the recording was released'
     },
     {
-        id: 'release_date',
-        label: 'Rel Date',
-        sortKey: 'release_date',
+        id: 'popularity',
+        label: 'Pop',
+        sortKey: 'popularity',
         align: 'center',
-        isExtra: true,
-        getValue: (track) => getAlbumReleaseDate(track) || '',
-        render: (track) => formatDate(getAlbumReleaseDate(track)),
+        getValue: (track) => getField(track, 'popularity') ?? -1,
+        render: (track) => getField(track, 'popularity') ?? '-',
         className: 'text-zinc-400',
-        tooltip: 'The full release date'
+        tooltip: 'Popularity of the track (0-100)'
+    },
+    {
+        id: 'duration',
+        label: 'Dur',
+        sortKey: 'duration_ms',
+        align: 'center',
+        getValue: (track) => getField(track, 'duration_ms') ?? 0,
+        render: (track) => formatDuration(getField(track, 'duration_ms')),
+        className: 'text-zinc-400',
+        tooltip: 'The length of the track'
     },
     {
         id: 'date_added',
@@ -282,67 +280,6 @@ export const trackColumns = [
         render: (track) => formatDate(getAddedAt(track)),
         className: 'text-zinc-400',
         tooltip: 'The date the track was added to your collection'
-    },
-    {
-        id: 'last_played_at',
-        label: 'Played',
-        sortKey: 'last_played_at',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => {
-            const val = getLastPlayedAt(track);
-            return val ? new Date(val).getTime() : 0;
-        },
-        render: (track) => formatDate(getLastPlayedAt(track)),
-        className: 'text-zinc-400',
-        tooltip: 'The last time you played this track'
-    },
-    {
-        id: 'context_type',
-        label: 'Ctx',
-        sortKey: 'context_type',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => getContextType(track) || '-',
-        render: (track) => getContextType(track) || '-',
-        className: 'text-zinc-400',
-        tooltip: 'The context in which the track was found'
-    },
-    {
-        id: 'explicit',
-        label: 'Exp',
-        sortKey: 'explicit',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => track?.explicit ?? track?.feats?.explicit,
-        render: (track) => {
-            const val = track?.explicit ?? track?.feats?.explicit;
-            return val === true ? 'Yes' : val === false ? 'No' : '-';
-        },
-        className: 'text-zinc-400',
-        tooltip: 'Whether the track contains explicit content'
-    },
-    {
-        id: 'track_number',
-        label: 'Trk',
-        sortKey: 'track_number',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => asNumber(getField(track, 'track_number')) ?? -1,
-        render: (track) => getField(track, 'track_number') ?? '-',
-        className: 'text-zinc-400',
-        tooltip: 'The position of the track on the album'
-    },
-    {
-        id: 'disc_number',
-        label: 'Dsc',
-        sortKey: 'disc_number',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => asNumber(getField(track, 'disc_number')) ?? -1,
-        render: (track) => getField(track, 'disc_number') ?? '-',
-        className: 'text-zinc-400',
-        tooltip: 'The disc number on the album'
     },
     {
         id: 'tempo',
@@ -378,17 +315,6 @@ export const trackColumns = [
         tooltip: 'How suitable a track is for dancing'
     },
     {
-        id: 'loudness',
-        label: 'dB',
-        sortKey: 'loudness',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => getField(track, 'loudness') ?? -Infinity,
-        render: (track) => getNumberLabel(getField(track, 'loudness')),
-        className: 'text-zinc-400',
-        tooltip: 'Overall loudness in decibels (dB)'
-    },
-    {
         id: 'valence',
         label: 'Val',
         sortKey: 'valence',
@@ -400,15 +326,26 @@ export const trackColumns = [
         tooltip: 'Musical positiveness (happiness)'
     },
     {
-        id: 'speechiness',
-        label: 'Spc',
-        sortKey: 'speechiness',
+        id: 'happiness',
+        label: 'Hap',
+        sortKey: 'happiness',
         align: 'center',
         isExtra: true,
-        getValue: (track) => getField(track, 'speechiness') ?? 0,
-        render: (track) => getPercentLabel(getField(track, 'speechiness')),
+        getValue: (track) => getField(track, 'happiness') ?? 0,
+        render: (track) => getPercentLabel(getField(track, 'happiness')),
         className: 'text-zinc-400',
-        tooltip: 'Presence of spoken words'
+        tooltip: 'Musical happiness (energy * valence)'
+    },
+    {
+        id: 'anger',
+        label: 'Ang',
+        sortKey: 'anger',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => getField(track, 'anger') ?? 0,
+        render: (track) => getPercentLabel(getField(track, 'anger')),
+        className: 'text-zinc-400',
+        tooltip: 'Musical anger (energy * (1 - valence))'
     },
     {
         id: 'acousticness',
@@ -431,6 +368,17 @@ export const trackColumns = [
         render: (track) => getPercentLabel(getField(track, 'instrumentalness')),
         className: 'text-zinc-400',
         tooltip: 'Likelihood the track contains no vocals'
+    },
+    {
+        id: 'speechiness',
+        label: 'Spc',
+        sortKey: 'speechiness',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => getField(track, 'speechiness') ?? 0,
+        render: (track) => getPercentLabel(getField(track, 'speechiness')),
+        className: 'text-zinc-400',
+        tooltip: 'Presence of spoken words'
     },
     {
         id: 'liveness',
@@ -477,24 +425,87 @@ export const trackColumns = [
         tooltip: 'Number of beats in each bar'
     },
     {
-        id: 'duration',
-        label: 'Dur',
-        sortKey: 'duration_ms',
+        id: 'loudness',
+        label: 'dB',
+        sortKey: 'loudness',
         align: 'center',
-        getValue: (track) => getField(track, 'duration_ms') ?? 0,
-        render: (track) => formatDuration(getField(track, 'duration_ms')),
+        isExtra: true,
+        getValue: (track) => getField(track, 'loudness') ?? -Infinity,
+        render: (track) => getNumberLabel(getField(track, 'loudness')),
         className: 'text-zinc-400',
-        tooltip: 'The length of the track'
+        tooltip: 'Overall loudness in decibels (dB)'
     },
     {
-        id: 'popularity',
-        label: 'Pop',
-        sortKey: 'popularity',
+        id: 'track_number',
+        label: 'Trk',
+        sortKey: 'track_number',
         align: 'center',
-        getValue: (track) => getField(track, 'popularity') ?? -1,
-        render: (track) => getField(track, 'popularity') ?? '-',
+        isExtra: true,
+        getValue: (track) => asNumber(getField(track, 'track_number')) ?? -1,
+        render: (track) => getField(track, 'track_number') ?? '-',
         className: 'text-zinc-400',
-        tooltip: 'Popularity of the track (0-100)'
+        tooltip: 'The position of the track on the album'
+    },
+    {
+        id: 'disc_number',
+        label: 'Dsc',
+        sortKey: 'disc_number',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => asNumber(getField(track, 'disc_number')) ?? -1,
+        render: (track) => getField(track, 'disc_number') ?? '-',
+        className: 'text-zinc-400',
+        tooltip: 'The disc number on the album'
+    },
+    {
+        id: 'release_date',
+        label: 'Rel Date',
+        sortKey: 'release_date',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => getAlbumReleaseDate(track) || '',
+        render: (track) => formatDate(getAlbumReleaseDate(track)),
+        className: 'text-zinc-400',
+        tooltip: 'The full release date'
+    },
+    {
+        id: 'last_played_at',
+        label: 'Played',
+        sortKey: 'last_played_at',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => {
+            const val = getLastPlayedAt(track);
+            return val ? new Date(val).getTime() : 0;
+        },
+        render: (track) => formatDate(getLastPlayedAt(track)),
+        className: 'text-zinc-400',
+        tooltip: 'The last time you played this track'
+    },
+    {
+        id: 'context_type',
+        label: 'Ctx',
+        sortKey: 'context_type',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => getContextType(track) || '-',
+        render: (track) => getContextType(track) || '-',
+        className: 'text-zinc-400',
+        tooltip: 'The context in which the track was found'
+    },
+    {
+        id: 'explicit',
+        label: 'Exp',
+        sortKey: 'explicit',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => track?.explicit ?? track?.feats?.explicit,
+        render: (track) => {
+            const val = track?.explicit ?? track?.feats?.explicit;
+            return val === true ? 'Yes' : val === false ? 'No' : '-';
+        },
+        className: 'text-zinc-400',
+        tooltip: 'Whether the track contains explicit content'
     },
     {
         id: 'isrc',
@@ -506,5 +517,16 @@ export const trackColumns = [
         render: (track) => getField(track, 'isrc') || '-',
         className: 'text-zinc-400',
         tooltip: 'International Standard Recording Code'
+    },
+    {
+        id: 'artists',
+        label: 'Artists',
+        sortKey: 'artists',
+        align: 'left',
+        isExtra: true,
+        getValue: (track) => getArtists(track),
+        render: (track) => getArtists(track),
+        className: 'text-zinc-400',
+        tooltip: 'All artists associated with the track'
     }
 ];

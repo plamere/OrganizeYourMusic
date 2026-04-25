@@ -371,7 +371,7 @@
     .modebar-group {
       display: flex !important;
       flex-direction: row !important;
-      align-items: center !important;
+      align-items: space-evenly !important;
       margin-left: 8px !important;
       padding: 0 !important;
     }
@@ -383,9 +383,9 @@
     class="fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-lg border-b border-zinc-800 z-50 flex items-center justify-between px-4 md:px-6 shadow-sm">
     <div class="flex items-center gap-2 md:gap-4">
       <button id="toggle-sidebar"
-        class="text-zinc-400 hover:text-white transition-all p-2 rounded-full hover:bg-zinc-800 flex items-center justify-center w-10 h-10"
+        class="text-zinc-400 hover:text-white transition-all p-2 rounded-full hover:bg-zinc-800 hidden items-center justify-center w-10 h-10"
         title="Toggle Sidebar">
-        <i class="fa fa-bars text-lg"></i>
+        <i class="fa fa-indent text-lg"></i>
       </button>
       <a class="text-white text-xl md:text-2xl font-black flex items-center gap-3 hover:text-spotify-green transition-all overflow-hidden tracking-tighter"
         href="/">
@@ -404,302 +404,446 @@
     </div>
   </nav>
 
-  <div id="intro" class="flex flex-col min-h-[calc(100vh-4rem)]">
-    <div id="main" class="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-black text-center relative">
-
-
-      <h1 id="title"
-        class="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tight mb-4 sm:mb-6 relative z-10">
-        Organize Your Music
-      </h1>
-      <p id="ttext"
-        class="text-base sm:text-lg md:text-xl text-zinc-300 max-w-2xl mb-8 sm:mb-12 leading-relaxed relative z-10">
-        Organize your Spotify music collection by any of a wide range of
-        musical attributes including genres, mood, decade of release and more.
-      </p>
-
-      <!-- Stage 0: Login -->
-      <div id="login-state" class="w-full max-w-md relative z-10">
-        <div class="bg-zinc-900 p-6 sm:p-12 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
-          <p class="text-zinc-400 text-sm mb-8 text-center leading-relaxed">
-            To organize your collection, we first need your permission to access your Spotify library.
-          </p>
-          <a id="login-button" href="javascript:void(0)" role="button"
-            class="block w-full text-center bg-spotify-green hover:bg-spotify-green-hover text-black font-extrabold py-4 px-6 rounded-full uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.3)]">
-            <i class="fa fa-spotify mr-2 text-xl"></i>
-            Authorize Spotify
-          </a>
-        </div>
+  <!-- Main Intro/Landing Page -->
+  <div id="intro" class="flex flex-col">
+    <!-- Hero Section -->
+    <div id="main"
+      class="flex flex-col justify-center items-center px-6 pt-12 pb-20 text-center relative overflow-hidden bg-black">
+      <!-- Enhanced Background Effects -->
+      <div class="hero-glow"></div>
+      <div class="mesh-gradient"></div>
+      <div
+        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-linear-to-b from-spotify-green/10 to-transparent pointer-events-none">
       </div>
 
-      <!-- Stage 1: Selection (Home) -->
-      <div id="selection-state" class="w-full max-w-md relative z-10 hidden">
-        <div class="bg-zinc-900 p-6 sm:p-10 rounded-2xl shadow-2xl border border-zinc-800 w-full transition-all">
-          <div class="form-group mb-6 text-left">
-            <label id="what-label" for="collection-type"
-              class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest">
-              What do you want to organize?
-            </label>
-            <select id="collection-type"
-              class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-spotify-green focus:border-transparent transition-all cursor-pointer">
-              <option value="saved">Songs you've saved to Your Music</option>
-              <option value="added">Songs you've added to a playlist</option>
-              <option value="follow">Songs in playlists you follow</option>
-              <option value="all">All of your music</option>
-              <option value="playlist">A specific playlist</option>
-            </select>
+      <!-- Floating Elements for depth -->
+      <div class="absolute top-10 left-[15%] w-64 h-64 bg-spotify-green/5 rounded-full blur-3xl animate-float"></div>
+      <div class="absolute bottom-20 right-[15%] w-96 h-96 bg-spotify-green/5 rounded-full blur-3xl animate-float"
+        style="animation-delay: -2s"></div>
+
+      <div class="relative z-10 max-w-5xl mx-auto w-full">
+        <h1 id="title" class="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tighter mb-4">
+          Organize Your <span class="text-spotify-green">Music</span>
+        </h1>
+        <p id="ttext"
+          class="text-sm sm:text-base md:text-lg text-zinc-500 max-w-xl mx-auto mb-8 leading-relaxed font-bold uppercase tracking-wide">
+          The professional toolkit for library management. Sort tracks by tempo, mood, and genre with laboratory
+          precision.
+        </p>
+
+        <div class="flex flex-col md:flex-row items-center justify-center gap-6 w-full max-w-5xl mx-auto">
+          <!-- Stage 0: Login -->
+          <div id="login-state" class="w-full max-w-[380px]">
+            <div class="spotify-glass p-10 rounded-3xl w-full text-left relative overflow-hidden group">
+              <div
+                class="absolute -top-24 -right-24 w-48 h-48 bg-spotify-green/10 rounded-full blur-3xl transition-all group-hover:bg-spotify-green/20">
+              </div>
+
+              <div class="flex items-center justify-between mb-10 relative z-10">
+                <div class="flex flex-col">
+                  <span class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.25em] mb-1">Status</span>
+                  <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-spotify-green animate-pulse"></div>
+                    <span class="text-[11px] font-black text-white uppercase tracking-widest">Gateway Ready</span>
+                  </div>
+                </div>
+              </div>
+
+              <a id="login-button" href="javascript:void(0)" role="button"
+                class="spotify-btn-primary w-full py-4.5 px-6 mb-10 relative z-10">
+                <i class="fa fa-spotify mr-3 text-xl"></i>
+                Connect Spotify
+              </a>
+
+              <div class="space-y-4 relative z-10">
+                <div class="flex items-center justify-between text-[10px] border-b border-white/5 pb-3">
+                  <span class="text-zinc-500 font-bold uppercase tracking-widest">API Interface</span>
+                  <span class="text-white font-black">Official v1.0</span>
+                </div>
+                <div class="flex items-center justify-between text-[10px] border-b border-white/5 pb-3">
+                  <span class="text-zinc-500 font-bold uppercase tracking-widest">Security</span>
+                  <span class="text-white font-black">Encrypted</span>
+                </div>
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-zinc-500 font-bold uppercase tracking-widest">Data Policy</span>
+                  <span class="text-white font-black uppercase">Zero Retention</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div id="uri-prompt" class="mb-6 text-left hidden">
-            <label for="uri-text" class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-widest">
-              Enter the URI for your playlist
-            </label>
-            <input id="uri-text" type="text"
-              class="w-full bg-zinc-800 text-white border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-spotify-green transition-all"
-              placeholder="https://open.spotify.com/playlist/..." />
+          <!-- Stage 1: Selection (Home) -->
+          <div id="selection-state" class="w-full max-w-[380px] hidden">
+            <div class="spotify-glass p-10 rounded-3xl w-full text-left relative overflow-hidden group">
+              <div
+                class="absolute -top-24 -left-24 w-48 h-48 bg-spotify-green/10 rounded-full blur-3xl transition-all group-hover:bg-spotify-green/20">
+              </div>
+
+              <div class="flex items-center justify-between mb-10 relative z-10">
+                <div class="flex flex-col">
+                  <span class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.25em] mb-1">Source</span>
+                  <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-spotify-green"></div>
+                    <span class="text-[11px] font-black text-white uppercase tracking-widest">Library Connected</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-6 mb-10 relative z-10">
+                <div class="space-y-3">
+                  <label id="what-label" for="collection-type"
+                    class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block ml-1">Collection
+                    Source</label>
+                  <select id="collection-type" class="spotify-select">
+                    <option value="saved">Saved Tracks</option>
+                    <option value="added">My Playlists</option>
+                    <option value="follow">Followed Playlists</option>
+                    <option value="all">Complete Library</option>
+                    <option value="playlist">Spotify Playlist URI</option>
+                  </select>
+                </div>
+
+                <div id="uri-prompt" class="hidden space-y-3">
+                  <label for="uri-text"
+                    class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block ml-1">Playlist
+                    Identifier</label>
+                  <input id="uri-text" type="text"
+                    class="w-full bg-zinc-950/50 text-white border border-white/5 rounded-md px-6 py-4 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-spotify-green transition-all placeholder:text-zinc-600"
+                    placeholder="Enter Spotify URI or URL" />
+                </div>
+              </div>
+
+              <a id="go" href="javascript:void(0)" role="button"
+                class="spotify-btn-primary w-full py-4.5 px-6 relative z-10">
+                Fetch Collection
+              </a>
+              <div
+                class="err-txt text-red-500 font-black text-[10px] mt-6 text-center uppercase tracking-[0.15em] relative z-10">
+              </div>
+            </div>
           </div>
 
-          <a id="go" href="javascript:void(0)" role="button"
-            class="block w-full text-center bg-spotify-green hover:bg-spotify-green-hover text-black font-extrabold py-3.5 px-6 rounded-full uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.3)]">
-            Organize your music
-          </a>
-          <div class="err-txt text-red-400 font-medium text-sm mt-4 text-center"></div>
+          <!-- Feature Grid -->
+          <div class="hidden lg:grid grid-cols-2 gap-3 text-left w-full max-w-sm">
+            <div
+              class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/40 border border-white/5 transition-all hover:bg-zinc-800/60 hover:border-white/10 cursor-default">
+              <div
+                class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-spotify-green transition-colors">
+                <i class="fa fa-bolt text-[10px] text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Tempo
+                Sync</span>
+            </div>
+            <div
+              class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/40 border border-white/5 transition-all hover:bg-zinc-800/60 hover:border-white/10 cursor-default">
+              <div
+                class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-spotify-green transition-colors">
+                <i class="fa fa-heart text-[10px] text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Mood
+                Analysis</span>
+            </div>
+            <div
+              class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/40 border border-white/5 transition-all hover:bg-zinc-800/60 hover:border-white/10 cursor-default">
+              <div
+                class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-spotify-green transition-colors">
+                <i class="fa fa-music text-[10px] text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Acoustic
+                DNA</span>
+            </div>
+            <div
+              class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/40 border border-white/5 transition-all hover:bg-zinc-800/60 hover:border-white/10 cursor-default">
+              <div
+                class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-spotify-green transition-colors">
+                <i class="fa fa-fire text-[10px] text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Energy
+                Levels</span>
+            </div>
+            <div
+              class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/40 border border-white/5 transition-all hover:bg-zinc-800/60 hover:border-white/10 cursor-default">
+              <div
+                class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-spotify-green transition-colors">
+                <i class="fa fa-calendar text-[10px] text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Era
+                Sorting</span>
+            </div>
+            <div
+              class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/40 border border-white/5 transition-all hover:bg-zinc-800/60 hover:border-white/10 cursor-default">
+              <div
+                class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-spotify-green transition-colors">
+                <i class="fa fa-tags text-[10px] text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Genre
+                Mapping</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="container mx-auto px-6 py-20 border-t border-zinc-800/50">
-      <div class="max-w-5xl mx-auto">
-        <div class="text-center mb-16">
-          <h2 class="text-3xl md:text-4xl font-black mb-4 text-white">
-            Get your collection in order
-          </h2>
-          <p class="text-lg text-zinc-400 max-w-2xl mx-auto">
-            With <b>Organize Your Music</b>, taking control of your saved
-            music is simple. Just follow these steps:
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          <div class="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 relative overflow-hidden group">
-            <div
-              class="text-6xl font-black text-zinc-800/50 absolute -top-4 -right-2 transition-transform group-hover:scale-110">
-              1
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2 relative z-10">
-              Select
-            </h3>
-            <p class="text-zinc-400 relative z-10">
-              Choose what music to organize: Saved Music, added playlists,
-              followed playlists, or everything.
-            </p>
-          </div>
-          <div class="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 relative overflow-hidden group">
-            <div
-              class="text-6xl font-black text-zinc-800/50 absolute -top-4 -right-2 transition-transform group-hover:scale-110">
-              2
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2 relative z-10">
-              Login
-            </h3>
-            <p class="text-zinc-400 relative z-10">
-              Authenticate with Spotify. We'll automatically sort your tracks
-              into bins like Genre, Mood, and Decade.
-            </p>
-          </div>
-          <div class="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 relative overflow-hidden group">
-            <div
-              class="text-6xl font-black text-zinc-800/50 absolute -top-4 -right-2 transition-transform group-hover:scale-110">
-              3
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2 relative z-10">
-              Explore
-            </h3>
-            <p class="text-zinc-400 relative z-10">
-              Pick a bin. View track properties, plot the tracks visually, and
-              listen to 30-second audio previews.
-            </p>
-          </div>
+    <!-- Workflow Section -->
+    <div class="border-t border-white/5 bg-zinc-950/20">
+      <div class="container mx-auto px-6 py-20">
+        <div class="max-w-4xl mx-auto text-center mb-16">
           <div
-            class="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 relative overflow-hidden group md:col-span-2 lg:col-span-1">
-            <div
-              class="text-6xl font-black text-zinc-800/50 absolute -top-4 -right-2 transition-transform group-hover:scale-110">
-              4
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2 relative z-10">
-              Stage
-            </h3>
-            <p class="text-zinc-400 relative z-10">
-              Select specific tracks you want to keep. They will automatically
-              move to your <b>Staging Playlist</b>.
-            </p>
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-white/5 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4">
+            <i class="fa fa-terminal text-spotify-green"></i> App Information
           </div>
+          <h2 class="text-3xl font-black text-white tracking-tighter">How it Works</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <!-- Step 1 -->
+          <div class="spotify-card group p-10">
+            <div
+              class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
+              01</div>
+            <div
+              class="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center mb-8 border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+              <i class="fa fa-link text-xl text-zinc-400 group-hover:text-black"></i>
+            </div>
+            <h3 class="text-sm font-black text-white uppercase tracking-[0.2em] mb-4">Authorize</h3>
+            <p class="text-[11px] text-zinc-500 leading-relaxed font-bold uppercase tracking-tight">Connect your Spotify
+              account to securely access your library, playlists, and listening history.</p>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="spotify-card group p-10">
+            <div
+              class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
+              02</div>
+            <div
+              class="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center mb-8 border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+              <i class="fa fa-search text-xl text-zinc-400 group-hover:text-black"></i>
+            </div>
+            <h3 class="text-sm font-black text-white uppercase tracking-[0.2em] mb-4">Scan Library</h3>
+            <p class="text-[11px] text-zinc-500 leading-relaxed font-bold uppercase tracking-tight">Our engine retrieves
+              technical audio features for every track in your selected collection.</p>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="spotify-card group p-10">
+            <div
+              class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
+              03</div>
+            <div
+              class="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center mb-8 border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+              <i class="fa fa-sliders text-xl text-zinc-400 group-hover:text-black"></i>
+            </div>
+            <h3 class="text-sm font-black text-white uppercase tracking-[0.2em] mb-4">Apply Filters</h3>
+            <p class="text-[11px] text-zinc-500 leading-relaxed font-bold uppercase tracking-tight">Sort and filter by
+              tempo, energy, mood, and more to isolate the perfect vibe for your next playlist.</p>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="spotify-card group p-10">
+            <div
+              class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
+              04</div>
+            <div
+              class="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center mb-8 border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+              <i class="fa fa-check-circle text-xl text-zinc-400 group-hover:text-black"></i>
+            </div>
+            <h3 class="text-sm font-black text-white uppercase tracking-[0.2em] mb-4">Sync Playlist</h3>
+            <p class="text-[11px] text-zinc-500 leading-relaxed font-bold uppercase tracking-tight">Export your
+              organized tracks directly back to Spotify as a brand new, curated playlist.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Intelligence Overview -->
+    <div class="container mx-auto px-6 py-24 border-t border-white/5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-4 text-left">
           <div
-            class="bg-zinc-900/50 p-6 rounded-xl border border-spotify-green/30 relative overflow-hidden group md:col-span-2 lg:col-span-2">
-            <div
-              class="text-6xl font-black text-spotify-green/10 absolute -top-4 -right-2 transition-transform group-hover:scale-110">
-              5
+            class="inline-flex items-center gap-2 px-2 py-1 rounded bg-spotify-green/10 text-spotify-green text-[8px] font-black uppercase tracking-widest mb-4">
+            Analysis Engine
+          </div>
+          <h2 class="text-4xl font-black text-white mb-6 tracking-tighter">Audio Intelligence</h2>
+          <p class="text-zinc-500 text-xs leading-relaxed font-bold uppercase tracking-widest mb-8">
+            Leveraging Spotify's deep audio analysis to map the DNA of your entire music library.</p>
+
+          <div class="flex items-center gap-4 p-5 rounded-2xl bg-zinc-900/50 border border-white/5 backdrop-blur-sm">
+            <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+              <i class="fa fa-shield text-spotify-green text-sm"></i>
             </div>
-            <h3 class="text-xl font-bold text-spotify-green mb-2 relative z-10">
-              Save to Spotify
-            </h3>
-            <p class="text-zinc-300 relative z-10">
-              Review your staging playlist. When you are perfectly happy with
-              the selection, explicitly save the new playlist directly to your
-              Spotify account.
-            </p>
+            <div>
+              <h4 class="text-[10px] font-black text-white uppercase tracking-widest mb-1">Integrity First</h4>
+              <p class="text-zinc-500 text-[9px] font-bold uppercase tracking-tighter">We never modify your original
+                playlists. New collections are generated separately.</p>
+            </div>
           </div>
         </div>
 
-        <div class="bg-blue-900/20 border-l-4 border-blue-500 p-5 rounded-r-lg mb-16 flex items-start gap-4">
-          <i class="fa fa-info-circle text-blue-400 text-xl mt-0.5"></i>
-          <p class="text-blue-100/80 text-sm leading-relaxed">
-            <strong class="text-blue-100 block mb-1">Your library is safe</strong>
-            <b class="text-white">Organize Your Music</b> will never modify or
-            delete any of the songs in your saved music or existing playlists.
-            It only creates and saves entirely new playlists for you.
-          </p>
-        </div>
+        <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <!-- BPM Card -->
+          <div class="spotify-card group p-8">
+            <div
+              class="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 transition-all duration-500 group-hover:scale-110">
+              <i class="fa fa-bolt text-9xl"></i>
+            </div>
+            <div class="flex items-center gap-4 mb-6 relative z-10">
+              <div
+                class="w-12 h-12 rounded-2xl bg-zinc-950 flex items-center justify-center border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+                <i class="fa fa-bolt text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span class="text-white font-black text-sm uppercase tracking-[0.15em]">Tempo & BPM</span>
+            </div>
+            <p class="text-zinc-500 text-[11px] font-bold uppercase tracking-tight leading-relaxed relative z-10">
+              Precise frequency analysis for perfect rhythm matching and beat-sync transitions.</p>
+          </div>
 
-        <div class="text-center mb-10">
-          <h2 class="text-3xl md:text-4xl font-black mb-4 text-white">
-            The Track Properties
-          </h2>
-          <p class="text-lg text-zinc-400 max-w-2xl mx-auto">
-            Slice and dice your collection by a wide range of powerful audio
-            features.
-          </p>
-        </div>
+          <!-- Mood Card -->
+          <div class="spotify-card group p-8">
+            <div
+              class="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 transition-all duration-500 group-hover:scale-110">
+              <i class="fa fa-smile-o text-9xl"></i>
+            </div>
+            <div class="flex items-center gap-4 mb-6 relative z-10">
+              <div
+                class="w-12 h-12 rounded-2xl bg-zinc-950 flex items-center justify-center border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+                <i class="fa fa-smile-o text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span class="text-white font-black text-sm uppercase tracking-[0.15em]">Mood Valence</span>
+            </div>
+            <p class="text-zinc-500 text-[11px] font-bold uppercase tracking-tight leading-relaxed relative z-10">
+              Musical positivity metrics to group tracks by emotional resonance and atmosphere.</p>
+          </div>
 
-        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-20">
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong
-              class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">Genres</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">The genre classifications associated with the
-              track.</span>
-          </li>
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">Year</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">The release year of the recording.</span>
-          </li>
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong
-              class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">Added</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">The earliest date you saved this track.</span>
-          </li>
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">BPM</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">The tempo of the song in beats per minute.</span>
-          </li>
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong
-              class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">Energy</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">Measure of intensity and activity.</span>
-          </li>
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong
-              class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">Danceability</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">How suitable a track is for dancing.</span>
-          </li>
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong
-              class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">Loudness</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">The overall loudness of a track in
-              decibels.</span>
-          </li>
-          <li
-            class="bg-zinc-900 p-5 rounded-xl border border-zinc-800 hover:border-spotify-green/50 hover:bg-zinc-800/80 hover:-translate-y-1 transition-all group">
-            <strong
-              class="block text-white mb-2 group-hover:text-spotify-green transition-colors text-lg">Valence</strong>
-            <span class="text-sm text-zinc-400 leading-relaxed block">Measure of musical positiveness
-              (happiness).</span>
-          </li>
-        </ul>
+          <!-- Acoustic DNA Card -->
+          <div class="spotify-card group p-8">
+            <div
+              class="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 transition-all duration-500 group-hover:scale-110">
+              <i class="fa fa-leaf text-9xl"></i>
+            </div>
+            <div class="flex items-center gap-4 mb-6 relative z-10">
+              <div
+                class="w-12 h-12 rounded-2xl bg-zinc-950 flex items-center justify-center border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+                <i class="fa fa-leaf text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span class="text-white font-black text-sm uppercase tracking-[0.15em]">Acoustic DNA</span>
+            </div>
+            <p class="text-zinc-500 text-[11px] font-bold uppercase tracking-tight leading-relaxed relative z-10">
+              Distinguish between natural acoustic textures and electronic production environments.</p>
+          </div>
+
+          <!-- Energy Card -->
+          <div class="spotify-card group p-8">
+            <div
+              class="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 transition-all duration-500 group-hover:scale-110">
+              <i class="fa fa-fire text-9xl"></i>
+            </div>
+            <div class="flex items-center gap-4 mb-6 relative z-10">
+              <div
+                class="w-12 h-12 rounded-2xl bg-zinc-950 flex items-center justify-center border border-white/5 group-hover:bg-spotify-green transition-all duration-300">
+                <i class="fa fa-fire text-zinc-400 group-hover:text-black"></i>
+              </div>
+              <span class="text-white font-black text-sm uppercase tracking-[0.15em]">Energy Levels</span>
+            </div>
+            <p class="text-zinc-500 text-[11px] font-bold uppercase tracking-tight leading-relaxed relative z-10">
+              Measure the intensity and activity of tracks to build high-octane or chill playlists.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo Section -->
+    <div class="container mx-auto px-6 py-20 border-t border-white/3">
+      <div class="max-w-4xl mx-auto text-center">
+        <div
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-spotify-green/5 border border-spotify-green/10 text-[8px] font-black uppercase tracking-widest text-spotify-green mb-6">
+          <i class="fa fa-play"></i> Tool Demonstration
+        </div>
+        <h2 class="text-3xl font-black text-white mb-4 tracking-tighter">Watch the Workflow</h2>
+        <p class="text-zinc-500 text-[11px] leading-relaxed font-bold uppercase tracking-widest mb-12">See how to
+          organize your entire library in under two minutes.</p>
 
         <div
-          class="flex flex-col md:flex-row w-full gap-10 items-center bg-zinc-900/40 p-8 md:p-12 rounded-2xl border border-zinc-800/50">
-          <div class="w-full md:w-1/3 text-left">
-            <h2 class="text-3xl md:text-4xl font-black mb-4 text-white">
-              See it in Action
-            </h2>
-            <div class="w-16 h-1 bg-spotify-green rounded-full mb-6"></div>
-            <p class="text-zinc-400 text-lg">
-              Watch a quick demonstration of how to expertly organize your
-              Spotify library using these audio features.
-            </p>
+          class="relative rounded-lg overflow-hidden border border-white/5 shadow-2xl bg-zinc-900 aspect-video group">
+          <div
+            class="absolute inset-0 bg-spotify-green/5 z-10 pointer-events-none group-hover:opacity-0 transition-opacity">
           </div>
-          <div class="w-full md:w-2/3 rounded-xl shadow-2xl overflow-hidden aspect-video border border-zinc-800">
-            <iframe class="w-full h-full" src="https://www.youtube-nocookie.com/embed/NGY1cthhr5g" frameborder="0"
-              allow="
-                  accelerometer;
-                  autoplay;
-                  clipboard-write;
-                  encrypted-media;
-                  gyroscope;
-                  picture-in-picture;
-                " allowfullscreen title="Demo Video"></iframe>
-          </div>
+          <iframe class="w-full h-full relative z-0" src="https://www.youtube-nocookie.com/embed/NGY1cthhr5g"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Main App Wrapper -->
   <div class="flex flex-col md:flex-row w-full flex-1">
     <div id="sidebar"
-      class="sidebar work hidden md:w-72 shrink-0 bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-800/50 px-4 py-6 overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-4rem)] z-40 no-scrollbar">
+      class="sidebar work md:w-72 shrink-0 bg-zinc-900/40 backdrop-blur-xl border-b md:border-b-0 md:border-r border-white/5 overflow-x-hidden overflow-y-auto md:sticky md:top-16 md:h-[calc(100vh-4rem)] z-40 no-scrollbar sidebar-transition">
     </div>
 
     <div id="main-wrapper" class="flex-1 p-3 md:p-6 w-full overflow-hidden flex flex-col bg-black">
       <div class="work hidden w-full flex-1 flex-col" id="main-area">
         <div id="loading"
-          class="max-w-2xl mx-auto w-full bg-zinc-900 p-6 sm:p-10 rounded-2xl shadow-2xl border border-zinc-800 my-auto">
-          <h3 id="section-title" class="text-2xl font-black text-center mb-8 text-white">
-            Loading your collection...
-          </h3>
-          <div id="loading-header" class="mb-8">
-            <h4 id="lplaylist-name" class="text-lg font-bold text-center text-spotify-green mb-2"></h4>
-            <div id="linfo" class="text-center text-zinc-400 mb-6 font-medium"></div>
+          class="max-w-xl mx-auto w-full bg-zinc-900/80 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-[0_32px_64px_-15px_rgba(0,0,0,0.5)] border border-white/5 my-auto">
+          <div class="flex flex-col items-center mb-10">
+            <div class="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-6 relative">
+              <div
+                class="absolute inset-0 rounded-full border-2 border-spotify-green border-t-transparent animate-spin">
+              </div>
+              <i class="fa fa-spotify text-3xl text-spotify-green"></i>
+            </div>
+            <h3 id="section-title" class="text-3xl font-black text-center text-white tracking-tighter">
+              Analyzing DNA
+            </h3>
+            <p class="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Retrieving Audio
+              Intelligence</p>
+          </div>
 
-            <div class="w-full bg-zinc-800 rounded-full h-3 overflow-hidden shadow-inner mb-3">
-              <div id="progress-bar"
-                class="bg-linear-to-r from-spotify-green to-spotify-green-hover h-3 transition-all duration-300 ease-out relative"
+          <div id="loading-header" class="mb-10">
+            <h4 id="lplaylist-name"
+              class="text-sm font-black text-center text-zinc-300 mb-2 uppercase tracking-widest truncate"></h4>
+            <div id="linfo" class="text-center text-zinc-500 mb-6 text-[11px] font-bold uppercase tracking-tight"></div>
+
+            <div class="w-full bg-zinc-800/50 rounded-full h-1.5 overflow-hidden mb-4 border border-white/5">
+              <div id="progress-bar" class="bg-spotify-green h-full transition-all duration-500 ease-out relative"
                 role="progressbar" style="width: 0%">
                 <div class="absolute top-0 left-0 right-0 bottom-0 bg-white/20 animate-pulse"></div>
               </div>
             </div>
-            <div id="tiny-track" class="text-xs text-zinc-500 text-center h-4 overflow-hidden font-mono truncate px-4">
+            <div id="tiny-track"
+              class="text-[9px] text-zinc-600 text-center h-4 overflow-hidden font-mono truncate px-4 uppercase tracking-tighter">
             </div>
           </div>
 
-          <div class="flex justify-center mb-8">
+          <div class="flex justify-center mb-10">
             <button id="stop-loading"
-              class="bg-transparent border border-zinc-600 text-zinc-300 hover:text-white hover:border-white hover:bg-zinc-800 text-sm font-bold py-2 px-6 rounded-full transition-all">
-              Stop Loading
+              class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[10px] font-black py-2.5 px-8 rounded-full transition-all uppercase tracking-widest border border-white/5">
+              Stop Analysis
             </button>
           </div>
-          <div class="text-sm text-zinc-500 text-center mb-6 leading-relaxed px-4">
-            We are analyzing your music. This may take a moment depending on
-            how extensive your collection is. You can stop anytime to work
-            with a partial list.
+
+          <div
+            class="text-[10px] text-zinc-600 text-center mb-8 leading-relaxed px-6 font-bold uppercase tracking-tight">
+            Our engine is processing every beat and frequency. You can stop anytime to work with the partial results.
           </div>
+
           <div id="favs"
-            class="hidden bg-spotify-green/10 border border-spotify-green/30 rounded-lg p-5 text-center text-sm text-zinc-300">
-            Looks like you really enjoy your
-            <span class="font-bold text-white" id="fav-genre"></span> and
-            <span class="font-bold text-white" id="fav-artist"></span>. A top
-            favorite track seems to be
-            <span class="font-bold text-white italic" id="fav-song"></span>.
+            class="hidden bg-spotify-green/5 border border-spotify-green/10 rounded-2xl p-6 text-center text-[11px] text-zinc-400 font-medium leading-relaxed">
+            <i class="fa fa-magic text-spotify-green mb-3 block text-lg"></i>
+            Discovery: You seem to favor <span class="font-black text-white" id="fav-genre"></span>
+            and <span class="font-black text-white" id="fav-artist"></span>.
+            Currently processing <span class="font-black text-white italic" id="fav-song"></span>.
           </div>
         </div>
 
-        <div id="loaded" class="work hidden h-full flex-col w-full transition-all duration-300">
+        <div id="loaded" class="work hidden flex-1 flex-col w-full transition-all duration-300">
           <div
             class="mb-4 rounded-2xl bg-linear-to-r from-zinc-900/40 to-zinc-900/10 p-4 md:p-5 border border-zinc-800/30">
             <div class="flex flex-col md:flex-row md:items-center gap-4 justify-between">
@@ -728,7 +872,7 @@
             </div>
           </div>
 
-          <div id="exTab3" class="w-full h-full flex flex-col min-h-0">
+          <div id="exTab3" class="w-full flex-1 flex flex-col min-h-0">
             <ul class="nav nav-tabs flex border-b border-zinc-800/50 mb-4 gap-1 px-1 overflow-x-auto no-scrollbar">
               <li class="active group">
                 <a id="the-track-list-tab" href="#the-track-list" data-toggle="tab"
@@ -763,7 +907,12 @@
                     <button id="reset-column-order" title="Reset column order to default"
                       class="hidden mb-1 text-zinc-500 hover:text-spotify-green transition-all p-1 rounded-full hover:bg-zinc-800 items-center justify-center w-7 h-7"
                       onclick="window.dispatchEvent(new CustomEvent('oym_reset_columns'))">
-                      <i class="fa fa-undo text-xs"></i>
+                      <i class="fa fa-columns text-xs"></i>
+                    </button>
+                    <button id="reset-row-order" title="Reset row order to default"
+                      class="hidden mb-1 text-zinc-500 hover:text-spotify-green transition-all p-1 rounded-full hover:bg-zinc-800 items-center justify-center w-7 h-7"
+                      onclick="window.dispatchEvent(new CustomEvent('oym_reset_rows'))">
+                      <i class="fa fa-list-ol text-xs"></i>
                     </button>
                   </div>
                   <div id="playlist-sub-title" class="text-zinc-400 text-sm font-medium"></div>
@@ -782,7 +931,7 @@
                 <div id="track-table-shell"
                   class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden border border-zinc-800">
                   <div class="overflow-x-auto w-full">
-                    <div id="gthe-track-table" class="w-full text-left"></div>
+                    <div id="gthe-track-table" class="w-full text-left min-h-[500px] border border-red-500/10"></div>
                   </div>
                   <div id="gthe-track-table-truncated"
                     class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
@@ -795,90 +944,89 @@
 
               <div class="tab-pane" id="the-plots">
                 <div id="plot-controls"
-                  class="mx-auto mb-6 w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
+                  class="mb-6 w-full rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 shadow-xl">
                   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div class="text-sm font-bold uppercase tracking-widest text-white mb-1">
-                        Plot Controls
+                      <div class="text-[10px] font-black uppercase tracking-widest text-white mb-1">
+                        Plot Configuration
                       </div>
-                      <div class="text-sm text-zinc-500">
-                        Customize axes and bubble size for active results.
+                      <div class="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">
+                        Map audio metrics to axes and bubble dimensions.
                       </div>
                     </div>
                     <button id="plot-clear" title="Clear all tracks from the plot"
-                      class="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/5 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/15 hover:text-red-300 hover:border-red-500/40">
+                      class="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/5 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/15 hover:text-red-300">
                       <i class="fa fa-trash text-xs"></i> Clear Plot
                     </button>
                   </div>
 
-                  <div
-                    class="flex flex-row flex-wrap items-end gap-x-8 gap-y-6 bg-black/30 p-4 rounded-xl border border-zinc-800/50">
-                    <div class="flex-1 min-w-30">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-black/20 p-4 rounded-xl border border-white/3">
+                    <div class="space-y-2">
                       <label for="select-xaxis"
-                        class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">X axis</label>
-                      <select id="select-xaxis"
-                        class="w-full bg-zinc-950/50 text-white border border-zinc-800 rounded-xl py-3 px-4 text-xs font-bold focus:ring-1 focus:ring-spotify-green/50 focus:border-spotify-green/50 focus:outline-none cursor-pointer hover:bg-zinc-900 transition-all"></select>
+                        class="block text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">X-Axis
+                        Variable</label>
+                      <select id="select-xaxis" class="spotify-select py-2.5 px-4"></select>
                     </div>
-                    <div class="flex-1 min-w-30">
+                    <div class="space-y-2">
                       <label for="select-yaxis"
-                        class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Y axis</label>
-                      <select id="select-yaxis"
-                        class="w-full bg-zinc-950/50 text-white border border-zinc-800 rounded-xl py-3 px-4 text-xs font-bold focus:ring-1 focus:ring-spotify-green/50 focus:border-spotify-green/50 focus:outline-none cursor-pointer hover:bg-zinc-900 transition-all"></select>
+                        class="block text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">Y-Axis
+                        Variable</label>
+                      <select id="select-yaxis" class="spotify-select py-2.5 px-4"></select>
                     </div>
-                    <div class="flex-1 min-w-30">
+                    <div class="space-y-2">
                       <label for="select-size"
-                        class="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Size</label>
-                      <select id="select-size"
-                        class="w-full bg-zinc-950/50 text-white border border-zinc-800 rounded-xl py-3 px-4 text-xs font-bold focus:ring-1 focus:ring-spotify-green/50 focus:border-spotify-green/50 focus:outline-none cursor-pointer hover:bg-zinc-900 transition-all"></select>
+                        class="block text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">Bubble
+                        Dimension</label>
+                      <select id="select-size" class="spotify-select py-2.5 px-4"></select>
                     </div>
                   </div>
                 </div>
 
-                <div class="bg-zinc-900 rounded-2xl shadow-xl p-4 border border-zinc-800 w-full">
-                  <div id="the-plot" class="w-full min-h-125"></div>
+                <div class="bg-zinc-900 rounded-xl shadow-xl p-4 border border-zinc-800 w-full relative">
+                  <div id="the-plot" class="w-full min-h-[500px]"></div>
                 </div>
               </div>
 
               <div class="tab-pane" id="staging">
                 <div id="staging-empty"
-                  class="max-w-3xl mx-auto bg-zinc-900 p-12 rounded-2xl shadow-xl border border-zinc-800 text-center mt-10">
+                  class="max-w-3xl mx-auto bg-zinc-900/50 backdrop-blur-md p-16 rounded-3xl shadow-2xl border border-white/5 text-center mt-12">
                   <div
-                    class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-zinc-800 mb-6 border border-zinc-700">
-                    <i class="fa fa-music text-3xl text-zinc-500"></i>
+                    class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-zinc-800 mb-8 border border-white/5 shadow-inner">
+                    <i class="fa fa-music text-4xl text-zinc-500"></i>
                   </div>
-                  <h3 class="text-3xl font-black text-white mb-4">
-                    Staging Playlist (<span class="nstaging-tracks text-spotify-green">0</span>)
+                  <h3 class="text-4xl font-black text-white mb-4 tracking-tighter">
+                    Staging Area (<span class="nstaging-tracks text-spotify-green">0</span>)
                   </h3>
-                  <p class="text-zinc-400 mb-10 leading-relaxed text-lg max-w-xl mx-auto">
-                    This is where you collect tracks to save to a new
-                    playlist. It's empty right now. Head back to
-                    <b>The Track List</b> or <b>The Plots</b> to select
-                    tracks.
+                  <p
+                    class="text-zinc-500 mb-12 leading-relaxed text-sm font-bold uppercase tracking-widest max-w-xl mx-auto">
+                    Collect tracks here to synchronize a new playlist to your profile.
                   </p>
 
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left border-t border-zinc-800/50 pt-10">
-                    <div class="bg-black/30 p-5 rounded-xl border border-zinc-800/50">
-                      <div class="text-spotify-green mb-3">
-                        <i class="fa fa-list text-xl"></i>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left border-t border-white/5 pt-12">
+                    <div
+                      class="group bg-black/40 p-6 rounded-2xl border border-white/5 hover:bg-zinc-800/40 transition-all">
+                      <div
+                        class="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center text-spotify-green mb-4 border border-white/5 group-hover:bg-spotify-green group-hover:text-black transition-all">
+                        <i class="fa fa-list text-lg"></i>
                       </div>
-                      <h4 class="text-lg font-bold text-white mb-2">
-                        Via The Track List
+                      <h4 class="text-xs font-black text-white mb-2 uppercase tracking-[0.2em]">
+                        From Track List
                       </h4>
-                      <p class="text-sm text-zinc-500 leading-relaxed">
-                        Browse categories on the left sidebar and check the
-                        boxes next to any tracks you wish to add.
+                      <p class="text-[11px] text-zinc-600 leading-relaxed font-bold uppercase tracking-tight">
+                        Navigate to the Track List tab and use the checkboxes to stage your selected items.
                       </p>
                     </div>
-                    <div class="bg-black/30 p-5 rounded-xl border border-zinc-800/50">
-                      <div class="text-spotify-green mb-3">
-                        <i class="fa fa-bar-chart text-xl"></i>
+                    <div
+                      class="group bg-black/40 p-6 rounded-2xl border border-white/5 hover:bg-zinc-800/40 transition-all">
+                      <div
+                        class="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center text-spotify-green mb-4 border border-white/5 group-hover:bg-spotify-green group-hover:text-black transition-all">
+                        <i class="fa fa-bolt text-lg"></i>
                       </div>
-                      <h4 class="text-lg font-bold text-white mb-2">
-                        Via The Plots
+                      <h4 class="text-xs font-black text-white mb-2 uppercase tracking-[0.2em]">
+                        Auto-Staging
                       </h4>
-                      <p class="text-sm text-zinc-500 leading-relaxed">
-                        Use the lasso or box select tools directly on the
-                        interactive chart to grab multiple tracks at once.
+                      <p class="text-[11px] text-zinc-600 leading-relaxed font-bold uppercase tracking-tight">
+                        Use the technical filters in the sidebar to automatically stage large groups of tracks.
                       </p>
                     </div>
                   </div>
@@ -921,42 +1069,72 @@
     </div>
   </div>
 
-  <div id="footer" class="bg-black border-t border-zinc-900 py-12 mt-auto z-50">
-    <div class="container mx-auto px-6 text-center">
-      <p class="text-sm text-zinc-500 leading-relaxed">
-        Powered by the
-        <a href="https://spotify.com"
-          class="text-zinc-400 hover:text-spotify-green underline transition-colors font-medium">Spotify API</a>.
-        Originally created by
-        <a href="https://twitter.com/plamere"
-          class="text-zinc-400 hover:text-spotify-green underline transition-colors font-medium">@plamere</a>
-        during the
-        <a href="http://labrosa.ee.columbia.edu/hamr_ismir2016/"
-          class="text-zinc-400 hover:text-spotify-green underline transition-colors font-medium">Science of Music
-          Hackathon</a>. View the
-        <a href="https://github.com/plamere/OrganizeYourMusic"
-          class="text-zinc-400 hover:text-spotify-green underline transition-colors font-medium">original source</a>.
-        <br class="hidden sm:block mt-2" />
-        Enhanced with modern UI/UX improvements by
-        <a href="https://github.com/CurtisCullenAWong/OrganizeYourMusic"
-          class="text-zinc-400 hover:text-spotify-green underline transition-colors font-medium">Curtis Wong</a>
-        (2026).
-      </p>
-    </div>
-  </div>
+  <!-- Global Footer -->
+  <footer id="footer" class="bg-black border-t border-white/5 py-10 md:py-20 relative z-10">
+    <div class="container mx-auto px-6 max-w-6xl">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-y-10 md:gap-16 mb-12">
+        <!-- Column 1: Identity & Credit -->
+        <div class="md:col-span-2 space-y-5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center border border-white/5">
+              <i class="fa fa-spotify text-spotify-green text-sm"></i>
+            </div>
+            <span class="text-white font-black uppercase tracking-tighter text-base">Organize Your Music</span>
+          </div>
+          <div class="space-y-3">
+            <p class="text-[10px] text-zinc-400 font-bold uppercase leading-relaxed tracking-wider">
+              Powered by the <span class="text-white">Spotify API</span>. Originally created by <a
+                href="https://twitter.com/plamere" class="text-spotify-green hover:underline">@plamere</a> during the
+              Science of Music Hackathon. <a href="https://github.com/plamere/OrganizeYourMusic"
+                class="text-zinc-500 hover:text-white underline decoration-zinc-800">View source</a>.
+            </p>
+            <p class="text-[9px] text-zinc-600 font-black uppercase tracking-[0.2em]">
+              Enhanced with modern UI/UX by <a href="https://github.com/CurtisCullenAWong"
+                class="text-zinc-400 hover:text-white transition-colors underline decoration-zinc-800">Curtis Wong</a>
+              &bull; 2026
+            </p>
+          </div>
+        </div>
 
-  <!-- Sidebar Image Preview Modal -->
-  <div id="sidebar-image-preview"
-    class="fixed z-9999 pointer-events-none hidden opacity-0 transition-all duration-300 transform scale-95 origin-left">
-    <div class="relative">
-      <!-- Glow effect -->
-      <div class="absolute -inset-1 bg-linear-to-r from-spotify-green to-emerald-500 rounded-xl blur opacity-25"></div>
-      <!-- Main container -->
-      <div class="relative bg-zinc-900 ring-1 ring-white/10 rounded-xl overflow-hidden shadow-2xl">
-        <img id="sidebar-preview-img" class="w-56 h-56 object-cover" src="" alt="Source Preview">
+        <!-- Column 2: Ecosystem -->
+        <div class="space-y-4">
+          <h4 class="text-white font-black text-[8px] uppercase tracking-[0.3em] opacity-30">Network</h4>
+          <ul class="space-y-2">
+            <li><a href="https://github.com/plamere/OrganizeYourMusic"
+                class="text-[10px] text-zinc-500 hover:text-white font-black uppercase tracking-widest transition-colors flex items-center gap-2.5"><i
+                  class="fa fa-github opacity-50"></i> Original Source</a></li>
+            <li><a href="https://github.com/CurtisCullenAWong/OrganizeYourMusic"
+                class="text-[10px] text-zinc-500 hover:text-white font-black uppercase tracking-widest transition-colors flex items-center gap-2.5"><i
+                  class="fa fa-code-fork opacity-50"></i> Modern Fork</a></li>
+            <li><a href="https://spotify.com"
+                class="text-[10px] text-zinc-500 hover:text-white font-black uppercase tracking-widest transition-colors flex items-center gap-2.5"><i
+                  class="fa fa-spotify opacity-50"></i> Spotify Web</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3: Protocol -->
+        <div class="space-y-4">
+          <h4 class="text-white font-black text-[8px] uppercase tracking-[0.3em] opacity-30">Protocol</h4>
+          <div class="flex flex-wrap gap-1.5">
+            <span
+              class="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 text-[7px] font-black text-zinc-600 uppercase">Vite</span>
+            <span
+              class="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 text-[7px] font-black text-zinc-600 uppercase">React</span>
+            <span
+              class="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 text-[7px] font-black text-zinc-600 uppercase">Tailwind</span>
+            <span
+              class="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 text-[7px] font-black text-zinc-600 uppercase">Plotly</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-6 border-t border-white/5 flex justify-center items-center">
+        <p class="text-[8px] text-zinc-800 font-black uppercase tracking-[0.4em]">
+          &copy; 2026 Advanced Music Systems
+        </p>
       </div>
     </div>
-  </div>
+  </footer>
 
   <script type="module" src="/src/scripts/react-adapter.jsx"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>

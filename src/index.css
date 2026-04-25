@@ -10,23 +10,31 @@
 	--color-spotify-highlight: #3E3E3E;
 	--color-spotify-light: #b3b3b3;
 	--font-sans: "Circular", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	
+	--animate-float: float 6s ease-in-out infinite;
+	--animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes float {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-20px); }
 }
 
 @layer components {
 	.sidebar-controls-card {
-		@apply mb-4 rounded-xl border border-zinc-800/50 bg-zinc-900/40 p-3 shadow-sm transition-all hover:border-zinc-700/50 hover:bg-zinc-900/60;
+		@apply mb-3 rounded-lg border border-white/5 bg-zinc-900/40 p-2.5 shadow-sm transition-all hover:bg-zinc-900/60;
 	}
 
 	.sidebar-section-header {
-		@apply mt-3 mb-1.5 flex cursor-pointer items-center justify-between px-2 text-[12px] font-black uppercase tracking-[0.2em] text-zinc-400 transition-colors hover:text-white;
+		@apply mt-2 mb-1 flex cursor-pointer items-center justify-between px-2 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 transition-colors hover:text-white;
 	}
 
 	.sidebar-section-header i {
-		@apply text-[10px] transition-transform duration-300;
+		@apply text-[8px] transition-transform duration-200;
 	}
 
 	.sidebar-item {
-		@apply flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1 text-[15px] font-semibold text-zinc-400 transition-all duration-200 hover:bg-white/5 hover:text-white active:scale-[0.98];
+		@apply flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-[13px] font-bold text-zinc-400 transition-all duration-150 hover:bg-white/5 hover:text-white active:scale-[0.98];
 	}
 
 	.sidebar-item.active {
@@ -34,15 +42,27 @@
 	}
 
 	.sidebar-item-count {
-		@apply text-[13px] font-bold text-zinc-500;
+		@apply text-[11px] font-black text-zinc-600;
 	}
 
 	.sidebar-item:hover .sidebar-item-count {
-		@apply text-zinc-300;
+		@apply text-zinc-400;
+	}
+
+	.track-table-cell {
+		@apply py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/[0.02] transition-colors whitespace-nowrap;
+	}
+
+	.track-table-header {
+		@apply py-2.5 px-3 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 border-b border-white/5 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-30 transition-colors hover:text-white;
 	}
 
 	.playlist-list {
-		@apply space-y-0;
+		@apply space-y-0.5;
+	}
+
+	.pager-control-btn {
+		@apply w-7 h-7 flex items-center justify-center rounded-md bg-zinc-900 border border-white/5 text-zinc-500 hover:bg-zinc-800 hover:text-white active:scale-90 transition-all disabled:opacity-20;
 	}
 
 	.no-scrollbar::-webkit-scrollbar {
@@ -53,4 +73,125 @@
 		-ms-overflow-style: none;
 		scrollbar-width: none;
 	}
+
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 5px;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 10px;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: rgba(255, 255, 255, 0.2);
+	}
+
+	.sidebar-transition {
+		@apply transition-all duration-300 ease-in-out;
+	}
+
+	.sidebar-collapsed {
+		@apply w-0! h-0! min-w-0! min-h-0! opacity-0! p-0! m-0! overflow-hidden! border-none! pointer-events-none;
+	}
+
+	.spotify-select {
+		@apply w-full bg-zinc-900 text-white border border-white/5 rounded-md px-5 py-3.5 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-spotify-green transition-all cursor-pointer appearance-none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 1.25rem center;
+		background-size: 0.85rem;
+	}
+
+	.spotify-select:hover {
+		@apply bg-zinc-800 border-white/10;
+	}
+
+	.hero-glow {
+		@apply absolute inset-0 pointer-events-none opacity-40;
+		background: radial-gradient(circle at 50% 0%, rgba(29, 185, 84, 0.15) 0%, transparent 70%);
+	}
+
+	.mesh-gradient {
+		@apply absolute inset-0 pointer-events-none opacity-20;
+		background: 
+			radial-gradient(at 0% 0%, rgba(29, 185, 84, 0.15) 0px, transparent 50%),
+			radial-gradient(at 100% 0%, rgba(18, 18, 18, 0.8) 0px, transparent 50%),
+			radial-gradient(at 100% 100%, rgba(29, 185, 84, 0.1) 0px, transparent 50%),
+			radial-gradient(at 0% 100%, rgba(18, 18, 18, 0.8) 0px, transparent 50%);
+	}
+
+	.spotify-glass {
+		@apply bg-zinc-900/60 backdrop-blur-2xl border border-white/5;
+	}
+
+	.spotify-card {
+		@apply relative overflow-hidden rounded-3xl bg-zinc-900/40 border border-white/5 transition-all duration-300 hover:bg-zinc-800/60 hover:border-white/10 hover:shadow-2xl hover:shadow-spotify-green/5;
+	}
+
+	.spotify-btn-primary {
+		@apply flex items-center justify-center bg-spotify-green text-[#121212] font-black rounded-full uppercase tracking-widest transition-all duration-200 transform;
+	}
+
+	.spotify-btn-primary:hover {
+		@apply bg-spotify-green-hover scale-105 shadow-[0_10px_30px_-5px_rgba(29,185,84,0.4)];
+		color: #121212 !important;
+	}
+
+	.spotify-btn-primary:active {
+		@apply scale-95;
+		color: #121212 !important;
+	}
 }
+
+/* Tooltip Animations */
+@keyframes tooltip-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -100%) translateY(0) scale(0.95);
+	}
+
+	to {
+		opacity: 1;
+		transform: translate(-50%, -100%) translateY(-20px) scale(1);
+	}
+}
+
+.animate-in.fade-in.zoom-in-95 {
+	animation: tooltip-in 0.15s ease-out forwards;
+}
+
+/* Custom transitions */
+.spotify-transition {
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::selection {
+	background-color: var(--color-spotify-green);
+	color: #121212;
+}
+
+/* Global Loading State Overrides */
+body.is-loading {
+	padding-top: 0 !important;
+}
+
+body.is-loading nav,
+body.is-loading #intro {
+	display: none !important;
+}
+
+body.is-loading #main-wrapper {
+	padding: 0 !important;
+}
+
+body.is-loading #loading {
+	margin-top: 10vh;
+	margin-bottom: 10vh;
+}
+
+
