@@ -50,7 +50,7 @@
 	}
 
 	.track-table-cell {
-		@apply py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/[0.02] transition-colors whitespace-nowrap;
+		@apply py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/2 transition-colors whitespace-nowrap;
 	}
 
 	.track-table-header {
@@ -92,7 +92,9 @@
 	}
 
 	.sidebar-transition {
-		@apply transition-all duration-300 ease-in-out;
+		transition-property: width, min-width, max-width, opacity, margin, padding;
+		transition-duration: 160ms;
+		transition-timing-function: ease-out;
 	}
 
 	.sidebar-collapsed {
@@ -141,7 +143,7 @@
 	}
 
 	.spotify-btn-primary {
-		@apply flex items-center justify-center bg-spotify-green text-[#121212] font-black rounded-full uppercase tracking-widest transition-all duration-200 transform;
+		@apply flex items-center justify-center bg-spotify-green text-spotify-base font-black rounded-full uppercase tracking-widest transition-all duration-200 transform;
 	}
 
 	.spotify-btn-primary:hover {

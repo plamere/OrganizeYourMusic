@@ -92,7 +92,19 @@ var configuredSpotifyPlaylistsUrl = sanitizeInjectedValue(window.SPOTIFY_PLAYLIS
 var configuredSpotifyAudioFeaturesUrl = sanitizeInjectedValue(window.SPOTIFY_AUDIO_FEATURES_URL);
 var configuredSpotifyArtistsUrl = sanitizeInjectedValue(window.SPOTIFY_ARTISTS_URL);
 var configuredSpotifyAlbumsUrl = sanitizeInjectedValue(window.SPOTIFY_ALBUMS_URL);
+var DEFAULT_SPOTIFY_PROXY_PATH = "/api/spotify";
 var activeSpotifyClientId = null;
+
+function getSpotifyProxyCandidates() {
+  var candidates = [];
+  if (configuredSpotifyProxyUrl) {
+    candidates.push(configuredSpotifyProxyUrl);
+  }
+  if (candidates.indexOf(DEFAULT_SPOTIFY_PROXY_PATH) === -1) {
+    candidates.push(DEFAULT_SPOTIFY_PROXY_PATH);
+  }
+  return candidates;
+}
 
 function getConfiguredSpotifyClientIds() {
   var ids = [];
@@ -209,6 +221,7 @@ var allTracks = [];
 window.sidebarExpanded = sidebarExpanded;
 var SIDEBAR_VISIBLE_KEY = "oym_sidebar_visible";
 var SIDEBAR_EXPANDED_KEY = "oym_sidebar_expanded";
+var ANIMATIONS_ENABLED_KEY = "oym_animations_enabled";
 
 // NEW: Global search state
 var currentSearchQuery = "";
@@ -1997,7 +2010,8 @@ async function refreshAccessToken() {
 
 class SpotifyDataFetcher {
   constructor() {
-    this.proxyUrl = configuredSpotifyProxyUrl;
+    this.proxyCandidates = getSpotifyProxyCandidates();
+    this.proxyUrl = this.proxyCandidates[0];
     this.queue = [];
     this.activeRequests = 0;
     this.maxConcurrent = 8;
@@ -2050,6 +2064,31 @@ class SpotifyDataFetcher {
     return chunks;
   }
 
+  async callSpotifyDirect(url, method, data, signal) {
+    var resolvedMethod = (method || "GET").toUpperCase();
+    var finalUrl = url;
+    var options = {
+      method: resolvedMethod,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      signal: signal,
+    };
+
+    if (data && resolvedMethod === "GET") {
+      var params = new URLSearchParams(data);
+      var query = params.toString();
+      if (query) {
+        finalUrl += (finalUrl.indexOf("?") === -1 ? "?" : "&") + query;
+      }
+    } else if (data && resolvedMethod !== "GET") {
+      options.headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify(data);
+    }
+
+    return fetch(finalUrl, options);
+  }
+
   async apiCall(url, method = "GET", data = null, retries = 5) {
     let currentRetries = retries;
     let hasRefreshed = false;
@@ -2062,12 +2101,53 @@ class SpotifyDataFetcher {
           // Apply rate limiting within the concurrency slot
           await this.throttle();
 
-          const response = await fetch(this.proxyUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url, method, data, accessToken }),
-            signal: controller.signal,
-          });
+          var response = null;
+          var responseSource = "direct";
+          var directNetworkError = null;
+          var lastNetworkError = null;
+
+          try {
+            response = await this.callSpotifyDirect(
+              url,
+              method,
+              data,
+              controller.signal,
+            );
+          } catch (directError) {
+            if (directError && directError.name === "AbortError") {
+              throw directError;
+            }
+            directNetworkError = directError;
+            responseSource = "proxy";
+          }
+
+          if (!response) {
+            for (let i = 0; i < this.proxyCandidates.length; i++) {
+              const candidateUrl = this.proxyCandidates[i];
+              try {
+                response = await fetch(candidateUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url, method, data, accessToken }),
+                  signal: controller.signal,
+                });
+                this.proxyUrl = candidateUrl;
+                break;
+              } catch (networkError) {
+                lastNetworkError = networkError;
+                if (networkError && networkError.name === "AbortError") {
+                  throw networkError;
+                }
+                if (i === this.proxyCandidates.length - 1) {
+                  throw networkError;
+                }
+              }
+            }
+          }
+
+          if (!response) {
+            throw directNetworkError || lastNetworkError || new Error("Spotify request failed");
+          }
 
           if (response.status === 429) {
             const retryAfterHeader = response.headers.get("Retry-After");
@@ -2135,6 +2215,28 @@ class SpotifyDataFetcher {
 
           if (!response.ok) {
             const errorData = await response.text();
+            if (
+              response.status === 502 ||
+              response.status === 503 ||
+              response.status === 504
+            ) {
+              if (responseSource === "proxy") {
+                return {
+                  type: "error",
+                  message:
+                    "Proxy unavailable (" +
+                    response.status +
+                    "). Start the backend server (`npm run dev` or `npm run dev:backend`) and retry.",
+                };
+              }
+              return {
+                type: "error",
+                message:
+                  "Spotify gateway error (" +
+                  response.status +
+                  "). Please retry in a moment.",
+              };
+            }
             return {
               type: "error",
               message: `API Error: ${response.status} - ${errorData}`,
@@ -2997,6 +3099,56 @@ function setHeaderStatusMessage(message, durationMs) {
   }
 }
 
+function areAnimationsEnabled() {
+  return window.localStorage.getItem(ANIMATIONS_ENABLED_KEY) !== "false";
+}
+
+function applyAnimationPreference(enabled) {
+  if (enabled) {
+    document.documentElement.classList.remove("animations-disabled-root");
+    document.body.classList.remove("animations-disabled");
+  } else {
+    document.documentElement.classList.add("animations-disabled-root");
+    document.body.classList.add("animations-disabled");
+  }
+}
+
+function updateAnimationToggleUI(enabled) {
+  var toggleBtn = document.getElementById("toggle-animations");
+  if (!toggleBtn) return;
+
+  var icon = toggleBtn.querySelector("i");
+  if (!icon) return;
+
+  if (enabled) {
+    icon.classList.remove("fa-toggle-off");
+    icon.classList.add("fa-toggle-on");
+    toggleBtn.title = "Disable animations";
+    toggleBtn.setAttribute("aria-label", "Disable animations");
+  } else {
+    icon.classList.remove("fa-toggle-on");
+    icon.classList.add("fa-toggle-off");
+    toggleBtn.title = "Enable animations";
+    toggleBtn.setAttribute("aria-label", "Enable animations");
+  }
+}
+
+function setAnimationsEnabled(enabled) {
+  window.localStorage.setItem(ANIMATIONS_ENABLED_KEY, enabled ? "true" : "false");
+  applyAnimationPreference(enabled);
+  updateAnimationToggleUI(enabled);
+}
+
+function triggerDeferredResizeForSidebar() {
+  // Heavy listeners (e.g. Plotly redraws) are bound to resize; defer until
+  // after the sidebar transition so collapse feels instant.
+  requestAnimationFrame(function () {
+    setTimeout(function () {
+      window.dispatchEvent(new Event("resize"));
+    }, 180);
+  });
+}
+
 function renderLoggedInEmail(user) {
   var identity = null;
   if (user && user.email) {
@@ -3021,6 +3173,8 @@ function renderLoggedInEmail(user) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  applyAnimationPreference(areAnimationsEnabled());
+
   hydrateActiveSpotifyClientId();
 
   // Hydrate in-memory token so API calls always use the latest persisted value.
@@ -3072,9 +3226,16 @@ document.addEventListener("DOMContentLoaded", function () {
             icon.classList.add("fa-outdent");
           }
         }
-        // Force a window resize event to trigger table/chart re-layouts
-        window.dispatchEvent(new Event("resize"));
+        triggerDeferredResizeForSidebar();
       }
+    };
+  }
+
+  var toggleAnimationsBtn = document.getElementById("toggle-animations");
+  if (toggleAnimationsBtn) {
+    updateAnimationToggleUI(areAnimationsEnabled());
+    toggleAnimationsBtn.onclick = function () {
+      setAnimationsEnabled(!areAnimationsEnabled());
     };
   }
 

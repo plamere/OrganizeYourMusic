@@ -13,8 +13,14 @@
     (function () {
       const token = localStorage.getItem('access_token');
       const refreshToken = localStorage.getItem('refresh_token');
+      const animationsEnabled = localStorage.getItem('oym_animations_enabled') !== 'false';
       const hasCode = new URLSearchParams(window.location.search).has('code');
       const style = document.createElement('style');
+
+      if (!animationsEnabled) {
+        document.documentElement.classList.add('animations-disabled-root');
+      }
+
       if (token || refreshToken || hasCode) {
         style.textContent = '#selection-state { display: block !important; } #info { display: flex !important; } #login-state { display: none !important; }';
       } else {
@@ -391,6 +397,14 @@
       margin-left: 8px !important;
       padding: 0 !important;
     }
+
+    .animations-disabled-root *,
+    .animations-disabled-root *::before,
+    .animations-disabled-root *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
   </style>
 </head>
 
@@ -410,18 +424,26 @@
       </a>
     </div>
 
-    <div id="info"
-      class="hidden items-center gap-3 bg-zinc-900/80 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-zinc-800 transition-all hover:bg-zinc-800/90">
-      <i class="fa fa-user text-zinc-500"></i>
-      <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged in
-        as</span>
-      <div id="who-carousel" class="who-carousel text-xs md:text-sm font-bold text-zinc-200 max-w-25 md:max-w-56">
-        <span id="who-track" class="who-carousel-track">
-          <span id="who" class="who-carousel-text">Connecting...</span>
-          <span id="who-divider" class="who-carousel-divider" aria-hidden="true">&bull;</span>
-          <span id="who-clone" class="who-carousel-text" aria-hidden="true">Connecting...</span>
-        </span>
+    <div class="flex items-center gap-2 md:gap-3">
+      <div id="info"
+        class="hidden items-center gap-3 bg-zinc-900/80 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-zinc-800 transition-all hover:bg-zinc-800/90">
+        <i class="fa fa-user text-zinc-500"></i>
+        <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged in
+          as</span>
+        <div id="who-carousel" class="who-carousel text-xs md:text-sm font-bold text-zinc-200 max-w-25 md:max-w-56">
+          <span id="who-track" class="who-carousel-track">
+            <span id="who" class="who-carousel-text">Connecting...</span>
+            <span id="who-divider" class="who-carousel-divider" aria-hidden="true">&bull;</span>
+            <span id="who-clone" class="who-carousel-text" aria-hidden="true">Connecting...</span>
+          </span>
+        </div>
       </div>
+
+      <button id="toggle-animations"
+        class="text-zinc-400 hover:text-white transition-all p-2 rounded-full hover:bg-zinc-800 items-center justify-center flex w-10 h-10"
+        title="Disable animations" aria-label="Disable animations" type="button">
+        <i class="fa fa-toggle-on text-lg"></i>
+      </button>
     </div>
   </nav>
 
