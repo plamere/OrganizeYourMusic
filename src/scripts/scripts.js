@@ -189,13 +189,29 @@ function restartAuthorization(message) {
 
   // Reset UI to login state
   var intro = document.getElementById("intro");
-  if (intro) intro.style.display = "block";
+  if (intro) {
+    intro.style.display = "block";
+    intro.style.removeProperty("display"); // Allow CSS/Tailwind to handle it
+    intro.classList.remove("hidden");
+  }
 
   var loginState = document.getElementById("login-state");
-  if (loginState) loginState.style.display = "block";
+  if (loginState) {
+    loginState.classList.remove("hidden");
+    loginState.style.display = "block";
+  }
 
   var selectionState = document.getElementById("selection-state");
-  if (selectionState) selectionState.style.display = "none";
+  if (selectionState) {
+    selectionState.classList.add("hidden");
+    selectionState.style.display = "none";
+  }
+
+  var info = document.getElementById("info");
+  if (info) {
+    info.classList.add("hidden");
+    info.classList.remove("flex");
+  }
 
   document.querySelectorAll(".work").forEach(function (el) {
     el.classList.add("hidden");
@@ -2995,11 +3011,7 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .catch(function (err) {
         console.error("Exchange failed", err);
-        error("Failed to exchange authorization code for token");
-        var loginState = document.getElementById("login-state");
-        if (loginState) loginState.style.display = "block";
-        var selectionState = document.getElementById("selection-state");
-        if (selectionState) selectionState.style.display = "none";
+        restartAuthorization("Failed to exchange authorization code for token");
       });
   } else {
     var storedRefreshToken = window.localStorage.getItem(
@@ -3012,16 +3024,10 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch(function (err) {
           console.error("Refresh failed", err);
-          var loginState = document.getElementById("login-state");
-          if (loginState) loginState.style.display = "block";
-          var selectionState = document.getElementById("selection-state");
-          if (selectionState) selectionState.style.display = "none";
+          restartAuthorization();
         });
     } else {
-      var loginState = document.getElementById("login-state");
-      if (loginState) loginState.style.display = "block";
-      var selectionState = document.getElementById("selection-state");
-      if (selectionState) selectionState.style.display = "none";
+      restartAuthorization();
     }
   }
 

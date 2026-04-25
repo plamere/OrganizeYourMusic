@@ -8,6 +8,22 @@
   <meta name="description" content="Organize your Spotify music collection" />
   <meta name="author" content="@plamere" />
 
+  <script>
+    // Critical: Prevent auth flicker by checking token before render
+    (function () {
+      const token = localStorage.getItem('access_token');
+      const refreshToken = localStorage.getItem('refresh_token');
+      const hasCode = new URLSearchParams(window.location.search).has('code');
+      const style = document.createElement('style');
+      if (token || refreshToken || hasCode) {
+        style.textContent = '#selection-state { display: block !important; } #info { display: flex !important; } #login-state { display: none !important; }';
+      } else {
+        style.textContent = '#login-state { display: block !important; } #selection-state { display: none !important; } #info { display: none !important; }';
+      }
+      document.head.appendChild(style);
+    })();
+  </script>
+
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="icon" type="image/png" href="/favicon.png" />
 
@@ -379,7 +395,7 @@
 </head>
 
 <body class="min-h-screen flex flex-col pt-16 bg-spotify-base text-spotify-light font-sans antialiased">
-  <nav
+  <nav id="navbar"
     class="fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-lg border-b border-zinc-800 z-50 flex items-center justify-between px-4 md:px-6 shadow-sm">
     <div class="flex items-center gap-2 md:gap-4">
       <button id="toggle-sidebar"
@@ -395,12 +411,11 @@
     </div>
 
     <div id="info"
-      class="flex items-center gap-3 bg-zinc-900/80 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-zinc-800 transition-all hover:bg-zinc-800/90">
+      class="hidden items-center gap-3 bg-zinc-900/80 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-zinc-800 transition-all hover:bg-zinc-800/90">
       <i class="fa fa-user text-zinc-500"></i>
       <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged in
         as</span>
-      <span id="who" class="text-xs md:text-sm font-bold text-zinc-200 truncate max-w-[100px] md:max-w-none">Not logged
-        in</span>
+      <span id="who" class="text-xs md:text-sm font-bold text-zinc-200 truncate max-w-[100px] md:max-w-none">Connecting...</span>
     </div>
   </nav>
 
@@ -433,7 +448,7 @@
 
         <div class="flex flex-col md:flex-row items-center justify-center gap-6 w-full max-w-5xl mx-auto">
           <!-- Stage 0: Login -->
-          <div id="login-state" class="w-full max-w-[380px]">
+          <div id="login-state" class="w-full max-w-[380px] hidden">
             <div class="spotify-glass p-10 rounded-3xl w-full text-left relative overflow-hidden group">
               <div
                 class="absolute -top-24 -right-24 w-48 h-48 bg-spotify-green/10 rounded-full blur-3xl transition-all group-hover:bg-spotify-green/20">
