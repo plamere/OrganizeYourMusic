@@ -60,7 +60,11 @@ const Sidebar = ({
         return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     };
 
-    const getTrackImage = (track) => track?.image_url || null;
+    const getBaseTrack = (track) => (track?.track && track?.track?.id ? track.track : track);
+    const getTrackImage = (track) => {
+        const base = getBaseTrack(track);
+        return base?.image_url || track?.details?.image_url || track?.image_url || null;
+    };
 
     const handleMouseEnter = (e, node) => {
         const img = getTrackImage(node.tracks[0]);

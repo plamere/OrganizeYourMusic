@@ -32,7 +32,7 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
             } else if (nowPlayingId) {
                 setNowPlayingId(null);
             }
-            
+
             const playing = window.audio ? !window.audio.paused : false;
             if (playing !== isPlaying) {
                 setIsPlaying(playing);
@@ -43,7 +43,7 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
 
     const handleToggleSelection = (ids, isSelected) => {
         const idList = Array.isArray(ids) ? ids : [ids];
-        
+
         idList.forEach(id => {
             if (isSelected) {
                 window.curSelected.add(id);
@@ -51,9 +51,9 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
                 window.curSelected.delete(id);
             }
         });
-        
+
         setSelectedIds(new Set(window.curSelected));
-        
+
         // Update staging counts in UI
         const elements = document.querySelectorAll(".nstaging-tracks");
         elements.forEach(function (el) { el.textContent = window.curSelected.size; });
@@ -65,7 +65,7 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
             else window.curSelected.delete(track.id);
         });
         setSelectedIds(new Set(window.curSelected));
-        
+
         const elements = document.querySelectorAll(".nstaging-tracks");
         elements.forEach(function (el) { el.textContent = window.curSelected.size; });
     };
@@ -78,7 +78,7 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
 
     try {
         return (
-            <TrackTable 
+            <TrackTable
                 tracks={tracks}
                 selectedIds={selectedIds}
                 onToggleSelection={handleToggleSelection}
@@ -102,7 +102,7 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
 const SidebarWrapper = ({ initialWorld }) => {
     const [world, setWorld] = useState(initialWorld || window.theWorld || []);
     const [activeNode, setActiveNode] = useState(window.curNode);
-    
+
     // Read from localStorage directly for initial state if global var is not ready
     const [isExpandedGlobally, setIsExpandedGlobally] = useState(() => {
         if (typeof window.sidebarExpanded === 'boolean') return window.sidebarExpanded;
@@ -127,7 +127,7 @@ const SidebarWrapper = ({ initialWorld }) => {
             if (window.sidebarExpanded !== undefined && window.sidebarExpanded !== isExpandedGlobally) {
                 setIsExpandedGlobally(window.sidebarExpanded);
             }
-            
+
             // Periodically sync with global theWorld to catch mutations
             const currentWorld = window.theWorld || [];
             if (currentWorld.length > 0) {
@@ -148,7 +148,7 @@ const SidebarWrapper = ({ initialWorld }) => {
     };
 
     return (
-        <Sidebar 
+        <Sidebar
             theWorld={world}
             activeNode={activeNode}
             onNodeClick={handleNodeClick}
@@ -166,7 +166,7 @@ let sidebarRoot = null;
 window.renderTrackTable = (tracks) => {
     const trackCount = tracks?.length || 0;
     console.log(`[ReactAdapter] Attempting to render Track Table with ${trackCount} tracks`);
-    
+
     let container = document.getElementById('gthe-track-table');
     if (!container) {
         console.warn("[ReactAdapter] Container 'gthe-track-table' not found! Searching for shell...");
@@ -181,7 +181,7 @@ window.renderTrackTable = (tracks) => {
             }
         }
     }
-    
+
     if (!container) {
         console.error("[ReactAdapter] FATAL: Could not find or recreate track table container");
         return;
@@ -197,7 +197,7 @@ window.renderTrackTable = (tracks) => {
     if (!trackTableRoot) {
         trackTableRoot = createRoot(container);
     }
-    
+
     trackTableRoot.render(
         <TableWrapper initialTracks={tracks} isStaging={false} />
     );
@@ -211,11 +211,11 @@ window.renderStagingTable = (tracks) => {
         console.error("Staging table container not found!");
         return;
     }
-    
+
     if (!stagingTableRoot) {
         stagingTableRoot = createRoot(container);
     }
-    
+
     stagingTableRoot.render(
         <TableWrapper initialTracks={tracks} isStaging={true} />
     );
@@ -228,11 +228,11 @@ window.renderSidebar = (theWorld) => {
         console.error("Sidebar container not found!");
         return;
     }
-    
+
     if (!sidebarRoot) {
         sidebarRoot = createRoot(container);
     }
-    
+
     sidebarRoot.render(
         <SidebarWrapper initialWorld={theWorld} />
     );
@@ -240,7 +240,6 @@ window.renderSidebar = (theWorld) => {
 
 // Initial proactive render check
 const proactiveRender = () => {
-    console.log("Proactive render check...");
     if (window.theWorld && window.theWorld.length > 0) {
         window.renderSidebar(window.theWorld);
     }
@@ -258,5 +257,3 @@ if (document.readyState === 'complete') {
 } else {
     window.addEventListener('load', proactiveRender);
 }
-
-console.log("React Adapter loaded with Sidebar support, enhanced logging, and proactive rendering");

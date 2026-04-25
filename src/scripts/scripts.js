@@ -2,54 +2,53 @@ import normalizeSpotifyTracks from "./spotifyTransformer.js";
 
 "use strict";
 // Global Tooltip System
-(function() {
-    const tooltip = document.createElement('div');
-    tooltip.id = 'global-custom-tooltip';
-    tooltip.className = 'fixed z-[99999] pointer-events-none bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-zinc-700 shadow-2xl hidden animate-in fade-in zoom-in-95 duration-150';
-    tooltip.style.transform = 'translate(-50%, -100%) translateY(-20px)';
-    
-    const textSpan = document.createElement('span');
-    tooltip.appendChild(textSpan);
-    
-    const arrow = document.createElement('div');
-    arrow.className = 'absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-zinc-900 border-r border-b border-zinc-700 rotate-45';
-    tooltip.appendChild(arrow);
-    
-    document.body.appendChild(tooltip);
-    
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[title]');
-        if (target && !target.closest('.track-header-cell')) { 
-            const currentTitle = target.getAttribute('title');
-            if (!currentTitle) return;
-            
-            target.setAttribute('data-original-title', currentTitle);
-            target.removeAttribute('title');
-            
-            textSpan.textContent = currentTitle;
-            tooltip.classList.remove('hidden');
-        }
-    });
-    
-    document.addEventListener('mousemove', (e) => {
-        if (!tooltip.classList.contains('hidden')) {
-            tooltip.style.left = e.clientX + 'px';
-            tooltip.style.top = e.clientY + 'px';
-        }
-    });
-    
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[data-original-title]');
-        if (target) {
-            const originalTitle = target.getAttribute('data-original-title');
-            target.setAttribute('title', originalTitle);
-            target.removeAttribute('data-original-title');
-            tooltip.classList.add('hidden');
-        }
-    });
+(function () {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'global-custom-tooltip';
+  tooltip.className = 'fixed z-[99999] pointer-events-none bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-zinc-700 shadow-2xl hidden animate-in fade-in zoom-in-95 duration-150';
+  tooltip.style.transform = 'translate(-50%, -100%) translateY(-20px)';
+
+  const textSpan = document.createElement('span');
+  tooltip.appendChild(textSpan);
+
+  const arrow = document.createElement('div');
+  arrow.className = 'absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-zinc-900 border-r border-b border-zinc-700 rotate-45';
+  tooltip.appendChild(arrow);
+
+  document.body.appendChild(tooltip);
+
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[title]');
+    if (target && !target.closest('.track-header-cell')) {
+      const currentTitle = target.getAttribute('title');
+      if (!currentTitle) return;
+
+      target.setAttribute('data-original-title', currentTitle);
+      target.removeAttribute('title');
+
+      textSpan.textContent = currentTitle;
+      tooltip.classList.remove('hidden');
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!tooltip.classList.contains('hidden')) {
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top = e.clientY + 'px';
+    }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    const target = e.target.closest('[data-original-title]');
+    if (target) {
+      const originalTitle = target.getAttribute('data-original-title');
+      target.setAttribute('title', originalTitle);
+      target.removeAttribute('data-original-title');
+      tooltip.classList.add('hidden');
+    }
+  });
 })();
 
-console.log("Organize Your Music - scripts.js fully loaded");
 var accessToken = null;
 var ACCESS_TOKEN_STORAGE_KEY = "access_token";
 var REFRESH_TOKEN_STORAGE_KEY = "refresh_token";
@@ -1747,185 +1746,6 @@ async function refreshAccessToken() {
   }
   return data;
 }
-
-async function callSpotify(type, url, json, callback) {
-  var refreshed = false;
-
-  async function doCall() {
-    var backendUrl =
-      window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
-        ? "http://localhost:8000/api/spotify"
-        : "/api/spotify";
-
-    try {
-      const response = await fetch(backendUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: url,
-          method: type,
-          data: json,
-          accessToken: accessToken,
-        }),
-      });
-
-      var errorPayload = null;
-      if (!response.ok) {
-        errorPayload = await readSpotifyErrorPayload(response);
-      }
-
-      if (response.status === 403 && isSpotifyScopeError(errorPayload)) {
-        restartAuthorization(
-          "Your Spotify authorization expired or is missing permissions. Please connect again.",
-        );
-        return;
-      }
-
-      if (
-        (response.status === 401 ||
-          (response.status === 403 &&
-            isSpotifyTokenExpiredError(errorPayload))) &&
-        !refreshed
-      ) {
-        refreshed = true;
-        try {
-          await refreshAccessToken();
-          await doCall();
-        } catch (e) {
-          restartAuthorization(
-            "Your Spotify session expired. Please connect again.",
-          );
-        }
-        return;
-      }
-
-      if (response.ok) {
-        const r = await response.json();
-        callback(true, r);
-      } else {
-        callback(false, response);
-      }
-    } catch (error) {
-      callback(false, error);
-    }
-  }
-
-  await doCall();
-}
-
-async function getSpotifyP(url, data) {
-  var curRetry = 0;
-  var maxRetries = 10;
-  var refreshed = false;
-
-  async function go() {
-    var backendUrl =
-      window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
-        ? "http://localhost:8000/api/spotify"
-        : "/api/spotify";
-
-    try {
-      const response = await fetch(backendUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: url,
-          data: data,
-          accessToken: accessToken,
-        }),
-      }).catch(err => {
-        console.error("Backend Proxy Error:", err);
-        throw new Error("Failed to connect to the backend proxy server at " + backendUrl + ". Please ensure 'npm run dev' is running.");
-      });
-
-      var errorPayload = null;
-      if (!response.ok) {
-        errorPayload = await readSpotifyErrorPayload(response);
-      }
-
-      if (response.ok) {
-        return await response.json();
-      }
-
-      if (response.status === 403 && isSpotifyScopeError(errorPayload)) {
-        restartAuthorization(
-          "Your Spotify authorization expired or is missing permissions. Please connect again.",
-        );
-        throw new Error("Unauthorized");
-      }
-
-      if (
-        response.status === 403 &&
-        isSpotifyTokenExpiredError(errorPayload) &&
-        !refreshed
-      ) {
-        refreshed = true;
-        await new Promise((r) => setTimeout(r, 1000));
-        await refreshAccessToken();
-        return await go();
-      }
-
-      if (response.status === 401 && !refreshed) {
-        refreshed = true;
-        await refreshAccessToken();
-        return await go();
-      }
-
-      if (response.status >= 500 && response.status < 600) {
-        if (curRetry++ < maxRetries) {
-          await new Promise((r) => setTimeout(r, 500));
-          return await go();
-        }
-        throw new Error("Server error after retries");
-      }
-
-      if (response.status === 429) {
-        var retry = 2000;
-        var retryAfter = response.headers.get("Retry-After");
-        if (retryAfter) retry = parseInt(retryAfter, 10) * 1000;
-        if (retry < 1000) retry = 1000;
-        if (curRetry++ < maxRetries) {
-          await new Promise((r) => setTimeout(r, retry + curRetry * retry));
-          return await go();
-        }
-        throw new Error("Rate limit exceeded after retries");
-      }
-
-      throw new Error("API error: " + response.status);
-    } catch (error) {
-      throw error;
-    }
-  }
-  return await go();
-}
-
-function fetchCurrentUserProfile() {
-  var url = "https://api.spotify.com/v1/me";
-  return getSpotifyP(url, null);
-}
-
-
-function playTrack(track) {
-  if (track != nowPlaying) {
-    audio.pause();
-    audio.src = track.details.preview_url;
-    audio.play();
-    nowPlaying = track;
-  } else {
-    stopTrack();
-  }
-}
-
-function stopTrack() {
-  audio.pause();
-  nowPlaying = null;
-  document.querySelectorAll(".playing").forEach(function (el) {
-    el.classList.remove("playing");
-  });
-}
-
 // =======================================================================
 // MODERNIZED DATA FETCHING (Replaces old sequential RSVP/Ajax logic)
 // =======================================================================
@@ -1940,7 +1760,26 @@ class SpotifyDataFetcher {
         : "/api/spotify";
     this.queue = [];
     this.activeRequests = 0;
-    this.maxConcurrent = 3;
+    this.maxConcurrent = 8;
+    this.requestLog = [];
+    this.maxRequestsPerInterval = 10;
+    this.intervalMs = 1000;
+  }
+
+  async throttle() {
+    while (true) {
+      const now = Date.now();
+      // Clean up log
+      this.requestLog = this.requestLog.filter(t => now - t < this.intervalMs);
+
+      if (this.requestLog.length < this.maxRequestsPerInterval) {
+        this.requestLog.push(now);
+        return;
+      }
+
+      // Wait a bit before checking again
+      await this.sleep(100);
+    }
   }
 
   async enqueue(fn) {
@@ -1952,8 +1791,6 @@ class SpotifyDataFetcher {
       return await fn();
     } finally {
       this.activeRequests--;
-      // Minimal breather between requests
-      await this.sleep(100);
       if (this.queue.length > 0) {
         const next = this.queue.shift();
         next();
@@ -1982,6 +1819,9 @@ class SpotifyDataFetcher {
     while (currentRetries >= 0) {
       const result = await this.enqueue(async () => {
         try {
+          // Apply rate limiting within the concurrency slot
+          await this.throttle();
+
           const response = await fetch(this.proxyUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -2080,6 +1920,48 @@ class SpotifyDataFetcher {
 }
 
 const spotifyFetcher = new SpotifyDataFetcher();
+
+
+async function callSpotify(type, url, json, callback) {
+  try {
+    const data = await spotifyFetcher.apiCall(url, type, json);
+    callback(true, data);
+  } catch (e) {
+    console.error("callSpotify failed:", e);
+    callback(false, e);
+  }
+}
+
+async function getSpotifyP(url, data) {
+  return await spotifyFetcher.apiCall(url, "GET", data);
+}
+
+function fetchCurrentUserProfile() {
+  var url = "https://api.spotify.com/v1/me";
+  return getSpotifyP(url, null);
+}
+
+
+function playTrack(track) {
+  if (track != nowPlaying) {
+    audio.pause();
+    audio.src = track.details.preview_url;
+    audio.play();
+    nowPlaying = track;
+  } else {
+    stopTrack();
+  }
+}
+
+function stopTrack() {
+  audio.pause();
+  nowPlaying = null;
+  document.querySelectorAll(".playing").forEach(function (el) {
+    el.classList.remove("playing");
+  });
+}
+
+
 
 // =======================================================================
 // UI STATE MANAGEMENT FUNCTIONS (moved earlier to prevent ReferenceError)
@@ -2401,32 +2283,28 @@ async function getTracksFromAPI(source, uri) {
   let allItems = [...(firstPage.items || [])];
   refreshHeader();
 
-  // 2. Queue up and fetch in batches of 10 to avoid 429 rate limiting
+  // 2. Queue up all offsets
   const offsetList = [];
   for (let offset = limit; offset < totalTracks; offset += limit) {
     if (abortLoading) break;
     offsetList.push(offset);
   }
 
-  const batches = spotifyFetcher.chunkArray(offsetList, 10);
-  for (const batch of batches) {
-    if (abortLoading) break;
-    const pageResults = await Promise.all(
-      batch.map((offset) =>
-        spotifyFetcher.apiCall(uri, "GET", {
-          limit,
-          offset,
-          market: "from_token",
-        }),
-      ),
-    );
-    pageResults.forEach((page) => {
-      if (page && page.items) {
-        allItems = allItems.concat(page.items);
-        refreshHeader();
-      }
-    });
-  }
+  const pageResults = await Promise.all(
+    offsetList.map((offset) =>
+      spotifyFetcher.apiCall(uri, "GET", {
+        limit,
+        offset,
+        market: "from_token",
+      }),
+    ),
+  );
+  pageResults.forEach((page) => {
+    if (page && page.items) {
+      allItems = allItems.concat(page.items);
+      refreshHeader();
+    }
+  });
 
   // 3. Process the collected track objects into our global map
   allItems.forEach((item) => {
@@ -2463,6 +2341,7 @@ async function getTracksFromAPI(source, uri) {
             album_id: item.track.album.id,
             uri: item.track.uri,
             preview_url: item.track.preview_url,
+            image_url: (item.track.album.images && item.track.album.images.length > 0) ? item.track.album.images[0].url : null,
             artists: tinyArtists(item.track.artists),
           },
         };
@@ -2764,21 +2643,21 @@ function initPlot() {
   addPlotSelect(document.getElementById("select-xaxis"), "energy");
   addPlotSelect(document.getElementById("select-yaxis"), "loudness");
   addPlotSelect(document.getElementById("select-size"), "popularity");
- 
+
   var pc = document.getElementById("plot-clear");
   if (pc) {
     pc.onclick = function () {
       clearPlot();
     };
   }
- 
+
   var rb = document.getElementById("refetch-button");
   if (rb) {
     rb.onclick = function () {
       refetchCurrentCollection();
     };
   }
- 
+
   window.onresize = function () {
     redrawPlot();
   };
@@ -2889,11 +2768,9 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   }
 
-  console.log("Attaching login button listener...");
   var loginButton = document.getElementById("login-button");
   if (loginButton) {
     loginButton.onclick = function () {
-      console.log("Login button clicked!");
       authorizeUser();
     };
   }
