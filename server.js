@@ -1,9 +1,25 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const SPOTIFY_PROXY_ROUTE = process.env.SPOTIFY_PROXY_ROUTE;
+const SPOTIFY_AUDIO_FEATURES_ROUTE = process.env.SPOTIFY_AUDIO_FEATURES_ROUTE;
+const SPOTIFY_ARTISTS_ROUTE = process.env.SPOTIFY_ARTISTS_ROUTE;
+const SPOTIFY_AUDIO_FEATURES_URL = process.env.SPOTIFY_AUDIO_FEATURES_URL;
+const SPOTIFY_ARTISTS_URL = process.env.SPOTIFY_ARTISTS_URL;
+
+if (
+    !SPOTIFY_PROXY_ROUTE ||
+    !SPOTIFY_AUDIO_FEATURES_ROUTE ||
+    !SPOTIFY_ARTISTS_ROUTE ||
+    !SPOTIFY_AUDIO_FEATURES_URL ||
+    !SPOTIFY_ARTISTS_URL
+) {
+    throw new Error('Missing Spotify endpoint configuration in environment');
+}
 
 // Enable CORS for all routes
 app.use(cors());
@@ -18,7 +34,7 @@ app.get('/health', (_req, res) => {
  * Generic Spotify API proxy endpoint
  * Forwards requests to Spotify API with the access token
  */
-app.post('/api/spotify', async (req, res) => {
+app.post(SPOTIFY_PROXY_ROUTE, async (req, res) => {
     try {
         const { url, method = 'GET', data, accessToken } = req.body;
 
@@ -71,7 +87,7 @@ app.post('/api/spotify', async (req, res) => {
 /**
  * Specific endpoint for audio features (handles large ID lists)
  */
-app.get('/api/spotify/audio-features', async (req, res) => {
+app.get(SPOTIFY_AUDIO_FEATURES_ROUTE, async (req, res) => {
     try {
         const { ids, accessToken } = req.query;
 
@@ -83,7 +99,7 @@ app.get('/api/spotify/audio-features', async (req, res) => {
             return res.status(401).json({ error: 'Access token is required' });
         }
 
-        const url = `https://api.spotify.com/v1/audio-features?ids=${ids}`;
+        const url = `${SPOTIFY_AUDIO_FEATURES_URL}?ids=${ids}`;
 
         const response = await fetch(url, {
             method: 'GET',
@@ -109,7 +125,7 @@ app.get('/api/spotify/audio-features', async (req, res) => {
 /**
  * Specific endpoint for artists (handles large ID lists)
  */
-app.get('/api/spotify/artists', async (req, res) => {
+app.get(SPOTIFY_ARTISTS_ROUTE, async (req, res) => {
     try {
         const { ids, accessToken } = req.query;
 
@@ -121,7 +137,7 @@ app.get('/api/spotify/artists', async (req, res) => {
             return res.status(401).json({ error: 'Access token is required' });
         }
 
-        const url = `https://api.spotify.com/v1/artists?ids=${ids}`;
+        const url = `${SPOTIFY_ARTISTS_URL}?ids=${ids}`;
 
         const response = await fetch(url, {
             method: 'GET',

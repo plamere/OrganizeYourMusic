@@ -81,6 +81,17 @@ var configuredFallbackSpotifyClientId = sanitizeInjectedValue(
 var configuredSpotifyRedirectUri = sanitizeInjectedValue(
   window.SPOTIFY_REDIRECT_URI,
 );
+var configuredSpotifyProxyUrl = sanitizeInjectedValue(window.SPOTIFY_PROXY_URL);
+var configuredSpotifyAuthUrl = sanitizeInjectedValue(window.SPOTIFY_AUTH_URL);
+var configuredSpotifyTokenUrl = sanitizeInjectedValue(window.SPOTIFY_TOKEN_URL);
+var configuredSpotifyMeUrl = sanitizeInjectedValue(window.SPOTIFY_ME_URL);
+var configuredSpotifyMeTracksUrl = sanitizeInjectedValue(window.SPOTIFY_ME_TRACKS_URL);
+var configuredSpotifyMePlaylistsUrl = sanitizeInjectedValue(window.SPOTIFY_ME_PLAYLISTS_URL);
+var configuredSpotifyUsersUrl = sanitizeInjectedValue(window.SPOTIFY_USERS_URL);
+var configuredSpotifyPlaylistsUrl = sanitizeInjectedValue(window.SPOTIFY_PLAYLISTS_URL);
+var configuredSpotifyAudioFeaturesUrl = sanitizeInjectedValue(window.SPOTIFY_AUDIO_FEATURES_URL);
+var configuredSpotifyArtistsUrl = sanitizeInjectedValue(window.SPOTIFY_ARTISTS_URL);
+var configuredSpotifyAlbumsUrl = sanitizeInjectedValue(window.SPOTIFY_ALBUMS_URL);
 var activeSpotifyClientId = null;
 
 function getConfiguredSpotifyClientIds() {
@@ -1449,7 +1460,8 @@ function saveTracksToPlaylist(playlist, inputTracks) {
     }
 
     var url =
-      "https://api.spotify.com/v1/users/" +
+      configuredSpotifyUsersUrl +
+      "/" +
       curUserID +
       "/playlists/" +
       playlist.id +
@@ -1487,7 +1499,7 @@ function savePlaylist() {
   if (curTracks.length > 0) {
     var name = document.getElementById("staging-playlist-name").textContent;
     info("saving " + name);
-    var url = "https://api.spotify.com/v1/users/" + curUserID + "/playlists";
+    var url = configuredSpotifyUsersUrl + "/" + curUserID + "/playlists";
     callSpotify("POST", url, { name: name }, function (ok, results) {
       if (ok) {
         saveTracksToPlaylist(results, curTracks);
@@ -1866,11 +1878,17 @@ function authorizeUser() {
   var codeVerifier = generateRandomString(64);
   window.localStorage.setItem("code_verifier", codeVerifier);
 
+  if (!configuredSpotifyAuthUrl) {
+    error("Spotify auth endpoint missing. Set VITE_SPOTIFY_AUTH_URL.");
+    return;
+  }
+
   sha256(codeVerifier)
     .then(function (hashed) {
       var codeChallenge = base64encode(hashed);
       var authUrl =
-        "https://accounts.spotify.com/authorize?" +
+        configuredSpotifyAuthUrl +
+        "?" +
         "client_id=" +
         encodeURIComponent(clientId) +
         "&response_type=code&show_dialog=false&scope=" +
@@ -1911,8 +1929,12 @@ async function exchangeCodeForToken(code) {
     throw new Error("Spotify client configuration is missing");
   }
 
+  if (!configuredSpotifyTokenUrl) {
+    throw new Error("Spotify token endpoint is missing");
+  }
+
   var codeVerifier = window.localStorage.getItem("code_verifier");
-  const response = await fetch("https://accounts.spotify.com/api/token", {
+  const response = await fetch(configuredSpotifyTokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -1939,12 +1961,16 @@ async function refreshAccessToken() {
     throw new Error("Spotify client configuration is missing");
   }
 
+  if (!configuredSpotifyTokenUrl) {
+    throw new Error("Spotify token endpoint is missing");
+  }
+
   var refreshToken = window.localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
   if (!refreshToken) {
     throw new Error("Refresh token is missing");
   }
 
-  const response = await fetch("https://accounts.spotify.com/api/token", {
+  const response = await fetch(configuredSpotifyTokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -1971,12 +1997,7 @@ async function refreshAccessToken() {
 
 class SpotifyDataFetcher {
   constructor() {
-    // Automatically determine the correct backend URL (local vs prod)
-    this.proxyUrl =
-      window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
-        ? "http://localhost:8000/api/spotify"
-        : "/api/spotify";
+    this.proxyUrl = configuredSpotifyProxyUrl;
     this.queue = [];
     this.activeRequests = 0;
     this.maxConcurrent = 8;
@@ -2170,7 +2191,7 @@ async function getSpotifyP(url, data) {
 }
 
 function fetchCurrentUserProfile() {
-  var url = "https://api.spotify.com/v1/me";
+  var url = configuredSpotifyMeUrl;
   return getSpotifyP(url, null);
 }
 
@@ -2413,7 +2434,7 @@ async function collectAllMetadata(tracks) {
       try {
         if (req.type === "track") {
           const res = await spotifyFetcher.apiCall(
-            "https://api.spotify.com/v1/audio-features",
+            configuredSpotifyAudioFeaturesUrl,
             "GET",
             { ids: req.chunk.join(",") },
           );
@@ -2437,7 +2458,7 @@ async function collectAllMetadata(tracks) {
           }
         } else if (req.type === "artist") {
           const res = await spotifyFetcher.apiCall(
-            "https://api.spotify.com/v1/artists",
+            configuredSpotifyArtistsUrl,
             "GET",
             { ids: req.chunk.join(",") },
           );
@@ -2454,7 +2475,7 @@ async function collectAllMetadata(tracks) {
           }
         } else if (req.type === "album") {
           const res = await spotifyFetcher.apiCall(
-            "https://api.spotify.com/v1/albums",
+            configuredSpotifyAlbumsUrl,
             "GET",
             { ids: req.chunk.join(",") },
           );
@@ -2643,7 +2664,7 @@ async function getSavedTracks() {
   try {
     await getTracksFromAPI(
       "Your Saved tracks",
-      "https://api.spotify.com/v1/me/tracks",
+      configuredSpotifyMeTracksUrl,
     );
     await finalizeCollection();
   } catch (error) {
@@ -2660,7 +2681,7 @@ async function getAllMusic() {
   try {
     await getTracksFromAPI(
       "Your Saved Tracks",
-      "https://api.spotify.com/v1/me/tracks",
+      configuredSpotifyMeTracksUrl,
     );
     await getMusicFromPlaylists(true);
     await finalizeCollection();
@@ -2682,7 +2703,7 @@ async function getMusicFromPlaylists(allPlaylists) {
     // Paginate playlists sequentially to avoid massive overhead upfront
     while (offset < total && !abortLoading) {
       const results = await spotifyFetcher.apiCall(
-        "https://api.spotify.com/v1/me/playlists",
+        configuredSpotifyMePlaylistsUrl,
         "GET",
         { limit: 50, offset },
       );
@@ -2736,7 +2757,7 @@ async function getPlaylistTracks(playlist) {
   const uri = playlist.uri;
   if (isValidPlaylistUri(uri)) {
     const playlistID = getPlaylistPid(uri);
-    const url = `https://api.spotify.com/v1/playlists/${playlistID}/tracks`;
+    const url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
     return getTracksFromAPI(playlist.name, url);
   } else {
     throw new Error("bad playlist URI");
