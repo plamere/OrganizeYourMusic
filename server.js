@@ -160,7 +160,7 @@ app.get(SPOTIFY_ARTISTS_ROUTE, async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Spotify API proxy server running on http://localhost:${PORT}`);
 }).on('error', err => {
     if (err.code === 'EADDRINUSE') {
