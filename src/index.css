@@ -34,11 +34,16 @@
 	}
 
 	.sidebar-item {
-		@apply flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-[13px] font-bold text-zinc-400 transition-all duration-150 hover:bg-white/5 hover:text-white active:scale-[0.98];
+		@apply flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-[13px] font-bold text-zinc-400 transition-all duration-150 hover:bg-white/5 hover:text-white active:scale-[0.98] relative;
 	}
 
 	.sidebar-item.active {
-		@apply bg-white/10 text-white;
+		@apply bg-zinc-800 text-spotify-green;
+	}
+
+	.sidebar-item.active::before {
+		content: '';
+		@apply absolute left-0 top-2 bottom-2 w-1 bg-spotify-green rounded-full;
 	}
 
 	.sidebar-item-count {

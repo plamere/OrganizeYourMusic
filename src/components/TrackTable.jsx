@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { trackColumns } from './columnDefinitions';
 import Tooltip from './Tooltip';
 
@@ -39,10 +39,39 @@ const TrackTable = ({
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState(initialPageSize);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery] = useState('');
     const [hoveredImage, setHoveredImage] = useState(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
     const [lastClickedId, setLastClickedId] = useState(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    const [hiddenColumns, setHiddenColumns] = useState(() => {
+        const saved = localStorage.getItem('oym_hidden_columns');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn("Failed to parse hidden columns:", e);
+            }
+        }
+        return [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('oym_hidden_columns', JSON.stringify(hiddenColumns));
+    }, [hiddenColumns]);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Column Drag and Drop State
     const [draggedColId, setDraggedColId] = useState(null);
@@ -148,7 +177,11 @@ const TrackTable = ({
     // Filter and Reorder columns based on context and relevancy (sorting)
     const activeColumns = useMemo(() => {
         // First, get the base set of columns
-        let cols = trackColumns.filter(col => !isStaging || !col.isExtra);
+        let cols = trackColumns.filter(col => {
+            const isStagingHidden = isStaging && col.isExtra;
+            const isUserHidden = hiddenColumns.includes(col.id);
+            return !isStagingHidden && !isUserHidden;
+        });
 
         // Sort them according to columnOrder
         cols.sort((a, b) => {
@@ -175,7 +208,7 @@ const TrackTable = ({
             }
             return col;
         });
-    }, [isStaging, columnOrder]);
+    }, [isStaging, columnOrder, hiddenColumns]);
 
     // Calculate total width of all sticky columns for scroll padding
     const totalStickyWidth = useMemo(() => {
@@ -248,11 +281,6 @@ const TrackTable = ({
         setLastClickedId(null);
     }, [searchQuery, tracks.length, sortConfig]);
 
-    // Keep sorted results anchored to the beginning of the scroll container.
-    useEffect(() => {
-        if (!tableScrollRef.current) return;
-        tableScrollRef.current.scrollTo({ left: 0, behavior: 'auto' });
-    }, [sortConfig]);
 
     const requestSort = (key) => {
         let direction = 'asc';
@@ -439,6 +467,78 @@ const TrackTable = ({
 
     return (
         <div className="flex flex-col w-full">
+            {/* Table Toolbar */}
+            <div className="flex items-center justify-between p-2 bg-zinc-900/50 border-b border-zinc-800">
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-2">
+                        {filteredTracks.length} Tracks
+                    </span>
+                </div>
+                <div className="relative" ref={dropdownRef}>
+                    <button
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all border shadow-sm ${isDropdownOpen ? 'bg-spotify-green text-black border-spotify-green' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/5'}`}
+                    >
+                        <i className="fa fa-columns"></i>
+                        <span>Hide Columns</span>
+                    </button>
+
+                    {isDropdownOpen && (
+                        <div className="absolute right-0 top-full mt-2 z-100 w-64 max-h-[70vh] overflow-y-auto bg-[#181818] border border-zinc-800 rounded-xl shadow-2xl p-3 custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center justify-between mb-3 px-1">
+                                <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                    Display Columns
+                                </div>
+                                <button
+                                    onClick={() => setHiddenColumns([])}
+                                    className="text-[9px] font-bold text-spotify-green hover:underline uppercase tracking-wider"
+                                >
+                                    Show All
+                                </button>
+                            </div>
+                            <div className="space-y-1">
+                                {trackColumns.map(col => {
+                                    const isHidden = hiddenColumns.includes(col.id);
+                                    const isStagingExtra = isStaging && col.isExtra;
+                                    const isLocked = col.id === 'title' || col.id === 'artist' || col.id === 'index';
+                                    
+                                    if (isStagingExtra) return null;
+
+                                    return (
+                                        <label
+                                            key={col.id}
+                                            className={`flex items-center gap-3 p-2 rounded-lg transition-all ${isHidden ? 'opacity-50 grayscale-[0.5]' : 'bg-white/5'} ${isLocked ? 'cursor-default' : 'cursor-pointer hover:bg-white/10'} group`}
+                                        >
+                                            <div className="relative flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    className="peer appearance-none w-4 h-4 rounded border border-zinc-700 checked:bg-spotify-green checked:border-spotify-green bg-zinc-800 transition-all cursor-pointer disabled:cursor-default"
+                                                    checked={!isHidden}
+                                                    disabled={isLocked}
+                                                    onChange={() => {
+                                                        if (isLocked) return;
+                                                        if (isHidden) {
+                                                            setHiddenColumns(hiddenColumns.filter(id => id !== col.id));
+                                                        } else {
+                                                            setHiddenColumns([...hiddenColumns, col.id]);
+                                                        }
+                                                    }}
+                                                />
+                                                <i className={`fa ${isLocked ? 'fa-lock text-zinc-500' : 'fa-check text-black'} absolute text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity`}></i>
+                                            </div>
+                                            <span className={`text-xs font-semibold transition-colors ${!isHidden ? 'text-white' : 'text-zinc-500'} group-hover:text-white flex items-center gap-2`}>
+                                                {col.label}
+                                                {isLocked && <span className="text-[8px] opacity-50 uppercase tracking-tighter">(Required)</span>}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div
                 ref={tableScrollRef}
                 onDragOver={(e) => onDragOver(e, null)}
@@ -450,7 +550,7 @@ const TrackTable = ({
                     <thead>
                         <tr className="google-visualization-table-tr-head">
                             <th
-                                className="track-header-cell w-12 sticky left-0 bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d] snap-start snap-always box-border"
+                                className="track-header-cell w-12 sticky left-0 bg-[#121212] shadow-[1px_0_0_0_rgba(255,255,255,0.05)] snap-start snap-always box-border"
                                 style={{
                                     minWidth: '48px',
                                     maxWidth: '48px',
@@ -460,17 +560,18 @@ const TrackTable = ({
                                     opacity: 1
                                 }}
                             >
-                                <div className="flex items-center justify-center">
+                                <div className="flex items-center justify-center relative">
                                     <input
                                         type="checkbox"
-                                        className="header-select-all w-4 h-4 text-spotify-green bg-zinc-800 border-zinc-700 rounded focus:ring-spotify-green focus:ring-2 cursor-pointer"
+                                        className="peer appearance-none w-4 h-4 text-spotify-green bg-zinc-800 border border-zinc-700 rounded checked:bg-spotify-green checked:border-spotify-green focus:ring-0 cursor-pointer transition-all"
                                         checked={isAllSelected}
                                         ref={el => el && (el.indeterminate = isSomeSelected)}
                                         onChange={(e) => onToggleAll(e.target.checked, tracks)}
                                     />
+                                    <i className={`fa ${isSomeSelected ? 'fa-minus' : 'fa-check'} absolute text-[10px] text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity`}></i>
                                 </div>
                             </th>
-                            {activeColumns.map((col, colIdx) => {
+                            {activeColumns.map((col) => {
                                 let stickyClass = "";
                                 let style = {
                                     zIndex: 30,
@@ -478,7 +579,7 @@ const TrackTable = ({
                                     opacity: 1
                                 };
                                 if (col.sticky) {
-                                    stickyClass = "sticky bg-[#1a1a1a] shadow-[1px_0_0_0_#2d2d2d]";
+                                    stickyClass = "sticky bg-[#121212] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]";
                                     style = {
                                         ...style,
                                         left: `${col.stickyLeft}px`,
@@ -563,38 +664,51 @@ const TrackTable = ({
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = rowHoverBg;
-                                        // Update all sticky cells in this row
                                         const stickyCells = e.currentTarget.querySelectorAll('.sticky');
                                         stickyCells.forEach(cell => cell.style.backgroundColor = rowHoverBg);
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = rowBg;
-                                        // Update all sticky cells in this row
                                         const stickyCells = e.currentTarget.querySelectorAll('.sticky');
                                         stickyCells.forEach(cell => cell.style.backgroundColor = rowBg);
                                     }}
+                                    onDoubleClick={() => {
+                                        // Double click now just toggles if it's already playing, or we keep it for redundancy
+                                    }}
                                     onClick={(e) => {
+                                        if (e.target.type === 'checkbox') return;
+
                                         const rowId = getTrackId(track);
-                                        const isSelectionAction = e.target.type === 'checkbox' || e.target.closest('.track-play') === null;
-
-                                        if (isSelectionAction && e.target.type !== 'checkbox') {
-                                            if (e.shiftKey && lastClickedId) {
-                                                const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
-                                                const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
-
-                                                if (lastIdx !== -1 && currentIdx !== -1) {
-                                                    const start = Math.min(lastIdx, currentIdx);
-                                                    const end = Math.max(lastIdx, currentIdx);
-                                                    const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
-                                                    const newState = !selectedIds.has(rowId);
-                                                    onToggleSelection(rangeIds, newState);
-                                                    setLastClickedId(rowId);
-                                                    return;
+                                        const isSelecting = !selectedIds.has(rowId);
+                                        
+                                        if (isSelecting) {
+                                            const previewUrl = getPreviewUrl(track);
+                                            onPlayTrack(track.details ? track : {
+                                                ...track,
+                                                id: rowId,
+                                                details: {
+                                                    ...(track.details || {}),
+                                                    preview_url: previewUrl
                                                 }
-                                            }
-                                            onToggleSelection(rowId, !selectedIds.has(rowId));
-                                            setLastClickedId(rowId);
+                                            });
                                         }
+
+                                        if (e.shiftKey && lastClickedId) {
+                                            const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
+                                            const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
+
+                                            if (lastIdx !== -1 && currentIdx !== -1) {
+                                                const start = Math.min(lastIdx, currentIdx);
+                                                const end = Math.max(lastIdx, currentIdx);
+                                                const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
+                                                const newState = !selectedIds.has(rowId);
+                                                onToggleSelection(rangeIds, newState);
+                                                setLastClickedId(rowId);
+                                                return;
+                                            }
+                                        }
+                                        onToggleSelection(rowId, isSelecting);
+                                        setLastClickedId(rowId);
                                     }}
                                 >
                                     <td
@@ -605,72 +719,77 @@ const TrackTable = ({
                                             zIndex: 25,
                                             transform: 'translateZ(0)',
                                             opacity: isDraggingRow ? 0.3 : 1,
-                                            boxShadow: '1px 0 0 0 #2d2d2d',
+                                            boxShadow: '1px 0 0 0 rgba(255,255,255,0.05)',
                                             backgroundColor: rowBg
                                         }}
+                                        onMouseEnter={(e) => {
+                                            const img = getTrackImage(track);
+                                            if (img) {
+                                                setHoveredImage(img);
+                                                setHoverPosition({
+                                                    x: e.clientX,
+                                                    y: e.clientY
+                                                });
+                                            }
+                                        }}
+                                        onMouseMove={(e) => {
+                                            if (hoveredImage) {
+                                                setHoverPosition({
+                                                    x: e.clientX,
+                                                    y: e.clientY
+                                                });
+                                            }
+                                        }}
+                                        onMouseLeave={() => setHoveredImage(null)}
                                     >
-                                        <input
-                                            type="checkbox"
-                                            className="track-select hidden"
-                                            checked={selectedIds.has(rowId)}
-                                            onChange={() => { }} // Handled by onClick for shift support
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const rowId = getTrackId(track);
-                                                const newState = !selectedIds.has(rowId);
+                                        <div className="flex items-center justify-center gap-2 relative">
+                                            <div className="relative flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    className="peer appearance-none w-4 h-4 text-spotify-green bg-zinc-800 border border-zinc-700 rounded checked:bg-spotify-green checked:border-spotify-green focus:ring-0 cursor-pointer transition-all"
+                                                    checked={selectedIds.has(rowId)}
+                                                    onChange={() => { }} // Handled by onClick for shift support
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const rowId = getTrackId(track);
+                                                        const newState = !selectedIds.has(rowId);
+                                                        const previewUrl = getPreviewUrl(track);
 
-                                                if (e.shiftKey && lastClickedId) {
-                                                    const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
-                                                    const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
-
-                                                    if (lastIdx !== -1 && currentIdx !== -1) {
-                                                        const start = Math.min(lastIdx, currentIdx);
-                                                        const end = Math.max(lastIdx, currentIdx);
-                                                        const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
-                                                        onToggleSelection(rangeIds, newState);
-                                                        setLastClickedId(rowId);
-                                                        return;
-                                                    }
-                                                }
-                                                onToggleSelection(rowId, newState);
-                                                setLastClickedId(rowId);
-                                            }}
-                                        />
-                                        {getPreviewUrl(track) ? (
-                                            <i
-                                                className={`track-play fa ${nowPlayingId === rowId && isPlaying ? 'fa-pause text-spotify-green' : 'fa-play text-zinc-500'} hover:text-white cursor-pointer transition-colors`}
-                                                onMouseEnter={(e) => {
-                                                    const img = getTrackImage(track);
-                                                    if (img) {
-                                                        setHoveredImage(img);
-                                                        setHoverPosition({
-                                                            x: e.clientX,
-                                                            y: e.clientY
-                                                        });
-                                                    }
-                                                }}
-                                                onMouseMove={(e) => {
-                                                    if (hoveredImage) {
-                                                        setHoverPosition({
-                                                            x: e.clientX,
-                                                            y: e.clientY
-                                                        });
-                                                    }
-                                                }}
-                                                onMouseLeave={() => setHoveredImage(null)}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onPlayTrack(track.details ? track : {
-                                                        ...track,
-                                                        id: rowId,
-                                                        details: {
-                                                            ...(track.details || {}),
-                                                            preview_url: getPreviewUrl(track)
+                                                        if (newState) {
+                                                            // Play track on highlight
+                                                            onPlayTrack(track.details ? track : {
+                                                                ...track,
+                                                                id: rowId,
+                                                                details: {
+                                                                    ...(track.details || {}),
+                                                                    preview_url: previewUrl
+                                                                }
+                                                            });
                                                         }
-                                                    });
-                                                }}
-                                            ></i>
-                                        ) : null}
+
+                                                        if (e.shiftKey && lastClickedId) {
+                                                            const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
+                                                            const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
+
+                                                            if (lastIdx !== -1 && currentIdx !== -1) {
+                                                                const start = Math.min(lastIdx, currentIdx);
+                                                                const end = Math.max(lastIdx, currentIdx);
+                                                                const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
+                                                                onToggleSelection(rangeIds, newState);
+                                                                setLastClickedId(rowId);
+                                                                return;
+                                                            }
+                                                        }
+                                                        onToggleSelection(rowId, newState);
+                                                        setLastClickedId(rowId);
+                                                    }}
+                                                />
+                                                <i className="fa fa-check absolute text-[10px] text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity"></i>
+                                            </div>
+                                            {nowPlayingId === rowId && isPlaying && (
+                                                <i className="fa fa-volume-up text-spotify-green text-xs animate-pulse"></i>
+                                            )}
+                                        </div>
 
                                         {/* Row Drop Indicator - Rendered in every cell to overcome sticky stacking context */}
                                         {dropTargetRowId === rowId && (

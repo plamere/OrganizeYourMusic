@@ -45,6 +45,20 @@ const Sidebar = ({
             prevExpandedGlobally.current = isExpandedGlobally;
         }
     }, [isExpandedGlobally, theWorld]);
+ 
+    // Auto-expand section containing activeNode
+    useEffect(() => {
+        if (activeNode) {
+            // Find which bin this node belongs to
+            const bin = theWorld.find(b => b.nodes.some(n => n.name === activeNode.name));
+            if (bin && expandedSections[bin.name] === false) {
+                setExpandedSections(prev => ({
+                    ...prev,
+                    [bin.name]: true
+                }));
+            }
+        }
+    }, [activeNode, theWorld]);
 
     const toggleSection = (name) => {
         setExpandedSections(prev => ({
@@ -184,10 +198,7 @@ const Sidebar = ({
                                                 className={`sidebar-item ${isActive ? 'active' : ''}`}
                                             >
                                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                                    {isActive && (
-                                                        <div className="w-1 h-1 rounded-full bg-spotify-green shadow-[0_0_6px_rgba(29,185,84,0.6)]"></div>
-                                                    )}
-                                                    <span className={`truncate transition-colors ${isActive ? 'text-spotify-green' : ''}`}>
+                                                    <span className={`truncate transition-colors ${isActive ? 'text-spotify-green font-black' : ''}`}>
                                                         {uname(node.name)}
                                                     </span>
                                                 </div>

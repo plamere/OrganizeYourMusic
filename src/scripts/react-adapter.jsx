@@ -8,12 +8,21 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
     const [tracks, setTracks] = useState(initialTracks || []);
     const [selectedIds, setSelectedIds] = useState(new Set(window.curSelected || []));
     const [nowPlayingId, setNowPlayingId] = useState(window.nowPlaying ? window.nowPlaying.id : null);
-    const [isPlaying, setIsPlaying] = useState(window.audio ? !window.audio.paused : false);
+    const [isPlaying, setIsPlaying] = useState(!!window.nowPlaying);
 
     // Sync with tracks prop change
     useEffect(() => {
         console.log("TableWrapper received new tracks:", initialTracks?.length, "isStaging:", isStaging);
         setTracks(initialTracks || []);
+        
+        // Auto-play the first track when a new collection is loaded (not in staging)
+        if (!isStaging && initialTracks && initialTracks.length > 0) {
+            const firstTrack = initialTracks[0];
+            // Small delay to ensure the player container is ready and window.playTrack is available
+            setTimeout(() => {
+                handlePlayTrack(firstTrack);
+            }, 500);
+        }
     }, [initialTracks, isStaging]);
 
     // Sync with global state changes from legacy JS
@@ -33,7 +42,7 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
                 setNowPlayingId(null);
             }
 
-            const playing = window.audio ? !window.audio.paused : false;
+            const playing = !!window.nowPlaying;
             if (playing !== isPlaying) {
                 setIsPlaying(playing);
             }

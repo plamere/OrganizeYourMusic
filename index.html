@@ -175,7 +175,7 @@
     .track-header-cell {
       box-sizing: border-box !important;
       padding: 12px 16px !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+      border-bottom: none !important;
       border-top: none !important;
       border-left: none !important;
       border-right: none !important;
@@ -388,14 +388,57 @@
       align-items: center !important;
       flex-wrap: nowrap !important;
       width: auto !important;
+      background-color: rgba(24, 24, 27, 0.8) !important;
+      padding: 4px !important;
+      border-radius: 8px !important;
+      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+      backdrop-filter: blur(4px) !important;
+      margin-right: 8px !important;
+      margin-top: 8px !important;
     }
 
     .modebar-group {
       display: flex !important;
       flex-direction: row !important;
-      align-items: space-evenly !important;
-      margin-left: 8px !important;
+      align-items: center !important;
+      margin-left: 4px !important;
       padding: 0 !important;
+      background-color: transparent !important;
+    }
+
+    .modebar-btn {
+      padding: 4px 6px !important;
+      border-radius: 4px !important;
+    }
+
+    .modebar-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .modebar-btn path {
+      fill: #a1a1aa !important;
+    }
+
+    .modebar-btn.active path {
+      fill: #1db954 !important;
+    }
+
+    /* Plotly SVG container fixes */
+    .js-plotly-plot .plotly .main-svg {
+      background: transparent !important;
+    }
+
+    .js-plotly-plot .plotly .modebar-container {
+      z-index: 100 !important;
+    }
+
+    #header-tabs .group.active a {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #1db954;
+    }
+
+    #header-tabs a:active {
+      transform: scale(0.95);
     }
 
     .animations-disabled-root *,
@@ -423,12 +466,39 @@
         <span class="truncate">Organize <span class="text-zinc-500 font-bold">Your Music</span></span>
       </a>
     </div>
+    <ul id="header-tabs"
+      class="nav nav-tabs hidden items-center gap-1 bg-zinc-900/50 p-1 rounded-full border border-white/5 transition-all duration-300">
+      <li class="active group">
+        <a id="the-track-list-tab" href="#the-track-list" data-toggle="tab"
+          class="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white rounded-full group-[.active]:bg-zinc-800 group-[.active]:text-spotify-green transition-all duration-200">
+          <i class="fa fa-list"></i>
+          <span class="hidden lg:inline">Track List</span>
+        </a>
+      </li>
+      <li class="group">
+        <a id="the-plots-tab" href="#the-plots" data-toggle="tab"
+          class="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white rounded-full group-[.active]:bg-zinc-800 group-[.active]:text-spotify-green transition-all duration-200">
+          <i class="fa fa-bar-chart"></i>
+          <span class="hidden lg:inline">Plots</span>
+        </a>
+      </li>
+      <li class="group">
+        <a href="#staging" id="staging-tab" data-toggle="tab"
+          class="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white rounded-full group-[.active]:bg-zinc-800 group-[.active]:text-spotify-green transition-all duration-200">
+          <i class="fa fa-music"></i>
+          <span class="hidden lg:inline">Staging</span>
+          <span
+            class="bg-spotify-light/20 text-spotify-light px-1.5 py-0.5 rounded-full text-[9px] font-black nstaging-tracks shadow-sm">0</span>
+        </a>
+      </li>
+    </ul>
 
     <div class="flex items-center gap-2 md:gap-3">
       <div id="info"
         class="hidden items-center gap-3 bg-zinc-900/80 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-zinc-800 transition-all hover:bg-zinc-800/90">
         <i class="fa fa-user text-zinc-500"></i>
-        <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged in
+        <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged
+          in
           as</span>
         <div id="who-carousel" class="who-carousel text-xs md:text-sm font-bold text-zinc-200 max-w-25 md:max-w-56">
           <span id="who-track" class="who-carousel-track">
@@ -916,34 +986,9 @@
           </div>
 
           <div id="exTab3" class="w-full flex-1 flex flex-col min-h-0">
-            <ul class="nav nav-tabs flex border-b border-zinc-800/50 mb-4 gap-1 px-1 overflow-x-auto no-scrollbar">
-              <li class="active group">
-                <a id="the-track-list-tab" href="#the-track-list" data-toggle="tab"
-                  class="flex items-center gap-2 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/30 rounded-t-xl group-[.active]:text-white group-[.active]:border-b-2 group-[.active]:border-spotify-green transition-all duration-200">
-                  <i class="fa fa-list text-sm"></i>
-                  <span>Track List</span>
-                </a>
-              </li>
-              <li class="group">
-                <a id="the-plots-tab" href="#the-plots" data-toggle="tab"
-                  class="flex items-center gap-2 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/30 rounded-t-xl group-[.active]:text-white group-[.active]:border-b-2 group-[.active]:border-spotify-green transition-all duration-200">
-                  <i class="fa fa-bar-chart text-sm"></i>
-                  <span>Plots</span>
-                </a>
-              </li>
-              <li class="group">
-                <a href="#staging" id="staging-tab" data-toggle="tab"
-                  class="flex items-center gap-2 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/30 rounded-t-xl group-[.active]:text-white group-[.active]:border-b-2 group-[.active]:border-spotify-green transition-all duration-200">
-                  <i class="fa fa-music text-sm"></i>
-                  <span>Staging</span>
-                  <span
-                    class="bg-spotify-green/20 text-spotify-green px-2 py-0.5 rounded-full text-[12px] font-black nstaging-tracks shadow-sm">0</span>
-                </a>
-              </li>
-            </ul>
 
-            <div class="tab-content flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-              <div class="tab-pane active" id="the-track-list">
+            <div class="tab-content flex-1 min-h-0">
+              <div class="tab-pane active h-full overflow-y-auto custom-scrollbar" id="the-track-list">
                 <div class="flex flex-col mb-4">
                   <div class="flex items-center gap-3">
                     <h4 id="playlist-title" class="text-2xl font-black text-white mb-1"></h4>
@@ -961,6 +1006,26 @@
                   <div id="playlist-sub-title" class="text-zinc-400 text-sm font-medium"></div>
                 </div>
 
+                <!-- Floating Spotify Player -->
+                <div id="spotify-player-container"
+                  class="hidden fixed bottom-2 left-2 z-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div class="relative group">
+                    <div
+                      class="absolute -inset-1 bg-spotify-green/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500">
+                    </div>
+                    <div class="relative backdrop-blur-2xl rounded-2xl overflow-hidden">
+                      <button onclick="window.stopTrack()"
+                        class="absolute top-1 right-1 w-6 h-6 bg-zinc-900/50 backdrop-blur-md rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all z-10 opacity-0 group-hover:opacity-100">
+                        <i class="fa fa-times text-[10px]"></i>
+                      </button>
+                      <iframe id="spotify-player" src="" width="300" height="80" frameborder="0"
+                        allowtransparency="true"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        class="rounded-xl"></iframe>
+                    </div>
+                  </div>
+                </div>
+
                 <div id="track-table-empty"
                   class="hidden items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 px-6 py-20 text-center">
                   <div class="text-zinc-500 m-2">
@@ -971,10 +1036,9 @@
                   </div>
                 </div>
 
-                <div id="track-table-shell"
-                  class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden border border-zinc-800">
+                <div id="track-table-shell" class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden">
                   <div class="overflow-x-auto w-full">
-                    <div id="gthe-track-table" class="w-full text-left min-h-125 border border-red-500/10"></div>
+                    <div id="gthe-track-table" class="w-full text-left min-h-125"></div>
                   </div>
                   <div id="gthe-track-table-truncated"
                     class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
@@ -985,52 +1049,51 @@
                 </div>
               </div>
 
-              <div class="tab-pane" id="the-plots">
+              <div class="tab-pane flex flex-col min-h-0 h-full" id="the-plots">
                 <div id="plot-controls"
                   class="mb-6 w-full rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 shadow-xl">
-                  <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div class="text-[10px] font-black uppercase tracking-widest text-white mb-1">
+                      <div class="text-[10px] font-black uppercase tracking-widest text-white mb-0.5">
                         Plot Configuration
                       </div>
-                      <div class="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">
+                      <div class="text-[9px] text-zinc-500 font-bold uppercase tracking-tight">
                         Map audio metrics to axes and bubble dimensions.
                       </div>
                     </div>
                     <button id="plot-clear" title="Clear all tracks from the plot"
-                      class="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/5 px-5 py-2.5 text-[9px] font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/15 hover:text-red-300">
+                      class="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/5 px-4 py-2 text-[9px] font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/15 hover:text-red-300 active:scale-95">
                       <i class="fa fa-trash text-xs"></i> Clear Plot
                     </button>
                   </div>
 
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-black/20 p-4 rounded-xl border border-white/3">
-                    <div class="space-y-2">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <div class="space-y-1.5">
                       <label for="select-xaxis"
-                        class="block text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">X-Axis
-                        Variable</label>
-                      <select id="select-xaxis" class="spotify-select py-2.5 px-4"></select>
+                        class="block text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">X-Axis</label>
+                      <select id="select-xaxis" class="spotify-select py-2 px-3 text-[11px]"></select>
                     </div>
-                    <div class="space-y-2">
+                    <div class="space-y-1.5">
                       <label for="select-yaxis"
-                        class="block text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">Y-Axis
-                        Variable</label>
-                      <select id="select-yaxis" class="spotify-select py-2.5 px-4"></select>
+                        class="block text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Y-Axis</label>
+                      <select id="select-yaxis" class="spotify-select py-2 px-3 text-[11px]"></select>
                     </div>
-                    <div class="space-y-2">
+                    <div class="space-y-1.5">
                       <label for="select-size"
-                        class="block text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">Bubble
-                        Dimension</label>
-                      <select id="select-size" class="spotify-select py-2.5 px-4"></select>
+                        class="block text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Bubble
+                        Size</label>
+                      <select id="select-size" class="spotify-select py-2 px-3 text-[11px]"></select>
                     </div>
                   </div>
                 </div>
 
-                <div class="bg-zinc-900 rounded-xl shadow-xl p-4 border border-zinc-800 w-full relative">
-                  <div id="the-plot" class="w-full min-h-125"></div>
+                <div
+                  class="bg-zinc-900 rounded-2xl shadow-xl p-2 md:p-4 border border-zinc-800 w-full relative flex-1 min-h-0 overflow-hidden">
+                  <div id="the-plot" class="w-full h-full"></div>
                 </div>
               </div>
 
-              <div class="tab-pane" id="staging">
+              <div class="tab-pane h-full overflow-y-auto custom-scrollbar" id="staging">
                 <div id="staging-empty"
                   class="max-w-3xl mx-auto bg-zinc-900/50 backdrop-blur-md p-16 rounded-3xl shadow-2xl border border-white/5 text-center mt-12">
                   <div

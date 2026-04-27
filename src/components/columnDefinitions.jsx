@@ -249,7 +249,7 @@ export const trackColumns = [
     },
     {
         id: 'popularity',
-        label: 'Pop',
+        label: 'Popularity',
         sortKey: 'popularity',
         align: 'center',
         getValue: (track) => getField(track, 'popularity') ?? -1,
@@ -259,7 +259,7 @@ export const trackColumns = [
     },
     {
         id: 'duration',
-        label: 'Dur',
+        label: 'Duration',
         sortKey: 'duration_ms',
         align: 'center',
         getValue: (track) => getField(track, 'duration_ms') ?? 0,
@@ -283,7 +283,7 @@ export const trackColumns = [
     },
     {
         id: 'tempo',
-        label: 'BPM',
+        label: 'Tempo',
         sortKey: 'tempo',
         align: 'center',
         isExtra: true,
@@ -294,7 +294,7 @@ export const trackColumns = [
     },
     {
         id: 'energy',
-        label: 'Eng',
+        label: 'Energy',
         sortKey: 'energy',
         align: 'center',
         isExtra: true,
@@ -305,7 +305,7 @@ export const trackColumns = [
     },
     {
         id: 'danceability',
-        label: 'Dnc',
+        label: 'Dance',
         sortKey: 'danceability',
         align: 'center',
         isExtra: true,
@@ -316,7 +316,7 @@ export const trackColumns = [
     },
     {
         id: 'valence',
-        label: 'Val',
+        label: 'Valence',
         sortKey: 'valence',
         align: 'center',
         isExtra: true,
@@ -327,7 +327,7 @@ export const trackColumns = [
     },
     {
         id: 'happiness',
-        label: 'Hap',
+        label: 'Happiness',
         sortKey: 'happiness',
         align: 'center',
         isExtra: true,
@@ -338,7 +338,7 @@ export const trackColumns = [
     },
     {
         id: 'anger',
-        label: 'Ang',
+        label: 'Anger',
         sortKey: 'anger',
         align: 'center',
         isExtra: true,
@@ -349,7 +349,7 @@ export const trackColumns = [
     },
     {
         id: 'acousticness',
-        label: 'Acst',
+        label: 'Acoustic',
         sortKey: 'acousticness',
         align: 'center',
         isExtra: true,
@@ -360,7 +360,7 @@ export const trackColumns = [
     },
     {
         id: 'instrumentalness',
-        label: 'Inst',
+        label: 'Instrumental',
         sortKey: 'instrumentalness',
         align: 'center',
         isExtra: true,
@@ -371,7 +371,7 @@ export const trackColumns = [
     },
     {
         id: 'speechiness',
-        label: 'Spc',
+        label: 'Speech',
         sortKey: 'speechiness',
         align: 'center',
         isExtra: true,
@@ -382,7 +382,7 @@ export const trackColumns = [
     },
     {
         id: 'liveness',
-        label: 'Live',
+        label: 'Liveness',
         sortKey: 'liveness',
         align: 'center',
         isExtra: true,
@@ -415,7 +415,7 @@ export const trackColumns = [
     },
     {
         id: 'time_signature',
-        label: 'TS',
+        label: 'Time Sig',
         sortKey: 'time_signature',
         align: 'center',
         isExtra: true,
@@ -437,7 +437,7 @@ export const trackColumns = [
     },
     {
         id: 'track_number',
-        label: 'Trk',
+        label: 'Track #',
         sortKey: 'track_number',
         align: 'center',
         isExtra: true,
@@ -448,7 +448,7 @@ export const trackColumns = [
     },
     {
         id: 'disc_number',
-        label: 'Dsc',
+        label: 'Disc #',
         sortKey: 'disc_number',
         align: 'center',
         isExtra: true,
@@ -459,7 +459,7 @@ export const trackColumns = [
     },
     {
         id: 'release_date',
-        label: 'Rel Date',
+        label: 'Release',
         sortKey: 'release_date',
         align: 'center',
         isExtra: true,
@@ -470,7 +470,7 @@ export const trackColumns = [
     },
     {
         id: 'last_played_at',
-        label: 'Played',
+        label: 'Played At',
         sortKey: 'last_played_at',
         align: 'center',
         isExtra: true,
@@ -484,7 +484,7 @@ export const trackColumns = [
     },
     {
         id: 'context_type',
-        label: 'Ctx',
+        label: 'Context',
         sortKey: 'context_type',
         align: 'center',
         isExtra: true,
@@ -495,7 +495,7 @@ export const trackColumns = [
     },
     {
         id: 'explicit',
-        label: 'Exp',
+        label: 'Explicit',
         sortKey: 'explicit',
         align: 'center',
         isExtra: true,

@@ -407,6 +407,12 @@ function restartAuthorization(message) {
     el.classList.add("hidden");
     el.classList.remove("flex");
   });
+
+  var headerTabs = document.getElementById("header-tabs");
+  if (headerTabs) {
+    headerTabs.classList.add("hidden");
+    headerTabs.classList.remove("flex");
+  }
 }
 
 var theWorld = [
@@ -1012,8 +1018,12 @@ function getPlotData(node) {
       sizemode: "diameter",
       size: [],
       sizeref: 1,
-      sizemin: 2,
+      sizemin: 4,
       color: "#1DB954",
+      line: {
+        color: "rgba(255, 255, 255, 0.2)",
+        width: 1,
+      },
     },
   };
   var xGetter = plottableData[xDataName].getter;
@@ -1040,6 +1050,7 @@ function normalizeSizes(tracks) {
   var maxSize = sizeInfo.max;
   var out = [];
   var range = maxSize - minSize;
+  if (range <= 0) range = 1;
   var orange = maxWidth - minWidth;
   tracks.forEach(function (track) {
     var val = sizeInfo.getter(track);
@@ -1064,52 +1075,82 @@ function plotPlaylist(node) {
 }
 
 function getLayout() {
-  var xDataName = document.getElementById("select-xaxis").value;
-  var yDataName = document.getElementById("select-yaxis").value;
-  var plotHost = document.getElementById("the-plot").parentElement;
-  var xMargin = 16;
-  var yMargin = 180;
-  var yFooter = 24;
-  var minHeight = 420;
-  var minWidth = 300;
+  const xDataName = document.getElementById("select-xaxis").value;
+  const yDataName = document.getElementById("select-yaxis").value;
+  const plotHost = document.getElementById("the-plot");
 
-  var width = plotHost.clientWidth - xMargin;
-  if (width < minWidth) width = minWidth;
-  var plotControls = document.getElementById("plot-controls");
-  var controlsHeight = plotControls ? plotControls.offsetHeight : 0;
-  var tabsList = document.querySelector("#exTab3 > ul.nav");
-  var tabsHeight = tabsList ? tabsList.offsetHeight : 0;
-  var height =
-    window.innerHeight - yMargin - yFooter - controlsHeight - tabsHeight;
-  if (height < minHeight) height = minHeight;
-  var layout = {
+  if (!plotHost) return {};
+
+  const width = plotHost.clientWidth;
+  const height = plotHost.clientHeight;
+
+  const layout = {
     showlegend: true,
-    legend: { orientation: "v", font: { color: "#b3b3b3" } },
+    legend: {
+      orientation: "h",
+      y: -0.2,
+      x: 0.5,
+      xanchor: "center",
+      font: { color: "#71717a", size: 10 },
+      bgcolor: "rgba(0,0,0,0)",
+    },
     hovermode: "closest",
     xaxis: {
-      title: plottableData[xDataName].name,
-      color: "#b3b3b3",
-      gridcolor: "#3E3E3E",
-      zerolinecolor: "#3E3E3E",
+      title: {
+        text: plottableData[xDataName].name.toUpperCase(),
+        font: {
+          size: 10,
+          color: "#71717a",
+          family: "Inter, system-ui, sans-serif",
+          weight: 900,
+        },
+        standoff: 20,
+      },
+      color: "#3f3f46",
+      gridcolor: "rgba(255,255,255,0.03)",
+      zerolinecolor: "rgba(255,255,255,0.05)",
+      tickfont: { color: "#71717a", size: 9 },
+      automargin: true,
     },
     yaxis: {
-      title: plottableData[yDataName].name,
-      color: "#b3b3b3",
-      gridcolor: "#3E3E3E",
-      zerolinecolor: "#3E3E3E",
+      title: {
+        text: plottableData[yDataName].name.toUpperCase(),
+        font: {
+          size: 10,
+          color: "#71717a",
+          family: "Inter, system-ui, sans-serif",
+          weight: 900,
+        },
+        standoff: 20,
+      },
+      color: "#3f3f46",
+      gridcolor: "rgba(255,255,255,0.03)",
+      zerolinecolor: "rgba(255,255,255,0.05)",
+      tickfont: { color: "#71717a", size: 9 },
+      automargin: true,
     },
     autosize: true,
-    margin: { l: 55, r: 90, t: 30, b: 55 },
-    width: width,
-    height: height,
+    margin: { l: 60, r: 40, t: 40, b: 80 },
+    width: width > 0 ? width : undefined,
+    height: height > 0 ? height : undefined,
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
-    font: { color: "#b3b3b3" },
+    font: {
+      color: "#e4e4e7",
+      family: "Inter, system-ui, sans-serif",
+    },
+    hoverlabel: {
+      bgcolor: "#18181b",
+      bordercolor: "#3f3f46",
+      font: { color: "#ffffff", size: 12 },
+    },
   };
   return layout;
 }
 
 function redrawPlot() {
+  if (!thePlot) thePlot = document.getElementById("the-plot");
+  if (!thePlot) return;
   var layout = getLayout();
   var plotData = [];
   curPlottingNames = [];
@@ -1119,32 +1160,42 @@ function redrawPlot() {
     curPlottingNames.push(name);
     plotData.push(getPlotData(node));
   });
-  Plotly.newPlot(thePlot, plotData, layout, {
-    displayLogo: false,
-    displayModeBar: false,
-    responsive: true,
-  });
-  thePlot.on("plotly_click", function (data) {
-    if (data.points.length > 0) {
-      var idx = data.points[0].pointNumber;
-      var track = data.points[0].data.node.tracks[idx];
-      playTrack(track);
-    }
-  });
 
-  thePlot.on("plotly_selected", function (data) {
-    var trackList = [];
-    data.points.forEach(function (point) {
-      var plotName = curPlottingNames[point.curveNumber];
-      var track = curPlottingNodes[plotName].tracks[point.pointNumber];
-      trackList.push(track);
-      curSelected.add(track.id);
+  requestAnimationFrame(function () {
+    Plotly.react(thePlot, plotData, layout, {
+      displayLogo: false,
+      displayModeBar: true,
+      modeBarButtonsToRemove: ["toImage", "sendDataToCloud"],
+      responsive: true,
+    }).then(function () {
+      if (!thePlot._hasClickEvent) {
+        thePlot.on("plotly_click", function (data) {
+          if (data.points.length > 0) {
+            var idx = data.points[0].pointNumber;
+            var track = data.points[0].data.node.tracks[idx];
+            playTrack(track);
+          }
+        });
+        thePlot._hasClickEvent = true;
+      }
+
+      if (!thePlot._hasSelectedEvent) {
+        thePlot.on("plotly_selected", function (data) {
+          if (data && data.points) {
+            data.points.forEach(function (point) {
+              var plotName = curPlottingNames[point.curveNumber];
+              var track = curPlottingNodes[plotName].tracks[point.pointNumber];
+              curSelected.add(track.id);
+            });
+            var elements = document.querySelectorAll(".nstaging-tracks");
+            elements.forEach(function (el) {
+              el.textContent = curSelected.size;
+            });
+          }
+        });
+        thePlot._hasSelectedEvent = true;
+      }
     });
-    var elements = document.querySelectorAll(".nstaging-tracks");
-    elements.forEach(function (el) {
-      el.textContent = curSelected.size;
-    });
-    info("selected " + trackList.length + " tracks");
   });
 }
 
@@ -1155,6 +1206,7 @@ function clearPlot() {
 
 function showPlaylist(node) {
   curNode = node;
+  window.curNode = node;
   if (theTrackTable == null) return;
 
   if (stagingIsVisible) {
@@ -1162,6 +1214,7 @@ function showPlaylist(node) {
     showTab("#the-track-list-tab");
   }
   curNode = node;
+  window.curNode = node;
 
   var displayTracks =
     currentSearchQuery.trim() !== ""
@@ -1566,63 +1619,63 @@ function updateViewOfTheWorld(_quick) {
 
 var plottableData = {
   energy: {
-    name: "energy",
+    name: "Energy",
     min: 0,
     max: 1,
     getter: featGetterPercent("energy"),
   },
   danceability: {
-    name: "danceability",
+    name: "Danceability",
     min: 0,
     max: 1,
     getter: featGetterPercent("danceability"),
   },
   valence: {
-    name: "valence",
+    name: "Valence (Mood)",
     min: 0,
     max: 1,
     getter: featGetterPercent("valence"),
   },
   duration: {
-    name: "duration",
+    name: "Duration",
     min: 0,
-    max: 1500,
-    getter: featGetter("duration"),
+    max: 1500 * 1000,
+    getter: featGetter("duration_ms"),
   },
-  tempo: { name: "tempo", min: 40, max: 240, getter: featGetter("tempo") },
-  anger: { name: "anger", min: 0, max: 1, getter: featGetterPercent("anger") },
+  tempo: { name: "Tempo (BPM)", min: 40, max: 240, getter: featGetter("tempo") },
+  anger: { name: "Anger", min: 0, max: 1, getter: featGetterPercent("anger") },
   happiness: {
-    name: "happiness",
+    name: "Happiness",
     min: 0,
     max: 1,
     getter: featGetterPercent("happiness"),
   },
   loudness: {
-    name: "loudness",
+    name: "Loudness (dB)",
     min: -30,
     max: 0,
     getter: featGetter("loudness"),
   },
   acousticness: {
-    name: "acousticness",
+    name: "Acousticness",
     min: 0,
     max: 1,
     getter: featGetterPercent("acousticness"),
   },
   liveness: {
-    name: "live",
+    name: "Liveness",
     min: 0,
     max: 1,
     getter: featGetterPercent("liveness"),
   },
   speechiness: {
-    name: "speechiness",
+    name: "Speechiness",
     min: 0,
     max: 1,
     getter: featGetterPercent("speechiness"),
   },
   popularity: {
-    name: "popularity",
+    name: "Popularity",
     min: 0,
     max: 100,
     getter: featGetter("popularity"),
@@ -1630,13 +1683,13 @@ var plottableData = {
   age: {
     min: 0,
     max: 5000,
-    name: "days-since-added",
+    name: "Days Since Added",
     getter: featGetter("age"),
   },
   year: {
     min: 1950,
-    max: 2020,
-    name: "release-year",
+    max: 2026,
+    name: "Release Year",
     getter: featGetter("year"),
   },
 };
@@ -2299,10 +2352,18 @@ function fetchCurrentUserProfile() {
 
 
 function playTrack(track) {
+  const player = document.getElementById("spotify-player");
+  const container = document.getElementById("spotify-player-container");
+
   if (track != nowPlaying) {
+    if (player && container) {
+      const trackId = track.id || (track.track && track.track.id) || (track.details && track.details.id);
+      if (trackId) {
+        player.src = `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0&autoplay=1&auto_play=true`;
+        container.classList.remove("hidden");
+      }
+    }
     audio.pause();
-    audio.src = track.details.preview_url;
-    audio.play();
     nowPlaying = track;
   } else {
     stopTrack();
@@ -2312,10 +2373,21 @@ function playTrack(track) {
 function stopTrack() {
   audio.pause();
   nowPlaying = null;
+  const container = document.getElementById("spotify-player-container");
+  if (container) {
+    container.classList.add("hidden");
+  }
+  const player = document.getElementById("spotify-player");
+  if (player) {
+    player.src = "";
+  }
   document.querySelectorAll(".playing").forEach(function (el) {
     el.classList.remove("playing");
   });
 }
+
+window.playTrack = playTrack;
+window.stopTrack = stopTrack;
 
 
 
@@ -2433,6 +2505,12 @@ function showLoadedState() {
   if (toggleSidebarBtn) {
     toggleSidebarBtn.classList.remove("hidden");
     toggleSidebarBtn.classList.add("md:flex");
+  }
+
+  var headerTabs = document.getElementById("header-tabs");
+  if (headerTabs) {
+    headerTabs.classList.remove("hidden");
+    headerTabs.classList.add("flex");
   }
 
   // Restore sidebar visibility state
@@ -3014,9 +3092,9 @@ function initPlot() {
     };
   }
 
-  window.onresize = function () {
+  window.addEventListener("resize", function () {
     redrawPlot();
-  };
+  });
   clearPlot();
 }
 
@@ -3301,6 +3379,12 @@ document.addEventListener("DOMContentLoaded", function () {
     if (toggleSidebarBtn) {
       toggleSidebarBtn.classList.add("hidden");
       toggleSidebarBtn.classList.remove("md:flex");
+    }
+
+    var headerTabs = document.getElementById("header-tabs");
+    if (headerTabs) {
+      headerTabs.classList.add("hidden");
+      headerTabs.classList.remove("flex");
     }
 
     var mainWrapper = document.getElementById("main-wrapper");
