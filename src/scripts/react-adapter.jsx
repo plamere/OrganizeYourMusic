@@ -145,7 +145,7 @@ const SidebarWrapper = ({ initialWorld }) => {
             }
         }, 1000); // Increased interval to reduce CPU churn
         return () => clearInterval(interval);
-    }, [activeNode, isExpandedGlobally]);
+    }, [activeNode, isExpandedGlobally, world]);
 
     const handleNodeClick = (node) => {
         if (window.plotPlaylist) window.plotPlaylist(node);
