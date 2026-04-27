@@ -46,9 +46,12 @@ const Sidebar = ({
         }
     }, [isExpandedGlobally, theWorld]);
  
-    // Auto-expand section containing activeNode
+    const lastHandledNodeRef = useRef(null);
+
+    // Auto-expand section containing activeNode only when it changes
     useEffect(() => {
-        if (activeNode) {
+        if (activeNode && activeNode.name !== lastHandledNodeRef.current) {
+            lastHandledNodeRef.current = activeNode.name;
             // Find which bin this node belongs to
             const bin = theWorld.find(b => b.nodes.some(n => n.name === activeNode.name));
             if (bin && expandedSections[bin.name] === false) {
@@ -58,7 +61,7 @@ const Sidebar = ({
                 }));
             }
         }
-    }, [activeNode, theWorld]);
+    }, [activeNode, theWorld, expandedSections]);
 
     const toggleSection = (name) => {
         setExpandedSections(prev => ({

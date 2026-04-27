@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { trackColumns } from './columnDefinitions';
 import Tooltip from './Tooltip';
 
@@ -197,9 +198,9 @@ const TrackTable = ({
         let currentLeft = 48; // Base checkbox/play column
         return cols.map(col => {
             if (col.sticky) {
-                let width = 150;
-                if (col.id === 'title') width = 240;
-                else if (col.id === 'artist') width = 200;
+                let width = 120;
+                if (col.id === 'title') width = 250;
+                else if (col.id === 'artist') width = 180;
                 else if (col.id === 'index') width = 48;
 
                 const colWithOffset = { ...col, stickyLeft: currentLeft, widthPx: width };
@@ -215,7 +216,7 @@ const TrackTable = ({
         let width = 48; // Base checkbox/play column
         activeColumns.forEach(col => {
             if (col.sticky) {
-                width += col.widthPx || 0;
+                width += col.width || 0;
             }
         });
         return width;
@@ -467,33 +468,37 @@ const TrackTable = ({
 
     return (
         <div className="flex flex-col w-full">
-            {/* Table Toolbar */}
-            <div className="flex items-center justify-between p-2 bg-zinc-900/50 border-b border-zinc-800">
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-2">
-                        {filteredTracks.length} Tracks
-                    </span>
-                </div>
-                <div className="relative" ref={dropdownRef}>
+            {/* Portal for Hide Columns Button */}
+            {typeof document !== 'undefined' && document.getElementById('playlist-actions-container') && createPortal(
+                <div className="relative inline-block" ref={dropdownRef}>
                     <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all border shadow-sm ${isDropdownOpen ? 'bg-spotify-green text-black border-spotify-green' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/5'}`}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm h-7 ${isDropdownOpen ? 'bg-spotify-green text-black border-spotify-green' : 'bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/5'}`}
                     >
-                        <i className="fa fa-columns"></i>
-                        <span>Hide Columns</span>
+                        <i className="fa fa-columns text-[10px]"></i>
+                        <span>Columns</span>
                     </button>
 
                     {isDropdownOpen && (
-                        <div className="absolute right-0 top-full mt-2 z-100 w-64 max-h-[70vh] overflow-y-auto bg-[#181818] border border-zinc-800 rounded-xl shadow-2xl p-3 custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="absolute left-0 top-full mt-2 z-1000 w-64 max-h-[70vh] overflow-y-auto bg-[#181818] border border-zinc-800 rounded-xl shadow-2xl p-3 custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
                             <div className="flex items-center justify-between mb-3 px-1">
                                 <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                                     Display Columns
                                 </div>
                                 <button
-                                    onClick={() => setHiddenColumns([])}
+                                    onClick={() => {
+                                        if (hiddenColumns.length > 0) {
+                                            setHiddenColumns([]);
+                                        } else {
+                                            const allOptionalIds = trackColumns
+                                                .filter(c => c.id !== 'title' && c.id !== 'artist' && c.id !== 'index')
+                                                .map(c => c.id);
+                                            setHiddenColumns(allOptionalIds);
+                                        }
+                                    }}
                                     className="text-[9px] font-bold text-spotify-green hover:underline uppercase tracking-wider"
                                 >
-                                    Show All
+                                    Toggle
                                 </button>
                             </div>
                             <div className="space-y-1">
@@ -501,7 +506,7 @@ const TrackTable = ({
                                     const isHidden = hiddenColumns.includes(col.id);
                                     const isStagingExtra = isStaging && col.isExtra;
                                     const isLocked = col.id === 'title' || col.id === 'artist' || col.id === 'index';
-                                    
+
                                     if (isStagingExtra) return null;
 
                                     return (
@@ -536,8 +541,10 @@ const TrackTable = ({
                             </div>
                         </div>
                     )}
-                </div>
-            </div>
+                </div>,
+                document.getElementById('playlist-actions-container')
+            )}
+
 
             <div
                 ref={tableScrollRef}
@@ -550,7 +557,7 @@ const TrackTable = ({
                     <thead>
                         <tr className="google-visualization-table-tr-head">
                             <th
-                                className="track-header-cell w-12 sticky left-0 bg-[#121212] shadow-[1px_0_0_0_rgba(255,255,255,0.05)] snap-start snap-always box-border"
+                                className="track-header-cell w-12 sticky left-0 bg-spotify-base shadow-[1px_0_0_0_rgba(255,255,255,0.05)] snap-start snap-always box-border"
                                 style={{
                                     minWidth: '48px',
                                     maxWidth: '48px',
@@ -602,7 +609,7 @@ const TrackTable = ({
                                         onDrop={(e) => onDrop(e, col.id)}
                                         onDragEnd={clearDragState}
                                         className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-all duration-200 snap-start snap-always ${col.width || ''} ${stickyClass} ${isDragging ? 'opacity-30 bg-zinc-800 shadow-inner' : ''} relative`}
-                                        style={{ ...style, backgroundColor: '#1a1a1a' }}
+                                        style={{ ...style }}
                                         onClick={() => requestSort(col.sortKey)}
                                     >
                                         <Tooltip text={col.tooltip || col.label}>
@@ -646,7 +653,7 @@ const TrackTable = ({
                                 zIndex: 25,
                                 transform: 'translateZ(0)',
                                 opacity: isDraggingRow ? 0.3 : 1,
-                                boxShadow: '1px 0 0 0 #2d2d2d',
+                                boxShadow: '1px 0 0 0 rgba(255,255,255,0.05)',
                                 backgroundColor: rowBg
                             };
 
@@ -680,7 +687,7 @@ const TrackTable = ({
 
                                         const rowId = getTrackId(track);
                                         const isSelecting = !selectedIds.has(rowId);
-                                        
+
                                         if (isSelecting) {
                                             const previewUrl = getPreviewUrl(track);
                                             onPlayTrack(track.details ? track : {
@@ -799,7 +806,7 @@ const TrackTable = ({
                                             />
                                         )}
                                     </td>
-                                    {activeColumns.map((col, colIdx) => {
+                                    {activeColumns.map((col) => {
                                         return (
                                             <td
                                                 key={col.id}
@@ -891,35 +898,37 @@ const TrackTable = ({
             </div>
 
             {/* Album Art Hover Preview (Modal-like) */}
-            {hoveredImage && (
-                <div
-                    className="fixed z-9999 pointer-events-none animate-in fade-in zoom-in-95 duration-200"
-                    style={{
-                        left: `${hoverPosition.x}px`,
-                        top: `${hoverPosition.y}px`,
-                    }}
-                >
-                    <div className="relative">
-                        {/* Glow effect */}
-                        <div className="absolute -inset-1 bg-linear-to-r from-spotify-green to-emerald-500 rounded-xl blur opacity-25"></div>
+            {
+                hoveredImage && (
+                    <div
+                        className="fixed z-9999 pointer-events-none animate-in fade-in zoom-in-95 duration-200"
+                        style={{
+                            left: `${hoverPosition.x}px`,
+                            top: `${hoverPosition.y}px`,
+                        }}
+                    >
+                        <div className="relative">
+                            {/* Glow effect */}
+                            <div className="absolute -inset-1 bg-linear-to-r from-spotify-green to-emerald-500 rounded-xl blur opacity-25"></div>
 
-                        {/* Main container */}
-                        <div className="relative bg-zinc-900 ring-1 ring-white/10 rounded-xl overflow-hidden shadow-2xl">
-                            <img
-                                src={hoveredImage}
-                                className="w-56 h-56 object-cover"
-                                alt="Album Art Preview"
-                                onError={(e) => e.target.style.display = 'none'}
-                            />
+                            {/* Main container */}
+                            <div className="relative bg-zinc-900 ring-1 ring-white/10 rounded-xl overflow-hidden shadow-2xl">
+                                <img
+                                    src={hoveredImage}
+                                    className="w-56 h-56 object-cover"
+                                    alt="Album Art Preview"
+                                    onError={(e) => e.target.style.display = 'none'}
+                                />
+                            </div>
+
+                            {/* Triangle indicator - always at bottom now */}
+                            <div
+                                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-900 rotate-45 border-r border-b border-white/10 shadow-xl"
+                            ></div>
                         </div>
-
-                        {/* Triangle indicator - always at bottom now */}
-                        <div
-                            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-900 rotate-45 border-r border-b border-white/10 shadow-xl"
-                        ></div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div>
     );
 };

@@ -137,12 +137,13 @@ const SidebarWrapper = ({ initialWorld }) => {
                 setIsExpandedGlobally(window.sidebarExpanded);
             }
 
-            // Periodically sync with global theWorld to catch mutations
+            // Periodically sync with global theWorld ONLY if it changed
             const currentWorld = window.theWorld || [];
-            if (currentWorld.length > 0) {
+            if (currentWorld.length > 0 && currentWorld.length !== world.length) {
+                console.log("React-Adapter: World changed, syncing sidebar. New size:", currentWorld.length);
                 setWorld([...currentWorld]);
             }
-        }, 500);
+        }, 1000); // Increased interval to reduce CPU churn
         return () => clearInterval(interval);
     }, [activeNode, isExpandedGlobally]);
 
