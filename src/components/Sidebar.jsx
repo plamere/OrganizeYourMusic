@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import Tooltip from './Tooltip';
 import SourcePreview from './SourcePreview';
+import TextCarousel from './TextCarousel';
 
 // Helper for formatting names
 const formatName = (s) => {
@@ -41,6 +42,7 @@ const getCategoryIcon = (name) => {
 const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHoverImageChange, viewMode }) => {
     const isActive = activeNode && activeNode.name === node.name;
     const [isVisible, setIsVisible] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const itemRef = useRef(null);
 
     useEffect(() => {
@@ -80,8 +82,14 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
                 {isVisible ? (
                     <button
                         onClick={() => onNodeClick(node)}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
+                        onMouseEnter={(e) => {
+                            handleMouseEnter();
+                            setIsHovered(true);
+                        }}
+                        onMouseLeave={(e) => {
+                            handleMouseLeave();
+                            setIsHovered(false);
+                        }}
                         className={`w-full text-left transition-all duration-300 flex flex-col group/btn relative overflow-hidden ${isCompact ? 'p-1 gap-1 rounded-lg' : 'p-2 gap-2 rounded-xl'} ${isActive
                             ? 'bg-zinc-800 ring-2 ring-spotify-green shadow-xl'
                             : 'hover:bg-zinc-800/60'
@@ -104,9 +112,9 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
                                 {node.tracks?.length || 0}
                             </div>
                         </div>
-                        <span className={`font-black truncate w-full px-0.5 relative z-10 transition-colors duration-300 ${isCompact ? 'text-[8px]' : 'text-[10px]'} ${isActive ? 'text-spotify-green' : 'text-zinc-400 group-hover/btn:text-zinc-100'}`}>
-                            {node.name}
-                        </span>
+                        <div className={`font-black w-full px-0.5 relative z-10 transition-colors duration-300 ${isCompact ? 'text-[8px]' : 'text-[10px]'} ${isActive ? 'text-spotify-green' : 'text-zinc-400 group-hover/btn:text-zinc-100'}`}>
+                            <TextCarousel isHovered={isHovered}>{node.name}</TextCarousel>
+                        </div>
                     </button>
                 ) : <div className="aspect-square w-full rounded-lg bg-zinc-900/20" />}
             </div>
@@ -121,15 +129,23 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
             {isVisible ? (
                 <button
                     onClick={() => onNodeClick(node)}
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
-                    className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center justify-between group/btn ${isActive
+                    onMouseEnter={() => {
+                        handleMouseEnter();
+                        setIsHovered(true);
+                    }}
+                    onMouseLeave={() => {
+                        handleMouseLeave();
+                        setIsHovered(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center justify-between group/btn gap-2 overflow-hidden ${isActive
                         ? 'bg-spotify-green text-black shadow-[0_4px_12px_rgba(29,185,84,0.3)]'
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                         }`}
                 >
-                    <span className="truncate">{node.name}</span>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full transition-colors ${isActive ? 'bg-black/10 text-black' : 'bg-zinc-800 text-zinc-500 group-hover/btn:bg-zinc-700'
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                        <TextCarousel isHovered={isHovered}>{node.name}</TextCarousel>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full transition-colors shrink-0 ${isActive ? 'bg-black/10 text-black' : 'bg-zinc-800 text-zinc-500 group-hover/btn:bg-zinc-700'
                         }`}>
                         {node.tracks?.length || 0}
                     </span>
@@ -158,7 +174,7 @@ const SidebarSection = React.memo(({
         <div className="space-y-0.5">
             <button
                 onClick={() => onToggle(bin.name)}
-                className="sidebar-section-header w-full group/header"
+                className="mt-2 mb-1 flex cursor-pointer items-center justify-between px-2 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 transition-colors hover:text-white w-full group/header"
             >
                 <div className="flex items-center gap-2">
                     <div className={`w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 border border-white/5 ${isExpanded ? 'bg-spotify-green/10 text-spotify-green' : 'bg-zinc-900 text-zinc-600 group-hover/header:bg-zinc-800 group-hover/header:text-zinc-300'}`}>
@@ -349,7 +365,7 @@ const Sidebar = ({
             </div>
 
             {/* Sections */}
-            <div className="flex-1 overflow-y-auto px-1 py-1 custom-scrollbar space-y-2">
+            <div className="flex-1 overflow-y-auto px-1 py-1 space-y-2 [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb:hover]:bg-white/20">
                 {processedWorld.map((bin) => (
                     <SidebarSection
                         key={bin.name}

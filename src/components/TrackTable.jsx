@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
+import { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { trackColumns } from './columnDefinitions';
 import Tooltip from './Tooltip';
 import SourcePreview from './SourcePreview';
+import TextCarousel from './TextCarousel';
 
 const getBaseTrack = (track) => (track?.track && track?.track?.id ? track.track : track);
 const getTrackId = (track) => track?.id || track?.track?.id || null;
@@ -27,64 +28,6 @@ const getTrackImage = (track) => {
     return base?.image_url || track?.details?.image_url || track?.image_url || null;
 };
 
-const CellCarousel = ({ children, isHovered, className = "" }) => {
-    const containerRef = useRef(null);
-    const textRef = useRef(null);
-    const [overflows, setOverflows] = useState(false);
-    const [shift, setShift] = useState(0);
-
-    useEffect(() => {
-        if (!isHovered) {
-            if (overflows) setOverflows(false);
-            return;
-        }
-
-        const checkOverflow = () => {
-            if (containerRef.current && textRef.current) {
-                const isOverflowing = textRef.current.scrollWidth > containerRef.current.clientWidth;
-                setOverflows(isOverflowing);
-                if (isOverflowing) {
-                    setShift(textRef.current.scrollWidth + 24); // 24px for divider + gap
-                }
-            }
-        };
-
-        checkOverflow();
-    }, [isHovered, children, overflows]);
-
-    const duration = Math.max(8, Math.round(shift / 28));
-
-    // Optimization: Skip complex logic for short content
-    if (typeof children === 'string' && children.length < 12) {
-        return <div className={`truncate ${className}`}>{children}</div>;
-    }
-    
-    if (typeof children !== 'string' && typeof children !== 'number') {
-        return <div className={`truncate ${className}`}>{children}</div>;
-    }
-
-    return (
-        <div 
-            ref={containerRef} 
-            className={`who-carousel ${overflows ? 'who-carousel--scrolling' : ''} ${className}`}
-            style={{ 
-                '--who-shift': `${shift}px`, 
-                '--who-duration': `${duration}s`,
-                width: '100%'
-            }}
-        >
-            <span className="who-carousel-track">
-                <span ref={textRef} className="who-carousel-text">{children}</span>
-                {overflows && isHovered && (
-                    <>
-                        <span className="who-carousel-divider" aria-hidden="true">&bull;</span>
-                        <span className="who-carousel-text who-carousel-clone" aria-hidden="true">{children}</span>
-                    </>
-                )}
-            </span>
-        </div>
-    );
-};
 
 const TrackRow = memo(({
     track,
@@ -107,7 +50,6 @@ const TrackRow = memo(({
     onRowDragOver,
     onRowDrop,
     clearRowDragState,
-    isStaging,
     sortConfig
 }) => {
     const rowId = getTrackId(track);
@@ -120,7 +62,7 @@ const TrackRow = memo(({
     useEffect(() => {
         const observer = new IntersectionObserver(([entry]) => {
             setIsVisible(entry.isIntersecting);
-        }, { 
+        }, {
             rootMargin: '200px',
             threshold: 0.01
         });
@@ -265,11 +207,11 @@ const TrackRow = memo(({
 
             {activeColumns.map((col) => {
                 const cellContent = isVisible ? col.render(track, globalIdx) : '';
-                
+
                 return (
                     <td
                         key={col.id}
-                        className={`track-table-cell ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky transition-colors' : 'snap-start'}`}
+                        className={`py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/2 transition-colors whitespace-nowrap ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky transition-colors' : 'snap-start'}`}
                         style={col.sticky ? {
                             ...stickyStyleBase,
                             left: `${col.stickyLeft}px`,
@@ -278,7 +220,7 @@ const TrackRow = memo(({
                         } : { zIndex: 1 }}
                     >
                         {isVisible ? (
-                            <CellCarousel isHovered={isHovered}>{cellContent}</CellCarousel>
+                            <TextCarousel isHovered={isHovered}>{cellContent}</TextCarousel>
                         ) : null}
 
                         {dropTargetRowId === rowId && (
@@ -739,83 +681,100 @@ const TrackTable = ({
     return (
         <div className="flex flex-col w-full h-full min-h-[inherit]">
             {/* Portal for Hide Columns Button */}
-            {typeof document !== 'undefined' && 
-             document.getElementById(isStaging ? 'staging-actions-container' : 'playlist-actions-container') && 
-             createPortal(
-                <div className="relative inline-block" ref={dropdownRef}>
-                    <button
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm h-7 ${isDropdownOpen ? 'bg-spotify-green text-black border-spotify-green' : 'bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/5'}`}
-                    >
-                        <i className="fa fa-columns text-[10px]"></i>
-                        <span>Columns</span>
-                    </button>
+            {typeof document !== 'undefined' &&
+                document.getElementById(isStaging ? 'staging-actions-container' : 'playlist-actions-container') &&
+                createPortal(
+                    <div className="relative inline-block" ref={dropdownRef}>
+                        <button
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm h-7 ${isDropdownOpen ? 'bg-spotify-green text-black border-spotify-green' : 'bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/5'}`}
+                        >
+                            <i className="fa fa-columns text-[10px]"></i>
+                            <span>Columns</span>
+                        </button>
 
-                    {isDropdownOpen && (
-                        <div className="absolute left-0 top-full mt-2 z-1000 w-64 max-h-[70vh] overflow-y-auto bg-[#181818] border border-zinc-800 rounded-xl shadow-2xl p-3 custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex items-center justify-between mb-3 px-1">
-                                <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                                    Display Columns
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        if (hiddenColumns.length > 0) {
-                                            setHiddenColumns([]);
-                                        } else {
-                                            const allOptionalIds = trackColumns
-                                                .filter(c => c.id !== 'title' && c.id !== 'artist' && c.id !== 'index')
-                                                .map(c => c.id);
-                                            setHiddenColumns(allOptionalIds);
-                                        }
-                                    }}
-                                    className="text-[9px] font-bold text-spotify-green hover:underline uppercase tracking-wider"
-                                >
-                                    Toggle
-                                </button>
-                            </div>
-                            <div className="space-y-1">
-                                {trackColumns.map(col => {
-                                    const isHidden = hiddenColumns.includes(col.id);
-                                    const isStagingExtra = isStaging && col.isExtra;
-                                    const isLocked = col.id === 'title' || col.id === 'artist' || col.id === 'index';
-
-                                    if (isStagingExtra) return null;
-
-                                    return (
-                                        <label
-                                            key={col.id}
-                                            className={`flex items-center gap-3 p-2 rounded-lg transition-all ${isHidden ? 'opacity-50 grayscale-[0.5]' : 'bg-white/5'} ${isLocked ? 'cursor-default' : 'cursor-pointer hover:bg-white/10'} group`}
+                        {isDropdownOpen && (
+                            <div className="absolute left-0 top-full mt-2 z-1000 w-64 max-h-[70vh] overflow-y-auto bg-[#181818] border border-zinc-800 rounded-xl shadow-2xl p-3 custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="flex items-center justify-between mb-3 px-1">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                        Display Columns
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => window.dispatchEvent(new CustomEvent('oym_reset_columns'))}
+                                            className="text-[9px] font-bold text-zinc-500 hover:text-spotify-green uppercase tracking-wider transition-colors"
+                                            title="Reset Column Order"
                                         >
-                                            <div className="relative flex items-center justify-center">
-                                                <input
-                                                    type="checkbox"
-                                                    className="peer appearance-none w-4 h-4 rounded border border-zinc-700 checked:bg-spotify-green checked:border-spotify-green bg-zinc-800 transition-all cursor-pointer disabled:cursor-default"
-                                                    checked={!isHidden}
-                                                    disabled={isLocked}
-                                                    onChange={() => {
-                                                        if (isLocked) return;
-                                                        if (isHidden) {
-                                                            setHiddenColumns(hiddenColumns.filter(id => id !== col.id));
-                                                        } else {
-                                                            setHiddenColumns([...hiddenColumns, col.id]);
-                                                        }
-                                                    }}
-                                                />
-                                                <i className={`fa ${isLocked ? 'fa-lock text-zinc-500' : 'fa-check text-black'} absolute text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity`}></i>
-                                            </div>
-                                            <span className={`text-xs font-semibold transition-colors ${!isHidden ? 'text-white' : 'text-zinc-500'} group-hover:text-white flex items-center gap-2`}>
-                                                {col.label}
-                                                {isLocked && <span className="text-[8px] opacity-50 uppercase tracking-tighter">(Required)</span>}
-                                            </span>
-                                        </label>
-                                    );
-                                })}
+                                            <i className="fa fa-refresh mr-1"></i> Cols
+                                        </button>
+                                        <button
+                                            onClick={() => window.dispatchEvent(new CustomEvent('oym_reset_rows'))}
+                                            className="text-[9px] font-bold text-zinc-500 hover:text-spotify-green uppercase tracking-wider transition-colors"
+                                            title="Reset Row Order"
+                                        >
+                                            <i className="fa fa-refresh mr-1"></i> Rows
+                                        </button>
+                                        <div className="w-px h-3 bg-zinc-800 mx-1"></div>
+                                        <button
+                                            onClick={() => {
+                                                if (hiddenColumns.length > 0) {
+                                                    setHiddenColumns([]);
+                                                } else {
+                                                    const allOptionalIds = trackColumns
+                                                        .filter(c => c.id !== 'title' && c.id !== 'artist' && c.id !== 'index')
+                                                        .map(c => c.id);
+                                                    setHiddenColumns(allOptionalIds);
+                                                }
+                                            }}
+                                            className="text-[9px] font-bold text-spotify-green hover:underline uppercase tracking-wider"
+                                        >
+                                            Toggle
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    {trackColumns.map(col => {
+                                        const isHidden = hiddenColumns.includes(col.id);
+                                        const isStagingExtra = isStaging && col.isExtra;
+                                        const isLocked = col.id === 'title' || col.id === 'artist' || col.id === 'index';
+
+                                        if (isStagingExtra) return null;
+
+                                        return (
+                                            <label
+                                                key={col.id}
+                                                className={`flex items-center gap-3 p-2 rounded-lg transition-all ${isHidden ? 'opacity-50 grayscale-[0.5]' : 'bg-white/5'} ${isLocked ? 'cursor-default' : 'cursor-pointer hover:bg-white/10'} group`}
+                                            >
+                                                <div className="relative flex items-center justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="peer appearance-none w-4 h-4 rounded border border-zinc-700 checked:bg-spotify-green checked:border-spotify-green bg-zinc-800 transition-all cursor-pointer disabled:cursor-default"
+                                                        checked={!isHidden}
+                                                        disabled={isLocked}
+                                                        onChange={() => {
+                                                            if (isLocked) return;
+                                                            if (isHidden) {
+                                                                setHiddenColumns(hiddenColumns.filter(id => id !== col.id));
+                                                            } else {
+                                                                setHiddenColumns([...hiddenColumns, col.id]);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <i className={`fa ${isLocked ? 'fa-lock text-zinc-500' : 'fa-check text-black'} absolute text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity`}></i>
+                                                </div>
+                                                <span className={`text-xs font-semibold transition-colors ${!isHidden ? 'text-white' : 'text-zinc-500'} group-hover:text-white flex items-center gap-2`}>
+                                                    {col.label}
+                                                    {isLocked && <span className="text-[8px] opacity-50 uppercase tracking-tighter">(Required)</span>}
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>,
-                document.getElementById('playlist-actions-container')
-            )}
+                        )}
+                    </div>,
+                    document.getElementById(isStaging ? 'staging-actions-container' : 'playlist-actions-container')
+                )}
 
 
             <div

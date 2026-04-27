@@ -42,56 +42,6 @@
   <title>Organize Your Music</title>
 
   <style>
-    /* Base typography overrides */
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-      color: #ffffff;
-      font-weight: 700;
-    }
-
-    a {
-      color: #ffffff;
-      transition: color 0.2s;
-      cursor: pointer;
-    }
-
-    a:hover {
-      color: #1db954;
-      text-decoration: none;
-    }
-
-    /* Bootstrap JS Tab Compatibility */
-    .tab-pane {
-      display: none;
-    }
-
-    .tab-pane.active {
-      display: block;
-    }
-
-    /* Custom Scrollbar for Dark Theme */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background-color: #121212;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background-color: #3e3e3e;
-      border-radius: 9999px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background-color: #71717a;
-    }
-
     /* Google Charts Table Dark Mode Brute-Force Overrides */
     .google-visualization-table {
       border: none !important;
@@ -200,6 +150,28 @@
       position: sticky !important;
       top: 0 !important;
       z-index: 10;
+    }
+
+    @media (max-width: 768px) {
+      #header-tabs {
+        position: absolute;
+        bottom: -44px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 1rem);
+        max-width: 400px;
+        background: rgba(18, 18, 18, 0.95);
+        backdrop-filter: blur(12px);
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        justify-content: center;
+        padding: 4px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      }
+    }
+
+    #header-tabs.flex {
+      display: flex !important;
     }
 
     /* Force centering on numeric columns which Google Table right-aligns */
@@ -433,8 +405,21 @@
     }
 
     #header-tabs .group.active a {
-      background-color: rgba(255, 255, 255, 0.1);
       color: #1db954;
+      position: relative;
+    }
+
+    #header-tabs .group.active a::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 2px;
+      background-color: #1db954;
+      border-radius: 9999px;
+      box-shadow: 0 0 8px rgba(29, 185, 84, 0.5);
     }
 
     #header-tabs a:active {
@@ -467,26 +452,26 @@
       </a>
     </div>
     <ul id="header-tabs"
-      class="nav nav-tabs hidden items-center gap-1 bg-zinc-900/50 p-1 rounded-full border border-white/5 transition-all duration-300">
+      class="nav nav-tabs hidden md:absolute md:left-1/2 md:-translate-x-1/2 items-center gap-1 bg-zinc-900/60 p-1 rounded-full border border-white/5 shadow-lg transition-all duration-300">
       <li class="active group">
         <a id="the-track-list-tab" href="#the-track-list" data-toggle="tab"
-          class="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white rounded-full group-[.active]:bg-zinc-800 group-[.active]:text-spotify-green transition-all duration-200">
+          class="flex items-center gap-1.5 px-2.5 md:px-4 py-2 text-[10px] md:text-[11px] font-black uppercase tracking-wide text-zinc-500 hover:text-white rounded-full group-[.active]:text-spotify-green transition-all duration-200">
           <i class="fa fa-list"></i>
-          <span class="hidden lg:inline">Track List</span>
+          <span>Track List</span>
         </a>
       </li>
       <li class="group">
         <a id="the-plots-tab" href="#the-plots" data-toggle="tab"
-          class="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white rounded-full group-[.active]:bg-zinc-800 group-[.active]:text-spotify-green transition-all duration-200">
+          class="flex items-center gap-1.5 px-2.5 md:px-4 py-2 text-[10px] md:text-[11px] font-black uppercase tracking-wide text-zinc-500 hover:text-white rounded-full group-[.active]:text-spotify-green transition-all duration-200">
           <i class="fa fa-bar-chart"></i>
-          <span class="hidden lg:inline">Plots</span>
+          <span>Plots</span>
         </a>
       </li>
       <li class="group">
         <a href="#staging" id="staging-tab" data-toggle="tab"
-          class="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white rounded-full group-[.active]:bg-zinc-800 group-[.active]:text-spotify-green transition-all duration-200">
+          class="flex items-center gap-1.5 px-2.5 md:px-4 py-2 text-[10px] md:text-[11px] font-black uppercase tracking-wide text-zinc-500 hover:text-white rounded-full group-[.active]:text-spotify-green transition-all duration-200">
           <i class="fa fa-music"></i>
-          <span class="hidden lg:inline">Staging</span>
+          <span>Staging</span>
           <span
             class="bg-spotify-light/20 text-spotify-light px-1.5 py-0.5 rounded-full text-[9px] font-black nstaging-tracks shadow-sm">0</span>
         </a>
@@ -498,9 +483,9 @@
         class="hidden items-center gap-3 bg-zinc-900/80 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-zinc-800 transition-all hover:bg-zinc-800/90">
         <i class="fa fa-user text-zinc-500"></i>
         <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-500 hidden sm:inline">Logged
-          in
-          as</span>
-        <div id="who-carousel" class="who-carousel text-xs md:text-sm font-bold text-zinc-200 max-w-25 md:max-w-56">
+          in as</span>
+        <div id="who-carousel"
+          class="who-carousel text-xs md:text-sm font-bold text-zinc-200 max-w-20 sm:max-w-40 md:max-w-56">
           <span id="who-track" class="who-carousel-track">
             <span id="who" class="who-carousel-text">Connecting...</span>
             <span id="who-divider" class="who-carousel-divider" aria-hidden="true">&bull;</span>
@@ -523,8 +508,12 @@
     <div id="main"
       class="flex flex-col justify-center items-center px-6 pt-12 pb-20 text-center relative overflow-hidden bg-black">
       <!-- Enhanced Background Effects -->
-      <div class="hero-glow"></div>
-      <div class="mesh-gradient"></div>
+      <div
+        class="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(circle_at_50%_0%,rgba(29,185,84,0.15)_0%,transparent_70%)]">
+      </div>
+      <div
+        class="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(at_0%_0%,rgba(29,185,84,0.15)_0px,transparent_50%),radial-gradient(at_100%_0%,rgba(18,18,18,0.8)_0px,transparent_50%),radial-gradient(at_100%_100%,rgba(29,185,84,0.1)_0px,transparent_50%),radial-gradient(at_0%_100%,rgba(18,18,18,0.8)_0px,transparent_50%)]">
+      </div>
       <div
         class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-150 bg-linear-to-b from-spotify-green/10 to-transparent pointer-events-none">
       </div>
@@ -547,7 +536,8 @@
         <div class="flex flex-col md:flex-row items-center justify-center gap-6 w-full max-w-5xl mx-auto">
           <!-- Stage 0: Login -->
           <div id="login-state" class="w-full max-w-95 hidden">
-            <div class="spotify-glass p-10 rounded-3xl w-full text-left relative overflow-hidden group">
+            <div
+              class="bg-zinc-900/60 backdrop-blur-2xl border border-white/5 p-10 rounded-3xl w-full text-left relative overflow-hidden group">
               <div
                 class="absolute -top-24 -right-24 w-48 h-48 bg-spotify-green/10 rounded-full blur-3xl transition-all group-hover:bg-spotify-green/20">
               </div>
@@ -563,7 +553,7 @@
               </div>
 
               <a id="login-button" href="javascript:void(0)" role="button"
-                class="spotify-btn-primary w-full py-4.5 px-6 mb-10 relative z-10">
+                class="flex items-center justify-center bg-spotify-green text-black font-black rounded-full uppercase tracking-widest transition-all duration-200 transform hover:bg-spotify-green-hover hover:scale-105 hover:shadow-[0_10px_30px_-5px_rgba(29,185,84,0.4)] w-full py-4.5 px-6 mb-10 relative z-10">
                 <i class="fa fa-spotify mr-3 text-xl"></i>
                 Connect Spotify
               </a>
@@ -587,7 +577,8 @@
 
           <!-- Stage 1: Selection (Home) -->
           <div id="selection-state" class="w-full max-w-95 hidden">
-            <div class="spotify-glass p-10 rounded-3xl w-full text-left relative overflow-hidden group">
+            <div
+              class="bg-zinc-900/60 backdrop-blur-2xl border border-white/5 p-10 rounded-3xl w-full text-left relative overflow-hidden group">
               <div
                 class="absolute -top-24 -left-24 w-48 h-48 bg-spotify-green/10 rounded-full blur-3xl transition-all group-hover:bg-spotify-green/20">
               </div>
@@ -607,12 +598,15 @@
                   <label id="what-label" for="collection-type"
                     class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block ml-1">Collection
                     Source</label>
-                  <select id="collection-type" class="spotify-select">
-                    <option value="saved">Saved Tracks</option>
-                    <option value="added">My Playlists</option>
-                    <option value="follow">Followed Playlists</option>
-                    <option value="all">Complete Library</option>
-                    <option value="playlist">Spotify Playlist URI</option>
+                  <select id="collection-type"
+                    class="block w-full bg-zinc-900 text-white rounded-md pl-5 pr-12 py-3.5 text-xs font-black uppercase focus:outline-none focus:ring-1 focus:ring-spotify-green transition-all cursor-pointer appearance-none border border-white/10 bg-[url('data:image/svg+xml,%3Csvg_xmlns=%22http://www.w3.org/2000/svg%22_fill=%22none%22_viewBox=%220_0_24_24%22_stroke=%22%23ffffff%22%3E%3Cpath_stroke-linecap=%22round%22_stroke-linejoin=%22round%22_stroke-width=%223%22_d=%22M19_9l-7_7-7-7%22%3E%3C/path%3E%3C/svg%3E')] bg-no-repeat bg-position-[right_1.25rem_center] bg-size-[0.85rem] bg-clip-padding">
+                    <option class="bg-zinc-900 text-white font-bold uppercase" value="saved">Saved Tracks</option>
+                    <option class="bg-zinc-900 text-white font-bold uppercase" value="added">My Playlists</option>
+                    <option class="bg-zinc-900 text-white font-bold uppercase" value="follow">Followed Playlists
+                    </option>
+                    <option class="bg-zinc-900 text-white font-bold uppercase" value="all">Complete Library</option>
+                    <option class="bg-zinc-900 text-white font-bold uppercase" value="playlist">Spotify Playlist URI
+                    </option>
                   </select>
                 </div>
 
@@ -627,7 +621,7 @@
               </div>
 
               <a id="go" href="javascript:void(0)" role="button"
-                class="spotify-btn-primary w-full py-4.5 px-6 relative z-10">
+                class="flex items-center justify-center bg-spotify-green text-black font-black rounded-full uppercase tracking-widest transition-all duration-200 transform hover:bg-spotify-green-hover hover:scale-105 hover:shadow-[0_10px_30px_-5px_rgba(29,185,84,0.4)] w-full py-4.5 px-6 relative z-10">
                 Fetch Collection
               </a>
               <div
@@ -716,7 +710,8 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <!-- Step 1 -->
-          <div class="spotify-card group p-10">
+          <div
+            class="relative overflow-hidden rounded-3xl bg-zinc-900/40 border border-white/5 transition-all duration-300 hover:bg-zinc-800/60 hover:border-white/10 hover:shadow-2xl hover:shadow-spotify-green/5 group p-10">
             <div
               class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
               01</div>
@@ -730,7 +725,8 @@
           </div>
 
           <!-- Step 2 -->
-          <div class="spotify-card group p-10">
+          <div
+            class="relative overflow-hidden rounded-3xl bg-zinc-900/40 border border-white/5 transition-all duration-300 hover:bg-zinc-800/60 hover:border-white/10 hover:shadow-2xl hover:shadow-spotify-green/5 group p-10">
             <div
               class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
               02</div>
@@ -744,7 +740,8 @@
           </div>
 
           <!-- Step 3 -->
-          <div class="spotify-card group p-10">
+          <div
+            class="relative overflow-hidden rounded-3xl bg-zinc-900/40 border border-white/5 transition-all duration-300 hover:bg-zinc-800/60 hover:border-white/10 hover:shadow-2xl hover:shadow-spotify-green/5 group p-10">
             <div
               class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
               03</div>
@@ -758,7 +755,8 @@
           </div>
 
           <!-- Step 4 -->
-          <div class="spotify-card group p-10">
+          <div
+            class="relative overflow-hidden rounded-3xl bg-zinc-900/40 border border-white/5 transition-all duration-300 hover:bg-zinc-800/60 hover:border-white/10 hover:shadow-2xl hover:shadow-spotify-green/5 group p-10">
             <div
               class="absolute top-6 right-8 text-5xl font-black text-white/5 group-hover:text-spotify-green/10 transition-colors">
               04</div>
@@ -988,20 +986,10 @@
           <div id="exTab3" class="w-full flex-1 flex flex-col min-h-0">
 
             <div class="tab-content flex-1 min-h-0">
-              <div class="tab-pane active h-full flex flex-col overflow-y-auto custom-scrollbar" id="the-track-list">
+              <div class="tab-pane active h-full flex flex-col overflow-hidden" id="the-track-list">
                 <div class="flex flex-col mb-4">
-                  <div id="playlist-actions-container" class="flex items-center gap-3">
+                  <div id="playlist-actions-container" class="flex items-center gap-2">
                     <h4 id="playlist-title" class="text-2xl font-black text-white mb-1"></h4>
-                    <button id="reset-column-order" title="Reset column order to default"
-                      class="hidden mb-1 text-zinc-500 hover:text-spotify-green transition-all p-1 rounded-full hover:bg-zinc-800 items-center justify-center w-7 h-7"
-                      onclick="window.dispatchEvent(new CustomEvent('oym_reset_columns'))">
-                      <i class="fa fa-columns text-xs"></i>
-                    </button>
-                    <button id="reset-row-order" title="Reset row order to default"
-                      class="hidden mb-1 text-zinc-500 hover:text-spotify-green transition-all p-1 rounded-full hover:bg-zinc-800 items-center justify-center w-7 h-7"
-                      onclick="window.dispatchEvent(new CustomEvent('oym_reset_rows'))">
-                      <i class="fa fa-list-ol text-xs"></i>
-                    </button>
                   </div>
                   <div id="playlist-sub-title" class="text-zinc-400 text-sm font-medium"></div>
                 </div>
@@ -1037,20 +1025,14 @@
                 </div>
 
                 <div id="track-table-shell"
-                  class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden flex flex-col flex-1">
-                  <div class="overflow-x-auto w-full flex-1 flex flex-col">
-                    <div id="gthe-track-table" class="w-full text-left flex-1 flex flex-col min-h-125"></div>
-                  </div>
-                  <div id="gthe-track-table-truncated"
-                    class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
-                    Showing the first
-                    <span class="max-shown font-bold text-white px-1"></span>
-                    matching tracks.
+                  class="flex flex-col flex-1 min-h-0">
+                  <div class="overflow-hidden w-full flex-1 flex flex-col">
+                    <div id="gthe-track-table" class="w-full text-left flex-1 flex flex-col min-h-0"></div>
                   </div>
                 </div>
               </div>
 
-              <div class="tab-pane flex flex-col min-h-0 h-full" id="the-plots">
+              <div class="tab-pane hidden flex-col min-h-0 h-full" id="the-plots">
                 <div id="plot-controls"
                   class="mb-6 w-full rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 shadow-xl">
                   <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1094,7 +1076,7 @@
                 </div>
               </div>
 
-              <div class="tab-pane h-full overflow-y-auto custom-scrollbar" id="staging">
+              <div class="tab-pane h-full hidden flex-col overflow-hidden" id="staging">
                 <div id="staging-empty"
                   class="max-w-3xl mx-auto bg-zinc-900/50 backdrop-blur-md p-16 rounded-3xl shadow-2xl border border-white/5 text-center mt-12">
                   <div
@@ -1161,13 +1143,9 @@
                     </div>
                   </div>
 
-                  <div class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden border border-zinc-800">
-                    <div class="overflow-x-auto w-full">
-                      <div id="gthe-staging-table" class="w-full text-left"></div>
-                    </div>
-                    <div id="gthe-staging-table-truncated"
-                      class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
-                      Showing the first 400 matching tracks.
+                  <div class="flex flex-col flex-1 min-h-0">
+                    <div class="overflow-hidden w-full flex-1 flex flex-col">
+                      <div id="gthe-staging-table" class="w-full text-left flex-1 flex flex-col"></div>
                     </div>
                   </div>
                 </div>
