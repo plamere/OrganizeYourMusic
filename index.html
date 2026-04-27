@@ -504,7 +504,7 @@
           <span id="who-track" class="who-carousel-track">
             <span id="who" class="who-carousel-text">Connecting...</span>
             <span id="who-divider" class="who-carousel-divider" aria-hidden="true">&bull;</span>
-            <span id="who-clone" class="who-carousel-text" aria-hidden="true">Connecting...</span>
+            <span id="who-clone" class="who-carousel-text who-carousel-clone" aria-hidden="true">Connecting...</span>
           </span>
         </div>
       </div>
@@ -988,7 +988,7 @@
           <div id="exTab3" class="w-full flex-1 flex flex-col min-h-0">
 
             <div class="tab-content flex-1 min-h-0">
-              <div class="tab-pane active h-full overflow-y-auto custom-scrollbar" id="the-track-list">
+              <div class="tab-pane active h-full flex flex-col overflow-y-auto custom-scrollbar" id="the-track-list">
                 <div class="flex flex-col mb-4">
                   <div id="playlist-actions-container" class="flex items-center gap-3">
                     <h4 id="playlist-title" class="text-2xl font-black text-white mb-1"></h4>
@@ -1036,9 +1036,10 @@
                   </div>
                 </div>
 
-                <div id="track-table-shell" class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden">
-                  <div class="overflow-x-auto w-full">
-                    <div id="gthe-track-table" class="w-full text-left min-h-125"></div>
+                <div id="track-table-shell"
+                  class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden flex flex-col flex-1">
+                  <div class="overflow-x-auto w-full flex-1 flex flex-col">
+                    <div id="gthe-track-table" class="w-full text-left flex-1 flex flex-col min-h-125"></div>
                   </div>
                   <div id="gthe-track-table-truncated"
                     class="hidden p-4 bg-zinc-800/80 text-xs text-center border-t border-zinc-800 text-zinc-400 font-medium">
@@ -1151,10 +1152,13 @@
                         Your new playlist
                       </a>
                     </div>
-                    <button id="save-button"
-                      class="bg-spotify-green hover:bg-spotify-green-hover text-black font-black py-4 px-10 rounded-full flex items-center gap-3 transition-all transform hover:scale-105 active:scale-95 shadow-[0_8px_20px_rgba(29,185,84,0.3)] shrink-0 uppercase tracking-widest text-xs">
-                      <i class="fa fa-spotify text-lg"></i> Save to Spotify
-                    </button>
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                      <div id="staging-actions-container"></div>
+                      <button id="save-button"
+                        class="bg-spotify-green hover:bg-spotify-green-hover text-black font-black py-4 px-10 rounded-full flex items-center gap-3 transition-all transform hover:scale-105 active:scale-95 shadow-[0_8px_20px_rgba(29,185,84,0.3)] shrink-0 uppercase tracking-widest text-xs">
+                        <i class="fa fa-spotify text-lg"></i> Save to Spotify
+                      </button>
+                    </div>
                   </div>
 
                   <div class="bg-zinc-900 rounded-xl shadow-xl overflow-hidden border border-zinc-800">

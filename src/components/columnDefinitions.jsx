@@ -185,7 +185,7 @@ export const trackColumns = [
         align: 'center',
         render: (_track, index) => index,
         className: 'text-zinc-500 font-mono text-[10px]',
-        width: 'w-12',
+        width: 'w-[64px]',
         sticky: true,
         tooltip: 'Index'
     },

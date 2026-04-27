@@ -202,6 +202,7 @@ var audio = document.createElement("audio");
 var nowPlaying = null;
 var curNode = null;
 var abortLoading = false;
+var sourceImages = {};
 
 var progressBar = document.getElementById("progress-bar");
 
@@ -959,6 +960,9 @@ function addTracks(tracks) {
             featSorter("popularity", true),
             false,
           );
+          if (sourceImages[source]) {
+            node.imageUrl = sourceImages[source];
+          }
           theWorld[sourceIndex].nodes.push(node);
         }
       });
@@ -971,17 +975,62 @@ function addTracks(tracks) {
 }
 
 function filterTracks(tracks) {
+  const start = now();
+  
+  // 1. Reset all nodes
   theWorld.forEach(function (bin) {
     bin.nodes.forEach(function (node) {
-      applyFilter(tracks, node.filter).forEach(function (track) {
-        node.tracks.push(track);
-        node.artists.add(track.details.artists[0].id);
-      });
+      node.tracks = [];
+      node.artists = new Set();
     });
   });
+
+  // 2. Optimized distribution
   tracks.forEach(function (track) {
+    // A. Direct assignment for high-cardinality categories (Genres & Sources)
+    if (track.feats.genres) {
+      track.feats.genres.forEach(function (genre) {
+        const node = nodeMap[genre];
+        if (node && node.label === "Genres") {
+          node.tracks.push(track);
+          if (track.details && track.details.artists && track.details.artists[0]) {
+            node.artists.add(track.details.artists[0].id);
+          }
+        }
+      });
+    }
+
+    if (track.feats.sources) {
+      track.feats.sources.forEach(function (source) {
+        const node = nodeMap[source];
+        if (node && node.label === "Sources") {
+          node.tracks.push(track);
+          if (track.details && track.details.artists && track.details.artists[0]) {
+            node.artists.add(track.details.artists[0].id);
+          }
+        }
+      });
+    }
+
+    // B. Filter-based assignment for others (Moods, Styles, Decades, etc.)
+    // We iterate the categories that aren't optimized yet
+    theWorld.forEach(function (bin) {
+      if (bin.name === "Genres" || bin.name === "Sources") return;
+      
+      bin.nodes.forEach(function (node) {
+        if (node.filter(track)) {
+          node.tracks.push(track);
+          if (track.details && track.details.artists && track.details.artists[0]) {
+            node.artists.add(track.details.artists[0].id);
+          }
+        }
+      });
+    });
+
     saveTrack(track);
   });
+
+  console.log(`[Performance] filterTracks took ${now() - start}ms for ${tracks.length} tracks`);
 }
 
 var totRefresh = 0;
@@ -1243,13 +1292,11 @@ function showPlaylist(node) {
   } else {
     if (node.name == "All results") {
       playlistTitle("All results in this collection");
-      if (resetBtn) resetBtn.classList.remove("hidden");
-      if (resetRowBtn) resetRowBtn.classList.remove("hidden");
     } else {
       playlistTitle("Your " + uname(node.name) + " tracks");
-      if (resetBtn) resetBtn.classList.add("hidden");
-      if (resetRowBtn) resetRowBtn.classList.add("hidden");
     }
+    if (resetBtn) resetBtn.classList.remove("hidden");
+    if (resetRowBtn) resetRowBtn.classList.remove("hidden");
     playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
   }
 
@@ -2701,7 +2748,10 @@ async function collectAllMetadata(tracks) {
 /**
  * Replaces recursive fetching with parallel page fetching
  */
-async function getTracksFromAPI(source, uri) {
+async function getTracksFromAPI(source, uri, sourceImageUrl = null) {
+  if (source && sourceImageUrl) {
+    sourceImages[source] = sourceImageUrl;
+  }
   const now = new Date();
   const limit = 50;
 
@@ -2938,7 +2988,8 @@ async function getPlaylistTracks(playlist) {
   if (isValidPlaylistUri(uri)) {
     const playlistID = getPlaylistPid(uri);
     const url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
-    return getTracksFromAPI(playlist.name, url);
+    const imageUrl = (playlist.images && playlist.images.length > 0) ? playlist.images[0].url : null;
+    return getTracksFromAPI(playlist.name, url, imageUrl);
   } else {
     throw new Error("bad playlist URI");
   }
