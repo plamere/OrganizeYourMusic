@@ -68,7 +68,10 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
 
     const imageUrl = useMemo(() => node.imageUrl || (node.tracks && node.tracks.length > 0 ? getTrackImage(node.tracks[0]) : null), [node]);
 
-    if (viewMode === 'grid') {
+    if (viewMode === 'grid' || viewMode === 'compact') {
+        const imageUrl = node.imageUrl || (node.tracks?.length > 0 ? getTrackImage(node.tracks[0]) : null);
+        const isCompact = viewMode === 'compact';
+        
         return (
             <div
                 ref={itemRef}
@@ -79,9 +82,9 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
                         onClick={() => onNodeClick(node)}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
-                        className={`w-full text-left p-2 rounded-xl transition-all duration-300 flex flex-col gap-2 group/btn relative overflow-hidden ${isActive
-                            ? 'bg-zinc-800 ring-2 ring-spotify-green shadow-[0_12px_24px_rgba(0,0,0,0.5)]'
-                            : 'hover:bg-zinc-800/60 hover:shadow-lg'
+                        className={`w-full text-left transition-all duration-300 flex flex-col group/btn relative overflow-hidden ${isCompact ? 'p-1 gap-1 rounded-lg' : 'p-2 gap-2 rounded-xl'} ${isActive
+                            ? 'bg-zinc-800 ring-2 ring-spotify-green shadow-xl'
+                            : 'hover:bg-zinc-800/60'
                             }`}
                     >
                         {/* Active Glow Background */}
@@ -89,23 +92,23 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
                             <div className="absolute inset-0 bg-spotify-green/5 blur-2xl pointer-events-none"></div>
                         )}
 
-                        <div className="aspect-square w-full rounded-lg overflow-hidden bg-zinc-950 shadow-inner relative z-10">
+                        <div className={`aspect-square w-full overflow-hidden bg-zinc-950 shadow-inner relative z-10 ${isCompact ? 'rounded-md' : 'rounded-lg'}`}>
                             {imageUrl ? (
                                 <img src={imageUrl} alt={node.name} className="w-full h-full object-cover transition-transform duration-700 group-hover/btn:scale-110" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-zinc-800 to-zinc-900 text-zinc-600">
-                                    <i className={`fa ${getCategoryIcon(node.name)} text-2xl`}></i>
+                                    <i className={`fa ${getCategoryIcon(node.name)} ${isCompact ? 'text-sm' : 'text-2xl'}`}></i>
                                 </div>
                             )}
-                            <div className={`absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full text-[9px] font-black backdrop-blur-md transition-all duration-300 ${isActive ? 'bg-spotify-green text-black' : 'bg-black/60 text-white group-hover/btn:bg-spotify-green group-hover/btn:text-black'}`}>
+                            <div className={`absolute bottom-1 right-1 px-1.5 py-0.5 rounded-full font-black backdrop-blur-md transition-all duration-300 ${isCompact ? 'text-[7px]' : 'text-[9px]'} ${isActive ? 'bg-spotify-green text-black' : 'bg-black/60 text-white group-hover/btn:bg-spotify-green group-hover/btn:text-black'}`}>
                                 {node.tracks?.length || 0}
                             </div>
                         </div>
-                        <span className={`text-[10px] font-black truncate w-full px-1 relative z-10 transition-colors duration-300 ${isActive ? 'text-spotify-green' : 'text-zinc-400 group-hover/btn:text-zinc-100'}`}>
+                        <span className={`font-black truncate w-full px-0.5 relative z-10 transition-colors duration-300 ${isCompact ? 'text-[8px]' : 'text-[10px]'} ${isActive ? 'text-spotify-green' : 'text-zinc-400 group-hover/btn:text-zinc-100'}`}>
                             {node.name}
                         </span>
                     </button>
-                ) : <div className="aspect-square w-full rounded-xl bg-zinc-900/20 mb-4" />}
+                ) : <div className="aspect-square w-full rounded-lg bg-zinc-900/20" />}
             </div>
         );
     }
@@ -170,7 +173,7 @@ const SidebarSection = React.memo(({
                 className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}
                 style={{ willChange: 'grid-template-rows, opacity' }}
             >
-                <div className={`overflow-hidden px-1 ${viewMode === 'grid' ? 'grid grid-cols-2 gap-2 pt-2 pb-4' : 'space-y-0.5 py-1'}`}>
+                <div className={`overflow-hidden px-1 ${viewMode === 'grid' ? 'grid grid-cols-2 gap-2 pt-2 pb-3' : viewMode === 'compact' ? 'grid grid-cols-3 gap-1.5 pt-2 pb-3' : 'space-y-0.5 py-1'}`}>
                     {bin.visibleNodes.map((node) => (
                         <SidebarItem
                             key={node.name}
@@ -294,7 +297,7 @@ const Sidebar = ({
     return (
         <div className="flex flex-col h-full">
             {/* Library Header */}
-            <div className="pt-4 pb-4 px-2 flex items-center justify-between border-b border-white/3 mb-4">
+            <div className="pt-3 pb-3 px-2 flex items-center justify-between border-b border-white/3 mb-2">
                 <div className="flex items-center gap-3 text-zinc-100 hover:text-white transition-all cursor-default group">
                     <div className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center group-hover:bg-zinc-800 transition-colors border border-white/5 shadow-inner">
                         <i className="fa fa-bookmark text-spotify-green text-sm group-hover:scale-110 transition-transform"></i>
@@ -306,7 +309,7 @@ const Sidebar = ({
                     {/* View Toggles */}
                     <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-white/5 mr-1 shadow-inner">
                         <Tooltip text="List View">
-                            <button
+                            <button 
                                 onClick={() => setViewMode('list')}
                                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-zinc-800 text-spotify-green shadow-lg ring-1 ring-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
                             >
@@ -314,11 +317,19 @@ const Sidebar = ({
                             </button>
                         </Tooltip>
                         <Tooltip text="Grid View">
-                            <button
+                            <button 
                                 onClick={() => setViewMode('grid')}
                                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${viewMode === 'grid' ? 'bg-zinc-800 text-spotify-green shadow-lg ring-1 ring-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
                             >
                                 <i className="fa fa-th-large text-[10px]"></i>
+                            </button>
+                        </Tooltip>
+                        <Tooltip text="Compact Grid">
+                            <button 
+                                onClick={() => setViewMode('compact')}
+                                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${viewMode === 'compact' ? 'bg-zinc-800 text-spotify-green shadow-lg ring-1 ring-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
+                            >
+                                <i className="fa fa-th text-[10px]"></i>
                             </button>
                         </Tooltip>
                     </div>
@@ -338,7 +349,7 @@ const Sidebar = ({
             </div>
 
             {/* Sections */}
-            <div className="flex-1 overflow-y-auto px-1 py-2 custom-scrollbar space-y-4">
+            <div className="flex-1 overflow-y-auto px-1 py-1 custom-scrollbar space-y-2">
                 {processedWorld.map((bin) => (
                     <SidebarSection
                         key={bin.name}
