@@ -1,0 +1,3966 @@
+import normalizeSpotifyTracks from "./spotifyTransformer.js";
+
+"use strict";
+// Global Tooltip System
+(function () {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'global-custom-tooltip';
+  tooltip.className = 'fixed z-[99999] pointer-events-none bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-zinc-700 shadow-2xl hidden animate-in fade-in zoom-in-95 duration-150';
+  tooltip.style.transform = 'translate(-50%, -100%) translateY(-20px)';
+
+  const textSpan = document.createElement('span');
+  tooltip.appendChild(textSpan);
+
+  const arrow = document.createElement('div');
+  arrow.className = 'absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-zinc-900 border-r border-b border-zinc-700 rotate-45';
+  tooltip.appendChild(arrow);
+
+  document.body.appendChild(tooltip);
+
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[title]');
+    if (target && !target.closest('.track-header-cell')) {
+      const currentTitle = target.getAttribute('title');
+      if (!currentTitle) return;
+
+      target.setAttribute('data-original-title', currentTitle);
+      target.removeAttribute('title');
+
+      textSpan.textContent = currentTitle;
+      tooltip.classList.remove('hidden');
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!tooltip.classList.contains('hidden')) {
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top = e.clientY + 'px';
+    }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    const target = e.target.closest('[data-original-title]');
+    if (target) {
+      const originalTitle = target.getAttribute('data-original-title');
+      target.setAttribute('title', originalTitle);
+      target.removeAttribute('data-original-title');
+      tooltip.classList.add('hidden');
+    }
+  });
+})();
+
+var accessToken = null;
+var ACCESS_TOKEN_STORAGE_KEY = "access_token";
+var REFRESH_TOKEN_STORAGE_KEY = "refresh_token";
+var ACTIVE_CLIENT_ID_STORAGE_KEY = "omy_active_client_id";
+
+function sanitizeInjectedValue(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  var trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  // Keep placeholder values from being treated as real runtime config.
+  if (/^%VITE_[A-Z0-9_]+%$/.test(trimmed)) {
+    return "";
+  }
+
+  return trimmed;
+}
+
+var configuredPrimarySpotifyClientId = sanitizeInjectedValue(
+  window.SPOTIFY_CLIENT_ID,
+);
+var configuredFallbackSpotifyClientId = sanitizeInjectedValue(
+  window.SPOTIFY_DEV_FALLBACK_CLIENT_ID,
+);
+var configuredSpotifyRedirectUri = sanitizeInjectedValue(
+  window.SPOTIFY_REDIRECT_URI,
+);
+var configuredSpotifyProxyUrl = sanitizeInjectedValue(window.SPOTIFY_PROXY_URL);
+var configuredSpotifyAuthUrl = sanitizeInjectedValue(window.SPOTIFY_AUTH_URL);
+var configuredSpotifyTokenUrl = sanitizeInjectedValue(window.SPOTIFY_TOKEN_URL);
+var configuredSpotifyMeUrl = sanitizeInjectedValue(window.SPOTIFY_ME_URL);
+var configuredSpotifyMeTracksUrl = sanitizeInjectedValue(window.SPOTIFY_ME_TRACKS_URL);
+var configuredSpotifyMePlaylistsUrl = sanitizeInjectedValue(window.SPOTIFY_ME_PLAYLISTS_URL);
+var configuredSpotifyUsersUrl = sanitizeInjectedValue(window.SPOTIFY_USERS_URL);
+var configuredSpotifyPlaylistsUrl = sanitizeInjectedValue(window.SPOTIFY_PLAYLISTS_URL);
+var configuredSpotifyAudioFeaturesUrl = sanitizeInjectedValue(window.SPOTIFY_AUDIO_FEATURES_URL);
+var configuredSpotifyArtistsUrl = sanitizeInjectedValue(window.SPOTIFY_ARTISTS_URL);
+var configuredSpotifyAlbumsUrl = sanitizeInjectedValue(window.SPOTIFY_ALBUMS_URL);
+var DEFAULT_SPOTIFY_PROXY_PATH = "/api/spotify";
+var activeSpotifyClientId = null;
+
+function getSpotifyProxyCandidates() {
+  var candidates = [];
+  if (configuredSpotifyProxyUrl) {
+    candidates.push(configuredSpotifyProxyUrl);
+  }
+  if (candidates.indexOf(DEFAULT_SPOTIFY_PROXY_PATH) === -1) {
+    candidates.push(DEFAULT_SPOTIFY_PROXY_PATH);
+  }
+  return candidates;
+}
+
+function getConfiguredSpotifyClientIds() {
+  var ids = [];
+  if (configuredPrimarySpotifyClientId) {
+    ids.push(configuredPrimarySpotifyClientId);
+  }
+  if (
+    configuredFallbackSpotifyClientId &&
+    configuredFallbackSpotifyClientId !== configuredPrimarySpotifyClientId
+  ) {
+    ids.push(configuredFallbackSpotifyClientId);
+  }
+  return ids;
+}
+
+function hydrateActiveSpotifyClientId() {
+  var configuredIds = getConfiguredSpotifyClientIds();
+  var storedClientId = window.localStorage.getItem(ACTIVE_CLIENT_ID_STORAGE_KEY);
+
+  if (storedClientId && configuredIds.indexOf(storedClientId) !== -1) {
+    activeSpotifyClientId = storedClientId;
+    return;
+  }
+
+  activeSpotifyClientId = configuredIds[0] || "";
+
+  if (activeSpotifyClientId) {
+    window.localStorage.setItem(
+      ACTIVE_CLIENT_ID_STORAGE_KEY,
+      activeSpotifyClientId,
+    );
+  } else {
+    window.localStorage.removeItem(ACTIVE_CLIENT_ID_STORAGE_KEY);
+  }
+}
+
+function getActiveSpotifyClientId() {
+  if (!activeSpotifyClientId) {
+    hydrateActiveSpotifyClientId();
+  }
+  return activeSpotifyClientId;
+}
+
+function getSpotifyRedirectUri() {
+  return configuredSpotifyRedirectUri;
+}
+
+function canUseSpotifyDevModeFallback() {
+  return (
+    configuredFallbackSpotifyClientId &&
+    configuredFallbackSpotifyClientId !== configuredPrimarySpotifyClientId
+  );
+}
+
+function switchToSpotifyDevModeFallback() {
+  if (!canUseSpotifyDevModeFallback()) {
+    return false;
+  }
+
+  var currentClientId = getActiveSpotifyClientId();
+  if (currentClientId === configuredFallbackSpotifyClientId) {
+    return false;
+  }
+
+  activeSpotifyClientId = configuredFallbackSpotifyClientId;
+  window.localStorage.setItem(
+    ACTIVE_CLIENT_ID_STORAGE_KEY,
+    configuredFallbackSpotifyClientId,
+  );
+  window.localStorage.setItem("omy_last_client_id", configuredFallbackSpotifyClientId);
+
+  // Tokens and verifier are bound to client ID. Reset before reauth.
+  accessToken = null;
+  window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem("code_verifier");
+
+  return true;
+}
+
+var curUserID = null;
+var curTracks = {};
+var curRawTrackItems = [];
+var curArtists = {};
+var curAlbums = {};
+var curSelected = new Set();
+var curSelectedTracks = [];
+var nodeMap = {};
+var genreIndex = 0;
+var sourceIndex = 7;
+var thePlot = null;
+
+var skipGenrePhrases = ["christmas"];
+var audio = document.createElement("audio");
+var nowPlaying = null;
+var curNode = null;
+var abortLoading = false;
+var sourceImages = {};
+var sourceTypes = {};
+var sourceUris = {};
+var activePlaylistReference = null;
+var playlistSourceTabVisible = false;
+var activeTrackListSubview = "track-list";
+
+var progressBar = document.getElementById("progress-bar");
+
+var topArtistCount = 0;
+var totalTracks = 0;
+var topArtistName = null;
+var topTrackName = null;
+var topTrackCount = 0;
+var totalPlaylists = 0;
+var processedPlaylists = 0;
+var theTrackTable = null;
+var theStagingTable = null;
+var stagingIsVisible = false;
+var maxTracksShown = 20000;
+var sidebarExpanded = true;
+var allTracks = [];
+window.sidebarExpanded = sidebarExpanded;
+var SIDEBAR_VISIBLE_KEY = "oym_sidebar_visible";
+var SIDEBAR_EXPANDED_KEY = "oym_sidebar_expanded";
+var ANIMATIONS_ENABLED_KEY = "oym_animations_enabled";
+
+// NEW: Global search state
+var currentSearchQuery = "";
+var quickMode = false;
+var headerIdentityText = "Not logged in";
+var headerStatusText = null;
+var headerStatusTimer = null;
+window.normalizedTrackData = [];
+window.getNormalizedTrackData = function () {
+  return Array.isArray(window.normalizedTrackData)
+    ? window.normalizedTrackData
+    : [];
+};
+
+window.addEventListener("unhandledrejection", function (event) {
+  console.error("Unhandled promise rejection:", event.reason);
+});
+
+function isSpotifyScopeError(resp) {
+  var payload = resp || null;
+  if (payload && payload.responseJSON) {
+    payload = payload.responseJSON;
+  }
+
+  if (!payload && resp && resp.responseText) {
+    try {
+      payload = JSON.parse(resp.responseText);
+    } catch (e) {
+      payload = null;
+    }
+  }
+
+  var msg = getSpotifyErrorMessage(payload);
+
+  if (!msg) {
+    return false;
+  }
+
+  var lower = String(msg).toLowerCase();
+  return lower.indexOf("insufficient") !== -1 && lower.indexOf("scope") !== -1;
+}
+
+function getSpotifyErrorMessage(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  var msg = payload && payload.error && payload.error.message;
+  if (!msg && payload && typeof payload.error === "string") {
+    msg = payload.error;
+  }
+  if (!msg && typeof payload.message === "string") {
+    msg = payload.message;
+  }
+  return msg || null;
+}
+
+function isSpotifyTokenExpiredError(payload) {
+  var msg = getSpotifyErrorMessage(payload);
+  if (!msg) {
+    return false;
+  }
+
+  var lower = String(msg).toLowerCase();
+  return (
+    lower.indexOf("token expired") !== -1 ||
+    lower.indexOf("access token expired") !== -1 ||
+    lower.indexOf("the access token expired") !== -1 ||
+    lower.indexOf("expired token") !== -1
+  );
+}
+
+function isSpotifyDevModeAllowlistError(payload) {
+  var msg = getSpotifyErrorMessage(payload);
+  if (!msg) {
+    return false;
+  }
+
+  var lower = String(msg).toLowerCase();
+  return (
+    lower.indexOf("development mode") !== -1 ||
+    lower.indexOf("allowlist") !== -1 ||
+    lower.indexOf("users and access") !== -1 ||
+    lower.indexOf("registered users") !== -1 ||
+    lower.indexOf("is not authorized") !== -1
+  );
+}
+
+function shouldAttemptSpotifyDevModeFallback(responseStatus, payload) {
+  if (responseStatus !== 403 || !canUseSpotifyDevModeFallback()) {
+    return false;
+  }
+
+  var currentClientId = getActiveSpotifyClientId();
+  if (!currentClientId || currentClientId === configuredFallbackSpotifyClientId) {
+    return false;
+  }
+
+  if (isSpotifyScopeError(payload)) {
+    return false;
+  }
+
+  if (isSpotifyDevModeAllowlistError(payload)) {
+    return true;
+  }
+
+  var msg = getSpotifyErrorMessage(payload);
+  if (!msg) {
+    // Generic 403 with no message from custom client IDs is commonly a dev-mode access block.
+    return true;
+  }
+
+  var lower = String(msg).toLowerCase();
+  return (
+    lower === "forbidden" ||
+    lower === "access forbidden" ||
+    lower.indexOf("forbidden") !== -1 ||
+    lower.indexOf("not allowed") !== -1 ||
+    lower.indexOf("unauthorized") !== -1
+  );
+}
+
+async function readSpotifyErrorPayload(response) {
+  if (!response || typeof response.clone !== "function") {
+    return null;
+  }
+
+  try {
+    var text = await response.clone().text();
+    if (!text) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      return { error: { message: text } };
+    }
+  } catch (e) {
+    return null;
+  }
+}
+
+function restartAuthorization(message) {
+  if (message) {
+    error(message);
+  }
+
+  accessToken = null;
+  window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+
+  // Stop any ongoing fetch
+  abortLoading = true;
+
+  // Reset UI to login state
+  var intro = document.getElementById("intro");
+  if (intro) {
+    intro.style.display = "block";
+    intro.style.removeProperty("display"); // Allow CSS/Tailwind to handle it
+    intro.classList.remove("hidden");
+  }
+
+  var loginState = document.getElementById("login-state");
+  if (loginState) {
+    loginState.classList.remove("hidden");
+    loginState.style.display = "block";
+  }
+
+  var selectionState = document.getElementById("selection-state");
+  if (selectionState) {
+    selectionState.classList.add("hidden");
+    selectionState.style.display = "none";
+  }
+
+  var info = document.getElementById("info");
+  if (info) {
+    info.classList.add("hidden");
+    info.classList.remove("flex");
+  }
+
+  document.querySelectorAll(".work").forEach(function (el) {
+    el.classList.add("hidden");
+    el.classList.remove("flex");
+  });
+
+  var headerTabs = document.getElementById("header-tabs");
+  if (headerTabs) {
+    headerTabs.classList.add("hidden");
+    headerTabs.classList.remove("flex");
+  }
+}
+
+var theWorld = [
+  { name: "Genres", nodes: [] },
+  {
+    name: "Moods",
+    nodes: [
+      makeNode(
+        "(unclassified mood)",
+        "popularity",
+        featMissingFilter("energy"),
+        featGetterInt("popularity"),
+        featSorter("popularity", true),
+        true,
+      ),
+      makeNode(
+        "chill",
+        "energy",
+        featMusicFilter("energy", 0, 0.2),
+        featGetterPercent("energy"),
+        featSorter("energy", false),
+        true,
+      ),
+      makeNode(
+        "amped",
+        "energy",
+        featMusicFilter("energy", 0.8, 1.0),
+        featGetterPercent("energy"),
+        featSorter("energy", true),
+        true,
+      ),
+      makeNode(
+        "sad",
+        "sadness",
+        featMusicFilter("sadness", 0.8, 1.0),
+        featGetterPercent("sadness"),
+        featSorter("sadness", true),
+        true,
+      ),
+      makeNode(
+        "anger",
+        "anger",
+        featMusicFilter("anger", 0.8, 1.0),
+        featGetterPercent("anger"),
+        featSorter("anger", true),
+        true,
+      ),
+      makeNode(
+        "happy",
+        "happiness",
+        featMusicFilter("happiness", 0.8, 1.0),
+        featGetterPercent("happiness"),
+        featSorter("happiness", true),
+        true,
+      ),
+      makeNode(
+        "danceable",
+        "danceability",
+        featMusicFilter("danceability", 0.8, 1.0),
+        featGetterPercent("danceability"),
+        featSorter("danceability", true),
+        true,
+      ),
+    ],
+  },
+  {
+    name: "Styles",
+    nodes: [
+      makeNode(
+        "instrumental",
+        "instrumentalness",
+        featMusicFilter("instrumentalness", 0.8, 1.0),
+        featGetterPercent("instrumentalness"),
+        featSorter("instrumentalness", true),
+        true,
+      ),
+      makeNode(
+        "acoustic",
+        "acousticness",
+        featMusicFilter("acousticness", 0.8, 1.0),
+        featGetterPercent("acousticness"),
+        featSorter("acousticness", true),
+        true,
+      ),
+      makeNode(
+        "live",
+        "liveness",
+        featMusicFilter("liveness", 0.85, 1.0),
+        featGetterPercent("liveness"),
+        featSorter("liveness", true),
+        true,
+      ),
+      makeNode(
+        "spoken word",
+        "speechiness",
+        featFilter("speechiness", 0.85, 1.0),
+        featGetterPercent("speechiness"),
+        featSorter("speechiness", true),
+        true,
+      ),
+      makeNode(
+        "clean",
+        "explicit",
+        featBoolFilter("explicit", false),
+        featGetterBool("explicit", "explicit", "clean"),
+        featSorter("explicit", true),
+        false,
+      ),
+      makeNode(
+        "explicit",
+        "explicit",
+        featBoolFilter("explicit", true),
+        featGetterBool("explicit", "explicit", "clean"),
+        featSorter("explicit", true),
+        false,
+      ),
+      makeNode(
+        "loud",
+        "loudness (dB)",
+        featMusicFilter("loudness", -5, 0),
+        featGetterInt("loudness"),
+        featSorter("loudness", true),
+        true,
+      ),
+      makeNode(
+        "quiet",
+        "loudness (dB)",
+        featMusicFilter("loudness", -60, -10),
+        featGetterInt("loudness"),
+        featSorter("loudness", false),
+        true,
+      ),
+    ],
+  },
+  {
+    name: "Decades",
+    nodes: [
+      makeNode(
+        "Oldies",
+        "year",
+        featFilter("year", 0, 1950),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "1950s",
+        "year",
+        featFilter("year", 1950, 1959),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "1960s",
+        "year",
+        featFilter("year", 1960, 1969),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "1970s",
+        "year",
+        featFilter("year", 1970, 1979),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "1980s",
+        "year",
+        featFilter("year", 1980, 1989),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "1990s",
+        "year",
+        featFilter("year", 1990, 1999),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "2000s",
+        "year",
+        featFilter("year", 2000, 2009),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "2010s",
+        "year",
+        featFilter("year", 2010, 2019),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "2020s",
+        "year",
+        featFilter("year", 2020, 2029),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "Now",
+        "year",
+        featFilter("year", 2016, 2020),
+        featGetter("year"),
+        featSorter("year", false),
+        true,
+      ),
+      makeNode(
+        "(unclassified year)",
+        "year",
+        featFilter("year", -1, 0),
+        featGetter("year"),
+        featSorter("year", false),
+        false,
+      ),
+    ],
+  },
+  {
+    name: "Added",
+    nodes: [
+      makeNode(
+        "Today",
+        "age (days)",
+        featFilter("age", 0, 1),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+      makeNode(
+        "In the last week",
+        "age (days)",
+        featFilter("age", 0, 7),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+      makeNode(
+        "In the last month",
+        "age (days)",
+        featFilter("age", 0, 30),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+      makeNode(
+        "In the last year",
+        "age (days)",
+        featFilter("age", 0, 365),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+      makeNode(
+        "Over a year ago",
+        "age (days)",
+        featFilter("age", 356, 365 * 100),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+      makeNode(
+        "Over 2 years ago",
+        "age (days)",
+        featFilter("age", 356 * 2, 365 * 100),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+      makeNode(
+        "Over 5 years ago",
+        "age (days)",
+        featFilter("age", 356 * 5, 365 * 100),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+      makeNode(
+        "Whenever",
+        "age (days)",
+        featFilter("age", 0, 365 * 100),
+        featGetterInt("age"),
+        featSorter("age", false),
+        true,
+      ),
+    ],
+  },
+  {
+    name: "Popularity",
+    nodes: [
+      makeNode(
+        "top popular",
+        "Popularity",
+        featFilter("popularity", 75, 100),
+        featGetter("popularity"),
+        featSorter("popularity", true),
+        true,
+      ),
+      makeNode(
+        "very popular",
+        "Popularity",
+        featFilter("popularity", 50, 75),
+        featGetter("popularity"),
+        featSorter("popularity", true),
+        true,
+      ),
+      makeNode(
+        "somewhat popular",
+        "Popularity",
+        featFilter("popularity", 20, 50),
+        featGetter("popularity"),
+        featSorter("popularity", true),
+        true,
+      ),
+      makeNode(
+        "deep",
+        "Popularity",
+        featFilter("popularity", 0, 20),
+        featGetter("popularity"),
+        featSorter("popularity", true),
+        true,
+      ),
+    ],
+  },
+  {
+    name: "Duration",
+    nodes: [
+      makeNode(
+        "Very very short",
+        "Duration",
+        featFilter("duration_ms", mins(0), mins(0.5)),
+        featGetter("duration_ms"),
+        featSorter("duration_ms", false),
+        true,
+      ),
+      makeNode(
+        "Very short",
+        "Duration",
+        featFilter("duration_ms", mins(0), mins(1.5)),
+        featGetter("duration_ms"),
+        featSorter("duration_ms", false),
+        true,
+      ),
+      makeNode(
+        "Short",
+        "Duration",
+        featFilter("duration_ms", mins(0), mins(3)),
+        featGetter("duration_ms"),
+        featSorter("duration_ms", false),
+        true,
+      ),
+      makeNode(
+        "Medium",
+        "Duration",
+        featFilter("duration_ms", mins(3), mins(6)),
+        featGetter("duration_ms"),
+        featSorter("duration_ms", false),
+        true,
+      ),
+      makeNode(
+        "Long",
+        "Duration",
+        featFilter("duration_ms", mins(6), mins(1000)),
+        featGetter("duration_ms"),
+        featSorter("duration_ms", false),
+        true,
+      ),
+      makeNode(
+        "Very long",
+        "Duration",
+        featFilter("duration_ms", mins(12), mins(1000)),
+        featGetter("duration_ms"),
+        featSorter("duration_ms", false),
+        true,
+      ),
+      makeNode(
+        "Very very long",
+        "Duration",
+        featFilter("duration_ms", mins(30), mins(1000)),
+        featGetter("duration_ms"),
+        featSorter("duration_ms", false),
+        true,
+      ),
+    ],
+  },
+  { name: "Sources", nodes: [] },
+  {
+    name: "All Results",
+    nodes: [
+      makeNode(
+        "All results",
+        "All results",
+        function () {
+          return true;
+        },
+        featGetter("popularity"),
+        featSorter("popularity", true),
+        false,
+      ),
+    ],
+  },
+];
+
+function mins(min) {
+  return min * 60 * 1000;
+}
+function now() {
+  return new Date().getTime();
+}
+
+function updateFavs() {
+  if (theWorld[genreIndex].nodes.length > 0 && topArtistName && topTrackName) {
+    var favGenre = theWorld[genreIndex].nodes[0].name;
+    document.getElementById("fav-genre").textContent = favGenre;
+    document.getElementById("fav-artist").textContent = topArtistName;
+    document.getElementById("fav-song").textContent = topTrackName;
+    var favs = document.getElementById("favs");
+    favs.classList.remove("hidden");
+    favs.classList.add("block");
+  }
+}
+
+function refreshHeader() {
+  var ntracks = Object.keys(curTracks).length;
+  var nArtists = Object.keys(curArtists).length;
+  if (totalPlaylists > 0) {
+    linfo(
+      "Found " +
+      ntracks +
+      " unique tracks by " +
+      nArtists +
+      " artists in " +
+      processedPlaylists +
+      " of " +
+      totalPlaylists +
+      " playlists",
+    );
+    var progress = (processedPlaylists * 100) / totalPlaylists;
+    setProgress(progress);
+  } else {
+    if (totalTracks > 0) {
+      var progress = (ntracks * 100) / totalTracks;
+      setProgress(progress);
+    }
+    linfo(
+      "Found " +
+      ntracks +
+      " tracks by " +
+      nArtists +
+      " artists in your collection.",
+    );
+  }
+}
+
+function addTracks(tracks) {
+  const AUDIO_FEATURE_FIELDS = [
+    'danceability', 'energy', 'valence', 'tempo', 'loudness',
+    'speechiness', 'acousticness', 'instrumentalness', 'liveness',
+    'key', 'mode', 'time_signature'
+  ];
+
+  tracks.forEach(function (track) {
+    track.feats = track.feats || {};
+
+    // 1. Copy audio features from track root to track.feats
+    AUDIO_FEATURE_FIELDS.forEach(field => {
+      if (track[field] !== undefined && track[field] !== null) {
+        track.feats[field] = track[field];
+      }
+    });
+
+    // 2. Calculate Moods (happiness, sadness, anger) if energy and valence exist
+    if (track.feats.energy !== undefined && track.feats.valence !== undefined) {
+      track.feats.sadness = (1 - track.feats.energy) * (1 - track.feats.valence);
+      track.feats.happiness = track.feats.energy * track.feats.valence;
+      track.feats.anger = track.feats.energy * (1 - track.feats.valence);
+    }
+
+    // 3. Handle Genres
+    var genres = getGenresForTrack(track);
+    track.feats.genres = new Set();
+    track.feats.topGenre = "";
+
+    genres.forEach(function (genre) {
+      if (isGoodGenre(genre)) {
+        track.feats.genres.add(genre);
+        if (
+          track.feats.topGenre.length == 0 &&
+          genre !== "(unclassified genre)"
+        ) {
+          track.feats.topGenre = genre;
+        }
+
+        if (!(genre in nodeMap)) {
+          var node = makeNode(
+            genre,
+            "Genres",
+            featGenreFilter(genre),
+            featGenreGetter(genre),
+            featSorter("popularity", true),
+            false,
+          );
+          theWorld[genreIndex].nodes.push(node);
+        }
+      }
+    });
+
+    // Fallback for unclassified if no good genres found
+    if (track.feats.genres.size === 0) {
+      const unclassified = "(unclassified genre)";
+      track.feats.genres.add(unclassified);
+      track.feats.topGenre = unclassified;
+      if (!(unclassified in nodeMap)) {
+        var node = makeNode(
+          unclassified,
+          "Genres",
+          featGenreFilter(unclassified),
+          featGenreGetter(unclassified),
+          featSorter("popularity", true),
+          false,
+        );
+        theWorld[genreIndex].nodes.push(node);
+      }
+    }
+
+    // 4. Sources
+    if (track.feats.sources) {
+      track.feats.sources.forEach(function (source) {
+        if (!(source in nodeMap)) {
+          var node = makeNode(
+            source,
+            "Sources",
+            featSourceFilter(source),
+            featSourceGetter(source),
+            featSorter("popularity", true),
+            false,
+          );
+          node.sourceType = sourceTypes[source] || null;
+          node.sourceUri = sourceUris[source] || null;
+          if (sourceImages[source]) {
+            node.imageUrl = sourceImages[source];
+          }
+          theWorld[sourceIndex].nodes.push(node);
+        } else if (nodeMap[source] && sourceUris[source] && !nodeMap[source].sourceUri) {
+          nodeMap[source].sourceUri = sourceUris[source];
+        }
+      });
+    }
+
+    track.feats.year = getYearForTrack(track);
+    track.feats.popularity = track.popularity;
+    track.feats.duration_ms = track.duration_ms;
+  });
+}
+
+function filterTracks(tracks) {
+  const start = now();
+
+  // 1. Reset all nodes
+  theWorld.forEach(function (bin) {
+    bin.nodes.forEach(function (node) {
+      node.tracks = [];
+      node.artists = new Set();
+    });
+  });
+
+  // 2. Optimized distribution
+  tracks.forEach(function (track) {
+    // A. Direct assignment for high-cardinality categories (Genres & Sources)
+    if (track.feats.genres) {
+      track.feats.genres.forEach(function (genre) {
+        const node = nodeMap[genre];
+        if (node && node.label === "Genres") {
+          node.tracks.push(track);
+          if (track.details && track.details.artists && track.details.artists[0]) {
+            node.artists.add(track.details.artists[0].id);
+          }
+        }
+      });
+    }
+
+    if (track.feats.sources) {
+      track.feats.sources.forEach(function (source) {
+        const node = nodeMap[source];
+        if (node && node.label === "Sources") {
+          node.tracks.push(track);
+          if (track.details && track.details.artists && track.details.artists[0]) {
+            node.artists.add(track.details.artists[0].id);
+          }
+        }
+      });
+    }
+
+    // B. Filter-based assignment for others (Moods, Styles, Decades, etc.)
+    // We iterate the categories that aren't optimized yet
+    theWorld.forEach(function (bin) {
+      if (bin.name === "Genres" || bin.name === "Sources") return;
+
+      bin.nodes.forEach(function (node) {
+        if (node.filter(track)) {
+          node.tracks.push(track);
+          if (track.details && track.details.artists && track.details.artists[0]) {
+            node.artists.add(track.details.artists[0].id);
+          }
+        }
+      });
+    });
+
+    saveTrack(track);
+  });
+
+  console.log(`[Performance] filterTracks took ${now() - start}ms for ${tracks.length} tracks`);
+  if (window.oymNotify) window.oymNotify('sidebar');
+}
+
+var totRefresh = 0;
+
+function refreshTheWorld(quick) {
+  var start = now();
+  updateViewOfTheWorld(quick);
+  var delta = now() - start;
+  totRefresh += delta;
+}
+
+function playlistSubtitle(s) {
+  document.getElementById("playlist-sub-title").textContent = s;
+}
+function playlistTitle(s) {
+  document.getElementById("playlist-title").textContent = s;
+}
+
+var curPlottingNodes = {};
+var curPlottingNames = [];
+
+function getPlotData(node) {
+  var xDataName = document.getElementById("select-xaxis").value;
+  var yDataName = document.getElementById("select-yaxis").value;
+
+  var theDataTrace = {
+    x: [],
+    y: [],
+    mode: "markers",
+    name: node.name,
+    text: [],
+    node: node,
+    marker: {
+      sizemode: "diameter",
+      size: [],
+      sizeref: 1,
+      sizemin: 4,
+      color: "#1DB954",
+      line: {
+        color: "rgba(255, 255, 255, 0.2)",
+        width: 1,
+      },
+    },
+  };
+  var xGetter = plottableData[xDataName].getter;
+  var yGetter = plottableData[yDataName].getter;
+
+  node.tracks.forEach(function (track) {
+    theDataTrace.x.push(xGetter(track));
+    theDataTrace.y.push(yGetter(track));
+    var name = track.details.name + " - " + track.details.artists[0].name;
+    theDataTrace.text.push(name);
+  });
+
+  var nsizes = normalizeSizes(node.tracks);
+  theDataTrace.marker.size = nsizes;
+  return theDataTrace;
+}
+
+function normalizeSizes(tracks) {
+  var sizeDataName = document.getElementById("select-size").value;
+  var sizeInfo = plottableData[sizeDataName];
+  var minWidth = 4;
+  var maxWidth = 12;
+  var minSize = sizeInfo.min;
+  var maxSize = sizeInfo.max;
+  var out = [];
+  var range = maxSize - minSize;
+  if (range <= 0) range = 1;
+  var orange = maxWidth - minWidth;
+  tracks.forEach(function (track) {
+    var val = sizeInfo.getter(track);
+    if (val < minSize) val = minSize;
+    if (val > maxSize) val = maxSize;
+    var nval = (val - minSize) / range;
+    var oval = nval * orange + minWidth;
+    out.push(oval);
+  });
+  return out;
+}
+
+function plotPlaylist(node) {
+  if (node.name in curPlottingNodes) {
+    delete curPlottingNodes[node.name];
+    redrawPlot();
+  } else {
+    curPlottingNodes[node.name] = node;
+    curPlottingNames.push(node.name);
+    redrawPlot();
+  }
+}
+
+function getLayout() {
+  const xDataName = document.getElementById("select-xaxis").value;
+  const yDataName = document.getElementById("select-yaxis").value;
+  const plotHost = document.getElementById("the-plot");
+
+  if (!plotHost) return {};
+
+  const width = plotHost.clientWidth;
+  const height = plotHost.clientHeight;
+
+  const layout = {
+    showlegend: true,
+    legend: {
+      orientation: "h",
+      y: -0.2,
+      x: 0.5,
+      xanchor: "center",
+      font: { color: "#71717a", size: 10 },
+      bgcolor: "rgba(0,0,0,0)",
+    },
+    hovermode: "closest",
+    xaxis: {
+      title: {
+        text: plottableData[xDataName].name.toUpperCase(),
+        font: {
+          size: 10,
+          color: "#71717a",
+          family: "Inter, system-ui, sans-serif",
+          weight: 900,
+        },
+        standoff: 20,
+      },
+      color: "#3f3f46",
+      gridcolor: "rgba(255,255,255,0.03)",
+      zerolinecolor: "rgba(255,255,255,0.05)",
+      tickfont: { color: "#71717a", size: 9 },
+      automargin: true,
+    },
+    yaxis: {
+      title: {
+        text: plottableData[yDataName].name.toUpperCase(),
+        font: {
+          size: 10,
+          color: "#71717a",
+          family: "Inter, system-ui, sans-serif",
+          weight: 900,
+        },
+        standoff: 20,
+      },
+      color: "#3f3f46",
+      gridcolor: "rgba(255,255,255,0.03)",
+      zerolinecolor: "rgba(255,255,255,0.05)",
+      tickfont: { color: "#71717a", size: 9 },
+      automargin: true,
+    },
+    autosize: true,
+    margin: { l: 60, r: 40, t: 40, b: 80 },
+    width: width > 0 ? width : undefined,
+    height: height > 0 ? height : undefined,
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+    font: {
+      color: "#e4e4e7",
+      family: "Inter, system-ui, sans-serif",
+    },
+    hoverlabel: {
+      bgcolor: "#18181b",
+      bordercolor: "#3f3f46",
+      font: { color: "#ffffff", size: 12 },
+    },
+  };
+  return layout;
+}
+
+function redrawPlot() {
+  if (!thePlot) thePlot = document.getElementById("the-plot");
+  if (!thePlot) return;
+  var layout = getLayout();
+  var plotData = [];
+  curPlottingNames = [];
+  Object.entries(curPlottingNodes).forEach(function (entry) {
+    var name = entry[0];
+    var node = entry[1];
+    curPlottingNames.push(name);
+    plotData.push(getPlotData(node));
+  });
+
+  requestAnimationFrame(function () {
+    Plotly.react(thePlot, plotData, layout, {
+      displayLogo: false,
+      displayModeBar: true,
+      modeBarButtonsToRemove: ["toImage", "sendDataToCloud"],
+      responsive: true,
+    }).then(function () {
+      if (!thePlot._hasClickEvent) {
+        thePlot.on("plotly_doubleclick", function (data) {
+          if (data && data.points && data.points.length > 0) {
+            var idx = data.points[0].pointNumber;
+            var track = data.points[0].data.node.tracks[idx];
+            playTrack(track);
+          }
+        });
+        thePlot._hasClickEvent = true;
+      }
+
+      if (!thePlot._hasSelectedEvent) {
+        thePlot.on("plotly_selected", function (data) {
+          if (data && data.points) {
+            data.points.forEach(function (point) {
+              var plotName = curPlottingNames[point.curveNumber];
+              var track = curPlottingNodes[plotName].tracks[point.pointNumber];
+              curSelected.add(track.id);
+            });
+            var elements = document.querySelectorAll(".nstaging-tracks");
+            elements.forEach(function (el) {
+              el.textContent = curSelected.size;
+            });
+          }
+        });
+        thePlot._hasSelectedEvent = true;
+      }
+    });
+  });
+}
+
+function clearPlot() {
+  curPlottingNodes = {};
+  redrawPlot();
+}
+
+function isPlaylistSourceNode(node) {
+  return !!node && node.sourceType === "playlist";
+}
+
+function setPlaylistSourceTabVisible(isVisible) {
+  playlistSourceTabVisible = !!isVisible;
+
+  var tabItem = document.getElementById("playlist-order-tab-item");
+  if (tabItem) {
+    tabItem.classList.toggle("hidden", !playlistSourceTabVisible);
+  }
+
+  if (!playlistSourceTabVisible && activeTrackListSubview === "playlist-sequence") {
+    showTab("#the-track-list-tab");
+    return;
+  }
+
+  showTrackListSubview(activeTrackListSubview);
+}
+
+function showTrackListSubview(subview) {
+  var nextSubview = subview === "playlist-sequence" && playlistSourceTabVisible
+    ? "playlist-sequence"
+    : "track-list";
+
+  activeTrackListSubview = nextSubview;
+  var trackListPanel = document.getElementById("track-list-view");
+  var playlistPanel = document.getElementById("playlist-sequence-view");
+
+  if (trackListPanel) {
+    if (nextSubview === "track-list") {
+      trackListPanel.classList.remove("hidden");
+      trackListPanel.classList.add("flex");
+    } else {
+      trackListPanel.classList.add("hidden");
+      trackListPanel.classList.remove("flex");
+    }
+  }
+
+  if (playlistPanel) {
+    if (nextSubview === "playlist-sequence" && playlistSourceTabVisible) {
+      playlistPanel.classList.remove("hidden");
+      playlistPanel.classList.add("flex");
+    } else {
+      playlistPanel.classList.add("hidden");
+      playlistPanel.classList.remove("flex");
+    }
+  }
+}
+
+function showPlaylist(node) {
+  curNode = node;
+  window.curNode = node;
+  if (window.oymNotify) window.oymNotify('sidebar');
+  var playlistSourceSelected = isPlaylistSourceNode(node);
+  activePlaylistReference = playlistSourceSelected
+    ? (node.sourceUri || node.playlistUri || node.uri || (getInfo() && getInfo().uri) || null)
+    : null;
+  window.activePlaylistReference = activePlaylistReference;
+  setPlaylistSourceTabVisible(playlistSourceSelected);
+  if (theTrackTable == null) return;
+
+  if (stagingIsVisible) {
+    // Need to implement tab show
+    showTab("#the-track-list-tab");
+  }
+  curNode = node;
+  window.curNode = node;
+
+  var displayTracks =
+    currentSearchQuery.trim() !== ""
+      ? getGlobalSearchTracks(currentSearchQuery)
+      : node.tracks;
+  var isSearching = currentSearchQuery.trim() !== "";
+
+  var nTracks = displayTracks.length;
+  var nArtists = new Set(
+    displayTracks.flatMap(function (t) {
+      return (t.details.artists || []).map(function (a) {
+        return a.id;
+      });
+    }),
+  ).size;
+
+  const resetBtn = document.getElementById("reset-column-order");
+  const resetRowBtn = document.getElementById("reset-row-order");
+  if (isSearching) {
+    playlistTitle("Search results");
+    playlistSubtitle(
+      "Search Results: " + nTracks + " tracks / " + nArtists + " artists",
+    );
+    if (resetBtn) resetBtn.classList.add("hidden");
+    if (resetRowBtn) resetRowBtn.classList.add("hidden");
+  } else {
+    const isAllResults = node.name === "All results";
+    const formatName = (name) => {
+      if (!name) return "";
+      return name.toLowerCase().startsWith("your ")
+        ? name.replace(/^your\s+/i, "")
+        : uname(name);
+    };
+    const title = isAllResults
+      ? "All results in this collection"
+      : `Your "${formatName(node.name)}" playlist`;
+    playlistTitle(title);
+    [resetBtn, resetRowBtn].forEach(btn => {
+      if (btn) btn.classList.remove("hidden");
+    });
+    playlistSubtitle(`${nTracks} tracks / ${nArtists} artists`);
+  }
+
+  // document.getElementById("tbl-param").textContent = node.label; // Missing element in new UI
+  if (displayTracks.length === 0) {
+    document.getElementById("track-table-shell").classList.add("hidden");
+    var emptyMsg = document.getElementById("track-table-empty");
+    emptyMsg.classList.remove("hidden");
+    emptyMsg.classList.add("flex");
+    var truncated = document.getElementById("gthe-track-table-truncated");
+    if (truncated) {
+      truncated.classList.remove("block");
+      truncated.classList.add("hidden");
+    }
+    return;
+  }
+
+  var emptyMsg = document.getElementById("track-table-empty");
+  emptyMsg.classList.remove("flex");
+  emptyMsg.classList.add("hidden");
+  document.getElementById("track-table-shell").classList.remove("hidden");
+
+  var truncated = document.getElementById("gthe-track-table-truncated");
+  if (displayTracks.length > maxTracksShown) {
+    if (truncated) {
+      truncated.classList.remove("hidden");
+      truncated.classList.add("block");
+    }
+  } else {
+    if (truncated) {
+      truncated.classList.remove("block");
+      truncated.classList.add("hidden");
+    }
+  }
+  showTracksInTable(
+    theTrackTable,
+    displayTracks,
+    node.getter,
+    node.label,
+    false,
+    "main",
+  );
+
+  if (playlistSourceSelected) {
+    showTracksInTable(
+      theTrackTable,
+      displayTracks,
+      node.getter,
+      node.label,
+      false,
+      "playlist",
+    );
+  }
+}
+
+function getGlobalSearchTracks(query) {
+  var searchQuery = query.trim().toLowerCase();
+  if (searchQuery === "") return [];
+
+  return Object.values(curTracks).filter(function (track) {
+    var trackName = (track.details.name || "").toLowerCase();
+    var artistNames = (track.details.artists || []).map(function (artist) {
+      return (artist.name || "").toLowerCase();
+    });
+    var artistGenres = (track.details.artists || []).map(function (artist) {
+      var artistInfo = curArtists[artist.id];
+      return artistInfo && artistInfo.genres ? artistInfo.genres : [];
+    });
+    var albumInfo = curAlbums[track.details.album_id] || {};
+    var albumName = (albumInfo.name || "").toLowerCase();
+    var albumGenres = (albumInfo.genres || []).map(function (genre) {
+      return (genre || "").toLowerCase();
+    });
+    var trackGenres = Array.from(track.feats.genres || []).map(
+      function (genre) {
+        return (genre || "").toLowerCase();
+      },
+    );
+    var sources = Array.from(track.feats.sources || []);
+    var sourceMatch = sources.some(function (source) {
+      return (source || "").toLowerCase().includes(searchQuery);
+    });
+    var topGenre = (track.feats.topGenre || "").toLowerCase();
+    if (
+      trackName.includes(searchQuery) ||
+      albumName.includes(searchQuery) ||
+      sourceMatch ||
+      topGenre.includes(searchQuery)
+    )
+      return true;
+    return (
+      artistNames.some(function (artistName) {
+        return artistName.includes(searchQuery);
+      }) ||
+      albumGenres.some(function (genre) {
+        return genre.includes(searchQuery);
+      }) ||
+      trackGenres.some(function (genre) {
+        return genre.includes(searchQuery);
+      }) ||
+      artistGenres.flat().some(function (genre) {
+        return (genre || "").toLowerCase().includes(searchQuery);
+      })
+    );
+  });
+}
+
+function showStagingList() {
+  if (theStagingTable == null) return;
+
+  curSelectedTracks = [];
+  curSelected.forEach(function (tid) {
+    curSelectedTracks.push(curTracks[tid]);
+  });
+  if (curSelectedTracks.length > 0) {
+    var full = document.getElementById("staging-full");
+    full.classList.remove("hidden");
+    full.classList.add("block");
+    var empty = document.getElementById("staging-empty");
+    empty.classList.remove("block");
+    empty.classList.add("hidden");
+  } else {
+    var full = document.getElementById("staging-full");
+    full.classList.remove("block");
+    full.classList.add("hidden");
+    var empty = document.getElementById("staging-empty");
+    empty.classList.remove("hidden");
+    empty.classList.add("block");
+  }
+  var truncated = document.getElementById("gthe-staging-table-truncated");
+  if (curSelectedTracks.length > maxTracksShown) {
+    if (truncated) {
+      truncated.classList.remove("hidden");
+      truncated.classList.add("block");
+    }
+  } else {
+    if (truncated) {
+      truncated.classList.remove("block");
+      truncated.classList.add("hidden");
+    }
+  }
+  showTracksInTable(
+    theStagingTable,
+    curSelectedTracks,
+    featGetter("popularity"),
+    "popularity",
+    true,
+  );
+}
+
+function getStagingTracks() {
+  // Return currently selected tracks in a consistent order
+  var out = [];
+  curSelected.forEach(function (tid) {
+    var track = curTracks[tid];
+    if (track) out.push(track);
+  });
+  // Sort by popularity by default for the saved playlist
+  out.sort(function (a, b) {
+    return b.feats.popularity - a.feats.popularity;
+  });
+  return out;
+}
+
+function toFiniteNumber(val) {
+  if (val == null || val === "") return null;
+  var num = Number(val);
+  if (!Number.isFinite(num)) return null;
+  return num;
+}
+
+function buildAudioFeaturesPayload(track) {
+  var feats = (track && track.feats) || {};
+  return {
+    id: track ? track.id : null,
+    danceability: toFiniteNumber(feats.danceability),
+    energy: toFiniteNumber(feats.energy),
+    valence: toFiniteNumber(feats.valence),
+    tempo: toFiniteNumber(feats.tempo),
+    loudness: toFiniteNumber(feats.loudness),
+    speechiness: toFiniteNumber(feats.speechiness),
+    acousticness: toFiniteNumber(feats.acousticness),
+    instrumentalness: toFiniteNumber(feats.instrumentalness),
+    liveness: toFiniteNumber(feats.liveness),
+    key: toFiniteNumber(feats.key),
+    mode: toFiniteNumber(feats.mode),
+    time_signature: toFiniteNumber(feats.time_signature),
+  };
+}
+
+function refreshNormalizedTrackData() {
+  var tracks = Object.values(curTracks || {});
+  var audioFeatures = tracks.map(buildAudioFeaturesPayload);
+
+  var normalizedRows = normalizeSpotifyTracks(
+    curRawTrackItems,
+    audioFeatures,
+  );
+  window.normalizedTrackData = normalizedRows;
+
+  var normalizedById = {};
+  normalizedRows.forEach(function (row) {
+    if (row && row.id) {
+      normalizedById[row.id] = row;
+    }
+  });
+
+  tracks.forEach(function (track) {
+    if (!track || !track.id || !(track.id in normalizedById)) return;
+    var normalized = normalizedById[track.id];
+
+    // Keep the legacy nested shape, but copy the flattened fields onto the
+    // live track object so all downstream renderers can read them directly.
+    Object.keys(normalized).forEach(function (key) {
+      if (key === 'id') return;
+      track[key] = normalized[key];
+    });
+
+    track.feats = track.feats || {};
+    track.details = track.details || {};
+  });
+
+  return window.normalizedTrackData;
+}
+
+function mergeTracksWithNormalizedRows(tracks) {
+  var normalizedRows = Array.isArray(window.normalizedTrackData)
+    ? window.normalizedTrackData
+    : [];
+
+  if (normalizedRows.length === 0) {
+    return tracks;
+  }
+
+  var normalizedById = {};
+  normalizedRows.forEach(function (row) {
+    if (row && row.id) {
+      normalizedById[row.id] = row;
+    }
+  });
+
+  return (tracks || []).map(function (track) {
+    if (!track || !track.id) return track;
+    var normalized = normalizedById[track.id];
+    if (!normalized) return track;
+
+    return {
+      ...track,
+      ...normalized,
+      details: {
+        ...(track.details || {}),
+      },
+      feats: {
+        ...(track.feats || {}),
+      },
+    };
+  });
+}
+
+function showTracksInTable(_table, tracks, _getter, _label, isStagingList) {
+  var mergedTracks = mergeTracksWithNormalizedRows(tracks);
+
+  if (isStagingList) {
+    if (window.renderStagingTable) {
+      window.renderStagingTable(mergedTracks);
+    }
+  } else {
+    if (arguments[5] === "playlist") {
+      if (window.renderPlaylistTrackTable) {
+        window.renderPlaylistTrackTable(mergedTracks);
+      }
+      return;
+    }
+
+    if (window.renderTrackTable) {
+      window.renderTrackTable(mergedTracks);
+    } else {
+      console.warn("window.renderTrackTable not ready, retrying in 500ms...");
+      setTimeout(function () {
+        if (window.renderTrackTable) window.renderTrackTable(mergedTracks);
+      }, 500);
+    }
+  }
+}
+
+function saveTracksToPlaylist(playlist, inputTracks) {
+  var tracks = inputTracks.slice();
+  function saveTracks() {
+    var uris = [];
+    while (tracks.length > 0 && uris.length < 100) {
+      var track = tracks.shift();
+      uris.push(track.details.uri);
+    }
+
+    var url =
+      configuredSpotifyUsersUrl +
+      "/" +
+      curUserID +
+      "/playlists/" +
+      playlist.id +
+      "/tracks";
+    var params = { uris: uris };
+    callSpotify("POST", url, params, function (ok) {
+      if (ok) {
+        if (tracks.length > 0) saveTracks();
+        else info("playlist saved");
+      } else {
+        error("Trouble adding tracks to playlist");
+      }
+    });
+  }
+  saveTracks();
+}
+
+function getActivePlaylistUri(overrideUri) {
+  if (overrideUri && typeof overrideUri === "string") {
+    return overrideUri;
+  }
+
+  if (activePlaylistReference && typeof activePlaylistReference === "string") {
+    return activePlaylistReference;
+  }
+
+  if (curNode && (curNode.sourceUri || curNode.playlistUri || curNode.uri)) {
+    return curNode.sourceUri || curNode.playlistUri || curNode.uri;
+  }
+
+  var info = getInfo();
+  if (info && info.type === "playlist" && info.uri) {
+    return info.uri;
+  }
+
+  return null;
+}
+
+async function reorderSpotifyPlaylist(nextOrder, playlistReference) {
+  var playlistUri = getActivePlaylistUri(playlistReference);
+  var playlistID = getPlaylistIdFromReference(playlistUri);
+  if (!playlistID) {
+    throw new Error("bad playlist URI");
+  }
+
+  var url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
+  var currentTracks = curNode && Array.isArray(curNode.tracks) ? curNode.tracks : [];
+  var currentItems = currentTracks
+    .map(function (track, index) {
+      return {
+        track: track,
+        id: track && track.id ? track.id : null,
+        uri: track && track.details && track.details.uri ? track.details.uri : null,
+        position: index,
+      };
+    })
+    .filter(function (item) {
+      return item.id && item.uri;
+    });
+
+  var trackBuckets = new Map();
+  currentItems.forEach(function (item) {
+    if (!trackBuckets.has(item.id)) {
+      trackBuckets.set(item.id, []);
+    }
+    trackBuckets.get(item.id).push(item);
+  });
+
+  var desiredOrder = Array.isArray(nextOrder) ? nextOrder.filter(Boolean) : [];
+  var orderedItems = [];
+  desiredOrder.forEach(function (id) {
+    var bucket = trackBuckets.get(id);
+    if (bucket && bucket.length > 0) {
+      orderedItems.push(bucket.shift());
+    }
+  });
+
+  trackBuckets.forEach(function (bucket) {
+    while (bucket.length > 0) {
+      orderedItems.push(bucket.shift());
+    }
+  });
+
+  var deletePayloads = currentItems
+    .slice()
+    .sort(function (a, b) {
+      return b.position - a.position;
+    });
+
+  for (var deleteIndex = 0; deleteIndex < deletePayloads.length; deleteIndex += 100) {
+    var deleteBatch = deletePayloads.slice(deleteIndex, deleteIndex + 100).map(function (item) {
+      return {
+        uri: item.uri,
+        positions: [item.position],
+      };
+    });
+
+    await spotifyFetcher.apiCall(url, "DELETE", {
+      tracks: deleteBatch,
+    });
+  }
+
+  for (var addIndex = 0; addIndex < orderedItems.length; addIndex += 100) {
+    var addBatch = orderedItems.slice(addIndex, addIndex + 100).map(function (item) {
+      return item.uri;
+    });
+
+    if (addBatch.length > 0) {
+      await spotifyFetcher.apiCall(url, "POST", {
+        uris: addBatch,
+      });
+    }
+  }
+
+  return orderedItems.map(function (item) {
+    return item.id;
+  });
+}
+window.reorderSpotifyPlaylist = reorderSpotifyPlaylist;
+
+async function deleteTracksFromPlaylist(trackIds, playlistReference) {
+  var playlistUri = getActivePlaylistUri(playlistReference);
+  var playlistID = getPlaylistIdFromReference(playlistUri);
+  if (!playlistID) {
+    throw new Error("bad playlist URI");
+  }
+
+  var url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
+  var currentTracks =
+    curNode && Array.isArray(curNode.tracks) ? curNode.tracks : [];
+
+  // Map selected IDs to their positions and URIs in the full playlist
+  var itemsToDelete = [];
+  currentTracks.forEach(function (track, index) {
+    if (trackIds.indexOf(track.id) !== -1) {
+      itemsToDelete.push({
+        uri:
+          track && track.details && track.details.uri
+            ? track.details.uri
+            : null,
+        position: index,
+      });
+    }
+  });
+
+  if (itemsToDelete.length === 0) return;
+
+  // Sort by position DESCENDING to avoid indexing shifts if Spotify processed them sequentially
+  // (though Spotify's positions array in a single request handles this, across multiple requests it matters)
+  var deletePayloads = itemsToDelete
+    .filter(function (item) {
+      return item.uri;
+    })
+    .sort(function (a, b) {
+      return b.position - a.position;
+    });
+
+  // Batch by 100 as per Spotify API limits
+  for (
+    var deleteIndex = 0;
+    deleteIndex < deletePayloads.length;
+    deleteIndex += 100
+  ) {
+    var chunk = deletePayloads
+      .slice(deleteIndex, deleteIndex + 100)
+      .map(function (item) {
+        return {
+          uri: item.uri,
+          positions: [item.position],
+        };
+      });
+
+    await spotifyFetcher.apiCall(url, "DELETE", {
+      tracks: chunk,
+    });
+  }
+}
+window.deleteTracksFromPlaylist = deleteTracksFromPlaylist;
+
+
+function makeNode(name, label, filter, getter, sorter, plottable) {
+  var node = {
+    name: name,
+    label: label,
+    plottable: plottable,
+    tracks: [],
+    artists: new Set(),
+    filter: filter,
+    getter: getter,
+    sorter: sorter,
+  };
+  nodeMap[name] = node;
+  return node;
+}
+
+function savePlaylist() {
+  var curTracks = getStagingTracks();
+  if (curTracks.length > 0) {
+    var name = document.getElementById("staging-playlist-name").textContent;
+    info("saving " + name);
+    var url = configuredSpotifyUsersUrl + "/" + curUserID + "/playlists";
+    callSpotify("POST", url, { name: name }, function (ok, results) {
+      if (ok) {
+        saveTracksToPlaylist(results, curTracks);
+      } else {
+        error("Trouble creating playlist");
+      }
+    });
+  } else {
+    info("no tracks to save");
+  }
+}
+
+function collapseAllSidebar() {
+  sidebarExpanded = false;
+  window.sidebarExpanded = false;
+  window.localStorage.setItem(SIDEBAR_EXPANDED_KEY, "false");
+  if (window.oymNotify) window.oymNotify('sidebar');
+}
+
+function expandAllSidebar() {
+  sidebarExpanded = true;
+  window.sidebarExpanded = true;
+  window.localStorage.setItem(SIDEBAR_EXPANDED_KEY, "true");
+  if (window.oymNotify) window.oymNotify('sidebar');
+}
+
+function toggleSidebarSections() {
+  if (sidebarExpanded) collapseAllSidebar();
+  else expandAllSidebar();
+}
+
+// Make shared variables and functions available to other modules
+window.curSelected = curSelected;
+window.onplaying = nowPlaying;
+window.Audio = audio;
+window.playTrack = playTrack;
+window.curNode = curNode;
+window.allTracks = allTracks;
+window.showPlaylist = showPlaylist;
+window.plotPlaylist = plotPlaylist;
+window.toggleSidebarSections = toggleSidebarSections;
+window.collapseAllSidebar = collapseAllSidebar;
+window.expandAllSidebar = expandAllSidebar;
+
+
+function updateViewOfTheWorld(_quick) {
+  updateFavs();
+  if (window.renderSidebar) {
+    window.renderSidebar(theWorld);
+  }
+}
+
+
+var plottableData = {
+  energy: {
+    name: "Energy",
+    min: 0,
+    max: 1,
+    getter: featGetterPercent("energy"),
+  },
+  danceability: {
+    name: "Danceability",
+    min: 0,
+    max: 1,
+    getter: featGetterPercent("danceability"),
+  },
+  valence: {
+    name: "Valence (Mood)",
+    min: 0,
+    max: 1,
+    getter: featGetterPercent("valence"),
+  },
+  duration: {
+    name: "Duration",
+    min: 0,
+    max: 1500 * 1000,
+    getter: featGetter("duration_ms"),
+  },
+  tempo: { name: "Tempo (BPM)", min: 40, max: 240, getter: featGetter("tempo") },
+  anger: { name: "Anger", min: 0, max: 1, getter: featGetterPercent("anger") },
+  happiness: {
+    name: "Happiness",
+    min: 0,
+    max: 1,
+    getter: featGetterPercent("happiness"),
+  },
+  loudness: {
+    name: "Loudness (dB)",
+    min: -30,
+    max: 0,
+    getter: featGetter("loudness"),
+  },
+  acousticness: {
+    name: "Acousticness",
+    min: 0,
+    max: 1,
+    getter: featGetterPercent("acousticness"),
+  },
+  liveness: {
+    name: "Liveness",
+    min: 0,
+    max: 1,
+    getter: featGetterPercent("liveness"),
+  },
+  speechiness: {
+    name: "Speechiness",
+    min: 0,
+    max: 1,
+    getter: featGetterPercent("speechiness"),
+  },
+  popularity: {
+    name: "Popularity",
+    min: 0,
+    max: 100,
+    getter: featGetter("popularity"),
+  },
+  age: {
+    min: 0,
+    max: 5000,
+    name: "Days Since Added",
+    getter: featGetter("age"),
+  },
+  year: {
+    min: 1950,
+    max: 2026,
+    name: "Release Year",
+    getter: featGetter("year"),
+  },
+};
+
+function addPlotSelect(elem, defaultValue) {
+  if (!elem) return;
+  elem.replaceChildren();
+  var keys = Object.keys(plottableData);
+  keys.sort();
+  keys.forEach(function (key) {
+    var param = plottableData[key];
+    var option = document.createElement("option");
+    option.textContent = param.name;
+    option.value = key;
+    elem.appendChild(option);
+  });
+  elem.value = defaultValue;
+  elem.onchange = redrawPlot;
+}
+
+function uname(s) {
+  return s.replace(/_/g, " ");
+}
+
+
+function featGenreFilter(genre) {
+  return function (track) {
+    return track.feats.genres.has(genre);
+  };
+}
+function featGenreGetter(_genre) {
+  return function (track) {
+    var glist = Array.from(track.feats.genres);
+    return glist.join(", ");
+  };
+}
+
+function featSourceFilter(source) {
+  return function (track) {
+    return track.feats.sources && track.feats.sources.has(source);
+  };
+}
+function featSourceGetter(_source) {
+  return function (track) {
+    return Array.from(track.feats.sources || []).join(", ");
+  };
+}
+
+function featSorter(param, reverse) {
+  return function (tracks) {
+    tracks.sort(function (a, b) {
+      if (a.feats[param] > b.feats[param]) return 1;
+      else if (a.feats[param] < b.feats[param]) return -1;
+      else return 0;
+    });
+    if (reverse) tracks.reverse();
+    return tracks;
+  };
+}
+
+function featGetter(param) {
+  return function (track) {
+    return track.feats[param];
+  };
+}
+function featGetterInt(param) {
+  return function (track) {
+    return Math.round(track.feats[param]);
+  };
+}
+function featGetterPercent(param) {
+  return function (track) {
+    return Math.round(100 * track.feats[param]);
+  };
+}
+function featGetterBool(param, true_val, false_val) {
+  return function (track) {
+    return track.feats[param] ? true_val : false_val;
+  };
+}
+function featBoolFilter(param, state) {
+  return function (track) {
+    return "feats" in track && track.feats[param] == state;
+  };
+}
+function featMusicFilter(param, low, high) {
+  return function (track) {
+    return (
+      "feats" in track &&
+      track.feats.speechiness < 0.8 &&
+      track.feats[param] >= low &&
+      track.feats[param] <= high
+    );
+  };
+}
+function featMissingFilter(_param) {
+  return function (track) {
+    return !("energy" in track.feats);
+  };
+}
+function featFilter(param, low, high) {
+  return function (track) {
+    return (
+      "feats" in track &&
+      track.feats[param] >= low &&
+      track.feats[param] <= high
+    );
+  };
+}
+
+function applyFilter(tracks, filt) {
+  var out = [];
+  tracks.forEach(function (track) {
+    if (filt(track)) out.push(track);
+  });
+  return out;
+}
+
+function getYearForTrack(track) {
+  var year = -1;
+  if (track.details.album_id in curAlbums) {
+    var album = curAlbums[track.details.album_id];
+    if ("release_date" in album) {
+      var date = album.release_date;
+      if (date.length >= 4) {
+        var syear = date.substring(0, 4);
+        year = parseInt(syear);
+      }
+    }
+  }
+  return year;
+}
+
+function getGenresForTrack(track) {
+  var genres = [];
+  var albumId = track.details.album_id;
+  if (albumId in curAlbums) {
+    var album = curAlbums[albumId];
+    (album.genres || []).forEach(function (g) {
+      genres.push(g);
+    });
+  }
+
+  track.details.artists.forEach(function (artist) {
+    if (artist.id in curArtists) {
+      var detailedArtist = curArtists[artist.id];
+      (detailedArtist.genres || []).forEach(function (genre) {
+        genres.push(genre);
+      });
+    }
+  });
+  if (genres.length == 0) genres.push("(unclassified genre)");
+  return genres;
+}
+
+function tinyArtists(artists) {
+  return (artists || []).map(function (a) {
+    return {
+      id: a.id,
+      name: a.name,
+    };
+  });
+}
+
+function isGoodGenre(genre) {
+  var lgenre = genre.toLowerCase();
+  for (var i = 0; i < skipGenrePhrases.length; i++) {
+    var phrase = skipGenrePhrases[i];
+    if (lgenre.indexOf(phrase) != -1) return false;
+  }
+  return true;
+}
+
+function error(msg) {
+  var message = msg || "";
+
+  // Route user-facing errors to inline error areas instead of navbar identity.
+  var errs = document.querySelectorAll(".err-txt");
+  errs.forEach(function (el) {
+    el.textContent = message;
+  });
+
+  var loadingInfo = document.getElementById("linfo");
+  if (loadingInfo) {
+    loadingInfo.textContent = message;
+  }
+
+  setHeaderStatusMessage(message, 14000);
+
+  if (message) {
+    console.error(message);
+  }
+}
+function info(msg) {
+  var message = msg || "";
+
+  // Keep lightweight status updates out of the navbar identity pill.
+  var loadingInfo = document.getElementById("linfo");
+  if (loadingInfo) {
+    loadingInfo.textContent = message;
+  }
+
+  setHeaderStatusMessage(message, 8000);
+
+  if (message) {
+    console.log(message);
+  }
+}
+function linfo(msg) {
+  var loadingInfo = document.getElementById("linfo");
+  if (loadingInfo) {
+    loadingInfo.textContent = msg || "";
+  }
+}
+
+
+function generateRandomString(length) {
+  var possible =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  var values = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(values).reduce(function (acc, x) {
+    return acc + possible[x % possible.length];
+  }, "");
+}
+
+function sha256(plain) {
+  var encoder = new TextEncoder();
+  var data = encoder.encode(plain);
+  return window.crypto.subtle.digest("SHA-256", data);
+}
+
+function base64encode(input) {
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(input)))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function authorizeUser() {
+  console.log("Initiating Authorize User flow...");
+  var clientId = getActiveSpotifyClientId();
+  var redirectUri = getSpotifyRedirectUri();
+  if (!clientId || !redirectUri) {
+    error(
+      "Spotify configuration missing. Set VITE_SPOTIFY_CLIENT_ID and VITE_SPOTIFY_REDIRECT_URI.",
+    );
+    return;
+  }
+
+  var scopes =
+    "user-library-read user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public";
+  var codeVerifier = generateRandomString(64);
+  window.localStorage.setItem("code_verifier", codeVerifier);
+
+  if (!configuredSpotifyAuthUrl) {
+    error("Spotify auth endpoint missing. Set VITE_SPOTIFY_AUTH_URL.");
+    return;
+  }
+
+  sha256(codeVerifier)
+    .then(function (hashed) {
+      var codeChallenge = base64encode(hashed);
+      var authUrl =
+        configuredSpotifyAuthUrl +
+        "?" +
+        "client_id=" +
+        encodeURIComponent(clientId) +
+        "&response_type=code&show_dialog=false&scope=" +
+        encodeURIComponent(scopes) +
+        "&redirect_uri=" +
+        encodeURIComponent(redirectUri) +
+        "&code_challenge_method=S256&code_challenge=" +
+        encodeURIComponent(codeChallenge);
+
+      console.log("Redirecting to Spotify Auth URL:", authUrl);
+      document.location = authUrl;
+    })
+    .catch(function (err) {
+      console.error("Error in sha256 generation:", err);
+      error("Secure context required or crypto API failure.");
+    });
+}
+
+function persistSpotifyTokens(data) {
+  if (!data) {
+    return;
+  }
+
+  if (data.access_token) {
+    accessToken = data.access_token;
+    window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, data.access_token);
+  }
+
+  if (data.refresh_token) {
+    window.localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
+  }
+}
+
+async function exchangeCodeForToken(code) {
+  var clientId = getActiveSpotifyClientId();
+  var redirectUri = getSpotifyRedirectUri();
+  if (!clientId || !redirectUri) {
+    throw new Error("Spotify client configuration is missing");
+  }
+
+  if (!configuredSpotifyTokenUrl) {
+    throw new Error("Spotify token endpoint is missing");
+  }
+
+  var codeVerifier = window.localStorage.getItem("code_verifier");
+  const response = await fetch(configuredSpotifyTokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      grant_type: "authorization_code",
+      code: code,
+      redirect_uri: redirectUri,
+      code_verifier: codeVerifier,
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to exchange code for token");
+  }
+
+  const data = await response.json();
+  persistSpotifyTokens(data);
+  return data;
+}
+
+async function refreshAccessToken() {
+  var clientId = getActiveSpotifyClientId();
+  if (!clientId) {
+    throw new Error("Spotify client configuration is missing");
+  }
+
+  if (!configuredSpotifyTokenUrl) {
+    throw new Error("Spotify token endpoint is missing");
+  }
+
+  var refreshToken = window.localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+  if (!refreshToken) {
+    throw new Error("Refresh token is missing");
+  }
+
+  const response = await fetch(configuredSpotifyTokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to refresh access token");
+  }
+
+  const data = await response.json();
+  persistSpotifyTokens(data);
+  if (!data || !data.access_token) {
+    throw new Error("Refresh response missing access token");
+  }
+  return data;
+}
+// =======================================================================
+// MODERNIZED DATA FETCHING (Replaces old sequential RSVP/Ajax logic)
+// =======================================================================
+
+class SpotifyDataFetcher {
+  constructor() {
+    this.proxyCandidates = getSpotifyProxyCandidates();
+    this.proxyUrl = this.proxyCandidates[0];
+    this.queue = [];
+    this.activeRequests = 0;
+    this.maxConcurrent = 8;
+    this.requestLog = [];
+    this.maxRequestsPerInterval = 10;
+    this.intervalMs = 1000;
+  }
+
+  async throttle() {
+    while (true) {
+      const now = Date.now();
+      // Clean up log
+      this.requestLog = this.requestLog.filter(t => now - t < this.intervalMs);
+
+      if (this.requestLog.length < this.maxRequestsPerInterval) {
+        this.requestLog.push(now);
+        return;
+      }
+
+      // Wait a bit before checking again
+      await this.sleep(100);
+    }
+  }
+
+  async enqueue(fn) {
+    if (this.activeRequests >= this.maxConcurrent) {
+      await new Promise((resolve) => this.queue.push(resolve));
+    }
+    this.activeRequests++;
+    try {
+      return await fn();
+    } finally {
+      this.activeRequests--;
+      if (this.queue.length > 0) {
+        const next = this.queue.shift();
+        next();
+      }
+    }
+  }
+
+  sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  chunkArray(array, chunkSize) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  }
+
+  async callSpotifyDirect(url, method, data, signal) {
+    var resolvedMethod = (method || "GET").toUpperCase();
+    var finalUrl = url;
+    var options = {
+      method: resolvedMethod,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      signal: signal,
+    };
+
+    if (data && resolvedMethod === "GET") {
+      var params = new URLSearchParams(data);
+      var query = params.toString();
+      if (query) {
+        finalUrl += (finalUrl.indexOf("?") === -1 ? "?" : "&") + query;
+      }
+    } else if (data && resolvedMethod !== "GET") {
+      options.headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify(data);
+    }
+
+    return fetch(finalUrl, options);
+  }
+
+  async apiCall(url, method = "GET", data = null, retries = 5) {
+    let currentRetries = retries;
+    let hasRefreshed = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for large batches
+
+    while (currentRetries >= 0) {
+      const result = await this.enqueue(async () => {
+        try {
+          // Apply rate limiting within the concurrency slot
+          await this.throttle();
+
+          var response = null;
+          var responseSource = "direct";
+          var directNetworkError = null;
+          var lastNetworkError = null;
+
+          try {
+            response = await this.callSpotifyDirect(
+              url,
+              method,
+              data,
+              controller.signal,
+            );
+          } catch (directError) {
+            if (directError && directError.name === "AbortError") {
+              throw directError;
+            }
+            directNetworkError = directError;
+            responseSource = "proxy";
+          }
+
+          if (!response) {
+            for (let i = 0; i < this.proxyCandidates.length; i++) {
+              const candidateUrl = this.proxyCandidates[i];
+              try {
+                response = await fetch(candidateUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url, method, data, accessToken }),
+                  signal: controller.signal,
+                });
+                this.proxyUrl = candidateUrl;
+                break;
+              } catch (networkError) {
+                lastNetworkError = networkError;
+                if (networkError && networkError.name === "AbortError") {
+                  throw networkError;
+                }
+                if (i === this.proxyCandidates.length - 1) {
+                  throw networkError;
+                }
+              }
+            }
+          }
+
+          if (!response) {
+            throw directNetworkError || lastNetworkError || new Error("Spotify request failed");
+          }
+
+          if (response.status === 429) {
+            const retryAfterHeader = response.headers.get("Retry-After");
+            const baseDelay = retryAfterHeader
+              ? parseInt(retryAfterHeader, 10)
+              : Math.pow(2, 5 - currentRetries) + 1;
+            const jitter = Math.random() * 1000;
+            const totalDelay = baseDelay * 1000 + jitter;
+            return { type: "retry", delay: totalDelay };
+          }
+
+          if (response.status === 401 || response.status === 403) {
+            var errorData = await readSpotifyErrorPayload(response);
+            if (errorData) {
+              console.error(`Spotify ${response.status} Error:`, errorData);
+            }
+
+            if (
+              shouldAttemptSpotifyDevModeFallback(response.status, errorData) &&
+              switchToSpotifyDevModeFallback()
+            ) {
+              restartAuthorization(
+                "This Spotify app is in Development Mode and this account is not on its Users and Access allowlist. Switched to fallback Client ID. Please connect again.",
+              );
+              authorizeUser();
+              return {
+                type: "error",
+                message: "Switched to fallback Spotify Client ID",
+              };
+            }
+
+            if (response.status === 403 && isSpotifyScopeError(errorData)) {
+              restartAuthorization(
+                "Your Spotify authorization expired or is missing permissions. Please connect again.",
+              );
+              return { type: "error", message: "Scope or permission error" };
+            }
+
+            // Try to refresh token ONCE per call
+            if (
+              !hasRefreshed &&
+              (response.status === 401 || isSpotifyTokenExpiredError(errorData))
+            ) {
+              console.log(
+                "Token expired during API call, attempting refresh...",
+              );
+              hasRefreshed = true;
+              try {
+                await refreshAccessToken();
+                return { type: "retry", delay: 0 }; // Immediate retry with new token
+              } catch (e) {
+                console.error("Automatic token refresh failed:", e);
+              }
+            }
+
+            var errorMsg =
+              "Your Spotify session expired or is missing permissions. Please connect again.";
+            if (response.status === 403) {
+              errorMsg =
+                "Access Forbidden (403). If using a custom Client ID, ensure your Spotify email is whitelisted in the Developer Dashboard (Users and Access).";
+            }
+            restartAuthorization(errorMsg);
+            return { type: "error", message: "Auth expired" };
+          }
+
+          if (!response.ok) {
+            const errorData = await response.text();
+            if (
+              response.status === 502 ||
+              response.status === 503 ||
+              response.status === 504
+            ) {
+              if (responseSource === "proxy") {
+                return {
+                  type: "error",
+                  message:
+                    "Proxy unavailable (" +
+                    response.status +
+                    "). Start the backend server (`npm run dev` or `npm run dev:backend`) and retry.",
+                };
+              }
+              return {
+                type: "error",
+                message:
+                  "Spotify gateway error (" +
+                  response.status +
+                  "). Please retry in a moment.",
+              };
+            }
+            return {
+              type: "error",
+              message: `API Error: ${response.status} - ${errorData}`,
+            };
+          }
+
+          const json = await response.json();
+          return { type: "success", data: json };
+        } catch (error) {
+          if (error.name === "AbortError") {
+            return { type: "error", message: "Request timed out" };
+          }
+          return { type: "error", message: error.message };
+        }
+      });
+
+      if (result.type === "success") {
+        clearTimeout(timeoutId);
+        return result.data;
+      }
+
+      if (result.type === "retry" && currentRetries > 0) {
+        if (result.delay > 0) {
+          console.warn(
+            `Rate limited (429). Retrying in ${Math.round(result.delay)}ms... (Attempts left: ${currentRetries})`,
+          );
+          await this.sleep(result.delay);
+        }
+        currentRetries--;
+        continue;
+      }
+
+      clearTimeout(timeoutId);
+      throw new Error(result.message || "Max retries exceeded or fatal error.");
+    }
+  }
+}
+
+const spotifyFetcher = new SpotifyDataFetcher();
+
+
+async function callSpotify(type, url, json, callback) {
+  try {
+    const data = await spotifyFetcher.apiCall(url, type, json);
+    callback(true, data);
+  } catch (e) {
+    console.error("callSpotify failed:", e);
+    callback(false, e);
+  }
+}
+
+async function getSpotifyP(url, data) {
+  return await spotifyFetcher.apiCall(url, "GET", data);
+}
+
+function fetchCurrentUserProfile() {
+  var url = configuredSpotifyMeUrl;
+  return getSpotifyP(url, null);
+}
+
+
+function playTrack(track) {
+  const player = document.getElementById("spotify-player");
+  const container = document.getElementById("spotify-player-container");
+
+  if (track != nowPlaying) {
+    if (player && container) {
+      const trackId = track.id || (track.track && track.track.id) || (track.details && track.details.id);
+      if (trackId) {
+        player.src = `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0&autoplay=1&auto_play=true`;
+        container.classList.remove("hidden");
+      }
+    }
+    audio.pause();
+    nowPlaying = track;
+  } else {
+    stopTrack();
+  }
+}
+
+function stopTrack() {
+  audio.pause();
+  nowPlaying = null;
+  const container = document.getElementById("spotify-player-container");
+  if (container) {
+    container.classList.add("hidden");
+  }
+  const player = document.getElementById("spotify-player");
+  if (player) {
+    player.src = "";
+  }
+  document.querySelectorAll(".playing").forEach(function (el) {
+    el.classList.remove("playing");
+  });
+}
+
+window.playTrack = playTrack;
+window.stopTrack = stopTrack;
+
+
+
+// =======================================================================
+// UI STATE MANAGEMENT FUNCTIONS (moved earlier to prevent ReferenceError)
+// =======================================================================
+
+function startShowingTracks() {
+  showLoadingState();
+}
+
+function stopShowingTracks() {
+  showLoadedState();
+}
+
+function showLoadingState() {
+  document.body.classList.add("is-loading");
+  var selectionState = document.getElementById("selection-state");
+  if (selectionState) selectionState.style.display = "none";
+
+  var loadingState = document.getElementById("loading");
+  if (loadingState) {
+    loadingState.classList.remove("hidden");
+    loadingState.classList.add("block");
+  }
+
+  // Hide all UI aspects using forceful styles
+  var nav = document.querySelector("nav");
+  if (nav) nav.style.setProperty("display", "none", "important");
+
+  var sidebar = document.getElementById("sidebar");
+  if (sidebar) {
+    sidebar.classList.add("hidden");
+    sidebar.classList.remove("md:block", "md:flex", "flex");
+    sidebar.style.setProperty("display", "none", "important");
+  }
+
+  var loaded = document.getElementById("loaded");
+  if (loaded) {
+    loaded.classList.add("hidden");
+    loaded.classList.remove("flex");
+    loaded.style.setProperty("display", "none", "important");
+  }
+
+  var mainArea = document.getElementById("main-area");
+  if (mainArea) {
+    mainArea.classList.remove("hidden");
+    mainArea.classList.add("flex");
+    mainArea.style.setProperty("display", "flex", "important");
+  }
+
+  var mainWrapper = document.getElementById("main-wrapper");
+  if (mainWrapper) {
+    mainWrapper.classList.remove("hidden");
+    mainWrapper.classList.add("flex");
+    mainWrapper.style.setProperty("display", "flex", "important");
+  }
+
+  var intro = document.getElementById("intro");
+  if (intro) intro.style.setProperty("display", "none", "important");
+
+  // Hide the sidebar toggle button
+  var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.classList.add("hidden");
+    toggleSidebarBtn.classList.remove("md:flex");
+  }
+}
+
+function showLoadedState() {
+  document.body.classList.remove("is-loading");
+  var loadingState = document.getElementById("loading");
+  if (loadingState) {
+    loadingState.classList.remove("block");
+    loadingState.classList.add("hidden");
+    loadingState.style.setProperty("display", "none", "important");
+  }
+
+  var selectionState = document.getElementById("selection-state");
+  if (selectionState) selectionState.style.display = "none";
+
+  // Restore UI aspects
+  var nav = document.querySelector("nav");
+  if (nav) nav.style.setProperty("display", "flex", "important");
+
+  var sidebar = document.getElementById("sidebar");
+  if (sidebar) {
+    sidebar.classList.remove("hidden");
+    sidebar.classList.add("md:block");
+    sidebar.style.removeProperty("display");
+  }
+
+  var loaded = document.getElementById("loaded");
+  if (loaded) {
+    loaded.classList.remove("hidden");
+    loaded.classList.add("flex");
+    loaded.style.removeProperty("display");
+  }
+
+  var mainArea = document.getElementById("main-area");
+  if (mainArea) {
+    mainArea.classList.remove("hidden");
+    mainArea.classList.add("flex");
+    mainArea.style.removeProperty("display");
+  }
+
+  var mainWrapper = document.getElementById("main-wrapper");
+  if (mainWrapper) {
+    mainWrapper.classList.remove("hidden");
+    mainWrapper.classList.add("flex");
+    mainWrapper.style.removeProperty("display");
+  }
+
+  var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.classList.remove("hidden");
+    toggleSidebarBtn.classList.add("md:flex");
+  }
+
+  var headerTabs = document.getElementById("header-tabs");
+  if (headerTabs) {
+    headerTabs.classList.remove("hidden");
+    headerTabs.classList.add("flex");
+  }
+
+  // Restore sidebar visibility state
+  var sidebarVisible = window.localStorage.getItem(SIDEBAR_VISIBLE_KEY);
+  if (sidebarVisible === "false") {
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+      sidebar.classList.add("sidebar-collapsed");
+
+      var icon = toggleSidebarBtn?.querySelector("i");
+      if (icon) {
+        icon.classList.remove("fa-indent");
+        icon.classList.add("fa-outdent");
+      }
+    }
+  }
+
+  // Restore sidebar sections state
+  var sectionsExpanded = window.localStorage.getItem(SIDEBAR_EXPANDED_KEY);
+  if (sectionsExpanded === "false") {
+    collapseAllSidebar();
+  } else if (sectionsExpanded === "true") {
+    expandAllSidebar();
+  }
+
+  var intro = document.getElementById("intro");
+  if (intro) intro.style.setProperty("display", "none", "important");
+}
+
+function showRefreshingState() {
+  // For refetching: show subtle loading overlay without hiding the UI
+  var loadingState = document.getElementById("loading");
+  if (loadingState) {
+    loadingState.classList.remove("hidden");
+    loadingState.classList.add("block");
+    loadingState.style.setProperty("opacity", "0.7", "important");
+  }
+
+  // Keep the UI visible so users can see current data
+  var nav = document.querySelector("nav");
+  if (nav) nav.style.setProperty("display", "flex", "important");
+
+  var sidebar = document.getElementById("sidebar");
+  if (sidebar) {
+    sidebar.classList.remove("hidden");
+    sidebar.style.removeProperty("display");
+  }
+
+  var loaded = document.getElementById("loaded");
+  if (loaded) {
+    loaded.classList.remove("hidden");
+    loaded.style.removeProperty("display");
+  }
+
+  var mainArea = document.getElementById("main-area");
+  if (mainArea) {
+    mainArea.classList.remove("hidden");
+    mainArea.style.removeProperty("display");
+  }
+}
+
+/**
+ * Replaces the old collectAudioAttributes, collectArtistAttributes,
+ * and collectAlbumAttributes by fetching them all concurrently.
+ */
+async function collectAllMetadata(tracks) {
+  const tids = tracks.map((t) => t.id);
+  const aidsSet = new Set();
+  const albumIdsSet = new Set();
+
+  // Map out the IDs we need to query
+  tracks.forEach((track) => {
+    track.details.artists.forEach((artist) => aidsSet.add(artist.id));
+    if (!(track.details.album_id in curAlbums))
+      albumIdsSet.add(track.details.album_id);
+  });
+
+  const aids = Array.from(aidsSet);
+  const albumIds = Array.from(albumIdsSet);
+
+  // Spotify's mandatory chunk limits
+  const trackChunks = spotifyFetcher.chunkArray(tids, 100);
+  const artistChunks = spotifyFetcher.chunkArray(aids, 50);
+  const albumChunks = spotifyFetcher.chunkArray(albumIds, 20);
+
+  // Fetch Audio Features, Artists, and Albums in PARALLEL
+  const allReqs = [
+    ...trackChunks.map((chunk) => ({ type: "track", chunk })),
+    ...artistChunks.map((chunk) => ({ type: "artist", chunk })),
+    ...albumChunks.map((chunk) => ({ type: "album", chunk })),
+  ];
+
+  const totalBatches = allReqs.length;
+  let completedBatches = 0;
+
+  // Process all requests. The enqueue system handles the 3-at-a-time limit,
+  // but we use Promise.all here to manage the overall collection.
+  await Promise.all(
+    allReqs.map(async (req) => {
+      if (abortLoading) return;
+      try {
+        if (req.type === "track") {
+          const res = await spotifyFetcher.apiCall(
+            configuredSpotifyAudioFeaturesUrl,
+            "GET",
+            { ids: req.chunk.join(",") },
+          );
+          if (res && res.audio_features) {
+            res.audio_features.forEach((audio_feature) => {
+              if (audio_feature && audio_feature.id) {
+                const track = curTracks[audio_feature.id];
+                if (track) {
+                  Object.keys(audio_feature).forEach(function (name) {
+                    track.feats[name] = audio_feature[name];
+                  });
+                  track.feats.sadness =
+                    (1 - audio_feature.energy) * (1 - audio_feature.valence);
+                  track.feats.happiness =
+                    audio_feature.energy * audio_feature.valence;
+                  track.feats.anger =
+                    audio_feature.energy * (1 - audio_feature.valence);
+                }
+              }
+            });
+          }
+        } else if (req.type === "artist") {
+          const res = await spotifyFetcher.apiCall(
+            configuredSpotifyArtistsUrl,
+            "GET",
+            { ids: req.chunk.join(",") },
+          );
+          if (res && res.artists) {
+            res.artists.forEach((artist) => {
+              if (artist && artist.id) {
+                curArtists[artist.id] = {
+                  genres: artist.genres,
+                  name: artist.name,
+                  count: 0,
+                };
+              }
+            });
+          }
+        } else if (req.type === "album") {
+          const res = await spotifyFetcher.apiCall(
+            configuredSpotifyAlbumsUrl,
+            "GET",
+            { ids: req.chunk.join(",") },
+          );
+          if (res && res.albums) {
+            res.albums.forEach((album) => {
+              if (album && album.id) {
+                curAlbums[album.id] = {
+                  name: album.name,
+                  release_date: album.release_date,
+                  genres: album.genres,
+                };
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error(`Metadata batch failed for ${req.type}:`, e);
+      } finally {
+        completedBatches++;
+        const progress = Math.round((completedBatches / totalBatches) * 100);
+        linfo(
+          `Enriching metadata: ${completedBatches} / ${totalBatches} batches...`,
+        );
+        setProgress(progress);
+      }
+    }),
+  );
+
+  // Calculate artist appearance counts based on new tracks safely
+  tracks.forEach((track) => {
+    track.details.artists.forEach((artist) => {
+      if (curArtists[artist.id]) {
+        curArtists[artist.id].count += 1;
+        if (curArtists[artist.id].count > topArtistCount) {
+          topArtistCount = curArtists[artist.id].count;
+          topArtistName = curArtists[artist.id].name;
+        }
+      }
+    });
+  });
+}
+
+/**
+ * Replaces recursive fetching with parallel page fetching
+ */
+async function getTracksFromAPI(source, uri, sourceImageUrl = null, sourceType = null) {
+  if (source && sourceImageUrl) {
+    sourceImages[source] = sourceImageUrl;
+  }
+  if (source) {
+    sourceTypes[source] = sourceType || sourceTypes[source] || null;
+    if (sourceType === "playlist") {
+      sourceUris[source] = uri;
+    }
+  }
+  const now = new Date();
+  const limit = 50;
+
+  // 1. Fetch the first page to get total size
+  const firstPage = await spotifyFetcher.apiCall(uri, "GET", {
+    limit,
+    offset: 0,
+    market: "from_token",
+  });
+  if (!firstPage || firstPage.total === undefined) return curTracks;
+
+  totalTracks = firstPage.total;
+  let allItems = [...(firstPage.items || [])];
+  refreshHeader();
+
+  // 2. Queue up all offsets
+  const offsetList = [];
+  for (let offset = limit; offset < totalTracks; offset += limit) {
+    if (abortLoading) break;
+    offsetList.push(offset);
+  }
+
+  const pageResults = await Promise.all(
+    offsetList.map((offset) =>
+      spotifyFetcher.apiCall(uri, "GET", {
+        limit,
+        offset,
+        market: "from_token",
+      }),
+    ),
+  );
+  pageResults.forEach((page) => {
+    if (page && page.items) {
+      allItems = allItems.concat(page.items);
+      refreshHeader();
+    }
+  });
+
+  // 3. Process the collected track objects into our global map
+  allItems.forEach((item) => {
+    curRawTrackItems.push(item);
+
+    if (!item.is_local && item.track && "id" in item.track) {
+      var addedAtDate = item.added_at ? new Date(item.added_at) : new Date();
+      var diffMs = now.getTime() - addedAtDate.getTime();
+      var diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+      if (item.track.id in curTracks) {
+        curTracks[item.track.id].feats.count += 1;
+        if (curTracks[item.track.id].feats.sources) {
+          curTracks[item.track.id].feats.sources.add(source);
+        }
+        if (curTracks[item.track.id].feats.count > topTrackCount) {
+          topTrackCount = curTracks[item.track.id].feats.count;
+          topTrackName = item.track.name;
+        }
+      } else {
+        const track = {
+          id: item.track.id,
+          feats: {
+            date_added: addedAtDate,
+            age: diffDays,
+            explicit: item.track.explicit,
+            duration_ms: item.track.duration_ms,
+            popularity: item.track.popularity,
+            sources: new Set([source]),
+            count: 1,
+          },
+          details: {
+            name: item.track.name,
+            album_id: item.track.album.id,
+            uri: item.track.uri,
+            preview_url: item.track.preview_url,
+            image_url: (item.track.album.images && item.track.album.images.length > 0) ? item.track.album.images[0].url : null,
+            artists: tinyArtists(item.track.artists),
+          },
+        };
+
+        const ntrack = loadTrack(track.id);
+        if (ntrack != null) {
+          curTracks[track.id] = ntrack;
+          curTracks[track.id].feats.count = 1;
+          curTracks[track.id].feats.sources = new Set([source]);
+        } else {
+          curTracks[track.id] = track;
+        }
+
+        // NEW: Populate curArtists during collection to fix "0 artists" bug
+        track.details.artists.forEach((artist) => {
+          if (!(artist.id in curArtists)) {
+            curArtists[artist.id] = { name: artist.name, genres: [], count: 0 };
+          }
+        });
+      }
+    }
+  });
+}
+
+/**
+ * Finalizes the collection by fetching metadata for all new tracks
+ * and performing a single global UI refresh.
+ */
+async function finalizeCollection() {
+  const allTracks = Object.values(curTracks);
+  const tracksToEnrich = allTracks.filter((t) => !t.feats.energy); // If no audio features, we need metadata
+
+  if (tracksToEnrich.length > 0) {
+    document.getElementById("lplaylist-name").textContent =
+      "Enriching Metadata...";
+    linfo(
+      "Fetching audio features and genres for " +
+      tracksToEnrich.length +
+      " tracks...",
+    );
+    await collectAllMetadata(tracksToEnrich);
+  }
+
+  refreshNormalizedTrackData();
+
+  addTracks(allTracks);
+  filterTracks(allTracks);
+  refreshTheWorld(false);
+
+  // Show initial track list (All Results)
+  if (theWorld.length > 0) {
+    const allResultsBin = theWorld.find(b => b.name === "All Results");
+    if (allResultsBin && allResultsBin.nodes.length > 0) {
+      showPlaylist(allResultsBin.nodes[0]);
+    }
+  }
+}
+
+// -------------------------------------------------------------------
+// Updated Entry Points (Async Native)
+// -------------------------------------------------------------------
+
+async function getSavedTracks() {
+  startShowingTracks();
+  document.getElementById("lplaylist-name").textContent = "Your Saved Tracks";
+  try {
+    await getTracksFromAPI(
+      "Your Saved tracks",
+      configuredSpotifyMeTracksUrl,
+      null,
+      "library",
+    );
+    await finalizeCollection();
+  } catch (error) {
+    console.log("GST catch ", error);
+  } finally {
+    stopShowingTracks();
+    showLoadedState();
+  }
+}
+
+async function getAllMusic() {
+  startShowingTracks();
+  document.getElementById("lplaylist-name").textContent = "Your Saved Tracks";
+  try {
+    await getTracksFromAPI(
+      "Your Saved Tracks",
+      configuredSpotifyMeTracksUrl,
+      null,
+      "library",
+    );
+    await getMusicFromPlaylists(true);
+    await finalizeCollection();
+  } catch (err) {
+    console.error("Error fetching all music: ", err);
+  } finally {
+    stopShowingTracks();
+    showLoadedState();
+  }
+}
+
+async function getMusicFromPlaylists(allPlaylists) {
+  startShowingTracks();
+  try {
+    let offset = 0;
+    let total = Infinity;
+    const outstandingPlaylists = [];
+
+    // Paginate playlists sequentially to avoid massive overhead upfront
+    while (offset < total && !abortLoading) {
+      const results = await spotifyFetcher.apiCall(
+        configuredSpotifyMePlaylistsUrl,
+        "GET",
+        { limit: 50, offset },
+      );
+      if (results && results.items) {
+        totalPlaylists = results.total || 0;
+        total = totalPlaylists;
+
+        results.items.forEach((playlist) => {
+          if (playlist) outstandingPlaylists.push(playlist);
+        });
+
+        offset += results.items.length;
+      } else {
+        throw new Error("Can't get your playlists");
+      }
+    }
+
+    await loadPlaylists(outstandingPlaylists, allPlaylists);
+    await finalizeCollection();
+  } catch (err) {
+    error("trouble, " + err);
+  } finally {
+    stopShowingTracks();
+    showLoadedState();
+  }
+}
+
+function isGoodPlaylist(playlist, allPlaylists) {
+  if (allPlaylists) return true;
+  return playlist.owner && playlist.owner.id === curUserID;
+}
+
+async function loadPlaylists(playlists, allPlaylists) {
+  for (const playlist of playlists) {
+    if (abortLoading) break;
+    processedPlaylists += 1;
+
+    if (quickMode && processedPlaylists > 100) return;
+
+    if (isGoodPlaylist(playlist, allPlaylists)) {
+      const trackCount =
+        playlist.tracks && playlist.tracks.total ? playlist.tracks.total : 0;
+      document.getElementById("lplaylist-name").textContent =
+        playlist.name + " (" + trackCount + " tracks)";
+      await getPlaylistTracks(playlist);
+    }
+  }
+}
+
+async function getPlaylistTracks(playlist) {
+  const uri = playlist.uri;
+  if (isValidPlaylistUri(uri)) {
+    const playlistID = getPlaylistPid(uri);
+    const url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
+    const imageUrl = (playlist.images && playlist.images.length > 0) ? playlist.images[0].url : null;
+    return getTracksFromAPI(playlist.name, url, imageUrl, "playlist");
+  } else {
+    throw new Error("bad playlist URI");
+  }
+}
+
+async function getPlaylistFromURI(name, uri) {
+  startShowingTracks();
+  const playlist = { name, uri };
+  try {
+    await getPlaylistTracks(playlist);
+    await finalizeCollection();
+  } catch (err) {
+    console.error("Error in getPlaylistFromURI:", err);
+    error("Trouble fetching playlist: " + err.message);
+  } finally {
+    stopShowingTracks();
+    showLoadedState();
+  }
+}
+
+function isValidPlaylistUri(uri) {
+  if (!uri || typeof uri !== "string") return false;
+  var fields = uri.split(":");
+  if (fields[0] !== "spotify") return false;
+  // Standard playlist URI: spotify:playlist:ID (length 3)
+  // Legacy user playlist URI: spotify:user:USER:playlist:ID (length 5)
+  if (fields.length === 3 && fields[1] === "playlist") return true;
+  if (fields.length === 5 && fields[3] === "playlist") return true;
+  return false;
+}
+
+function getPlaylistPid(uri) {
+  var fields = uri.split(":");
+  if (fields.length === 3 && fields[1] === "playlist") return fields[2];
+  if (fields.length === 5 && fields[3] === "playlist") return fields[4];
+  // Fallback search for 'playlist' segment
+  var idx = fields.indexOf("playlist");
+  if (idx !== -1 && fields[idx + 1]) return fields[idx + 1];
+  return null;
+}
+
+function getPlaylistIdFromReference(reference) {
+  if (!reference || typeof reference !== "string") return null;
+
+  if (reference.indexOf("/tracks") !== -1) {
+    var trackMatch = reference.match(/\/playlists\/([^/]+)\/tracks/);
+    if (trackMatch && trackMatch[1]) return trackMatch[1];
+  }
+
+  if (isValidPlaylistUri(reference)) {
+    return getPlaylistPid(reference);
+  }
+
+  if (reference.indexOf(":") === -1 && reference.indexOf("/") === -1) {
+    return reference;
+  }
+
+  return getPlaylistPid(reference);
+}
+
+function saveInfo(params) {
+  localStorage.setItem("info", JSON.stringify(params));
+}
+function getInfo() {
+  var item = localStorage.getItem("info");
+  return JSON.parse(item);
+}
+
+
+function startCollectionFetch(info) {
+  sourceTypes = {};
+  sourceUris = {};
+  if (info.type == "saved") getSavedTracks();
+  else if (info.type == "added") getMusicFromPlaylists(false);
+  else if (info.type == "playlist")
+    getPlaylistFromURI("Your Playlist", info.uri);
+  else if (info.type == "follow") getMusicFromPlaylists(true);
+  else if (info.type == "all") getAllMusic();
+  else console.log("unexpected type", info.type);
+}
+
+function refetchCurrentCollection() {
+  var info = getInfo();
+  if (!info || !info.type) return;
+  abortLoading = false;
+  // Show refreshing state (overlay) without resetting or hiding existing data
+  showRefreshingState();
+  startCollectionFetch(info);
+}
+
+function go() {
+  var errs = document.querySelectorAll(".err-txt");
+  errs.forEach(function (el) {
+    el.textContent = "";
+  });
+  var type = document.getElementById("collection-type").value;
+  var params = { type: type };
+  if (type == "playlist") {
+    var rawUri = document.getElementById("uri-text").value;
+    params.uri = normalizeUri(rawUri);
+  }
+  saveInfo(params);
+
+  showLoadingState();
+  startCollectionFetch(params);
+}
+
+
+function normalizeUri(uri) {
+  if (typeof uri !== "string") return "";
+  uri = uri.trim();
+  if (uri.indexOf("?") !== -1) uri = uri.split("?")[0];
+
+  // If it's a URL or contains path segments
+  if (uri.indexOf("/") !== -1) {
+    var parts = uri.split("/").filter(function (p) {
+      return p;
+    });
+    var playlistIdx = parts.indexOf("playlist");
+    if (playlistIdx !== -1 && parts[playlistIdx + 1]) {
+      var id = parts[playlistIdx + 1];
+      var userIdx = parts.indexOf("user");
+      if (userIdx !== -1 && parts[userIdx + 1]) {
+        return "spotify:user:" + parts[userIdx + 1] + ":playlist:" + id;
+      }
+      return "spotify:playlist:" + id;
+    }
+  }
+
+  // If it's already a URI
+  if (uri.startsWith("spotify:")) {
+    if (uri.endsWith(":")) uri = uri.substring(0, uri.length - 1);
+    return uri;
+  }
+
+  // If it's just an ID (no colons or slashes), assume it's a playlist ID
+  if (uri.length > 0 && uri.indexOf(":") === -1 && uri.indexOf("/") === -1) {
+    return "spotify:playlist:" + uri;
+  }
+
+  return uri;
+}
+
+function stopLoading() {
+  console.log("stop loading");
+  abortLoading = true;
+  linfo("Stopping ... hang on ...");
+}
+
+
+function setProgress(percent) {
+  progressBar.style.width = percent + "%";
+  progressBar.setAttribute("aria-valuenow", percent);
+}
+
+function initPlot() {
+  addPlotSelect(document.getElementById("select-xaxis"), "energy");
+  addPlotSelect(document.getElementById("select-yaxis"), "loudness");
+  addPlotSelect(document.getElementById("select-size"), "popularity");
+
+  var pc = document.getElementById("plot-clear");
+  if (pc) {
+    pc.onclick = function () {
+      clearPlot();
+    };
+  }
+
+  var rb = document.getElementById("refetch-button");
+  if (rb) {
+    rb.onclick = function () {
+      refetchCurrentCollection();
+    };
+  }
+
+  window.addEventListener("resize", function () {
+    redrawPlot();
+  });
+  clearPlot();
+}
+
+function updateWhoCarousel(identityText) {
+  var carousel = document.getElementById("who-carousel");
+  var track = document.getElementById("who-track");
+  var whoElem = document.getElementById("who");
+  var whoClone = document.getElementById("who-clone");
+  var whoDivider = document.getElementById("who-divider");
+  if (!carousel || !track || !whoElem || !whoClone || !whoDivider) {
+    return;
+  }
+
+  var value = identityText || "Not logged in";
+  whoElem.textContent = value;
+  whoClone.textContent = value;
+
+  carousel.classList.remove("who-carousel--scrolling");
+  carousel.style.removeProperty("--who-duration");
+  carousel.style.removeProperty("--who-shift");
+
+  // Reset hidden duplicated ticker pieces before measuring overflow.
+  whoDivider.style.display = "none";
+  whoClone.style.display = "none";
+
+  if (!value) {
+    return;
+  }
+
+  // Measure against the compact container and enable ticker only when needed.
+  var overflows = whoElem.scrollWidth > carousel.clientWidth;
+  if (!overflows) {
+    return;
+  }
+
+  whoDivider.style.display = "inline";
+  whoClone.style.display = "inline";
+
+  var shift = whoElem.scrollWidth + whoDivider.scrollWidth + 12;
+  var duration = Math.max(8, Math.round(shift / 28));
+  carousel.style.setProperty("--who-shift", shift + "px");
+  carousel.style.setProperty("--who-duration", duration + "s");
+  carousel.classList.add("who-carousel--scrolling");
+}
+
+function refreshHeaderCarouselText() {
+  var currentText = headerStatusText || headerIdentityText || "Not logged in";
+  updateWhoCarousel(currentText);
+}
+
+function setHeaderIdentityText(value) {
+  headerIdentityText = value || "Not logged in";
+  if (!headerStatusText) {
+    refreshHeaderCarouselText();
+  }
+}
+
+function setHeaderStatusMessage(message, durationMs) {
+  if (headerStatusTimer) {
+    clearTimeout(headerStatusTimer);
+    headerStatusTimer = null;
+  }
+
+  var text = message || "";
+  if (!text) {
+    headerStatusText = null;
+    refreshHeaderCarouselText();
+    return;
+  }
+
+  headerStatusText = text;
+  refreshHeaderCarouselText();
+
+  if (durationMs && durationMs > 0) {
+    headerStatusTimer = setTimeout(function () {
+      headerStatusText = null;
+      headerStatusTimer = null;
+      refreshHeaderCarouselText();
+    }, durationMs);
+  }
+}
+
+function areAnimationsEnabled() {
+  return window.localStorage.getItem(ANIMATIONS_ENABLED_KEY) !== "false";
+}
+
+function applyAnimationPreference(enabled) {
+  if (enabled) {
+    document.documentElement.classList.remove("animations-disabled-root");
+    document.body.classList.remove("animations-disabled");
+  } else {
+    document.documentElement.classList.add("animations-disabled-root");
+    document.body.classList.add("animations-disabled");
+  }
+}
+
+function updateAnimationToggleUI(enabled) {
+  var toggleBtn = document.getElementById("toggle-animations");
+  if (!toggleBtn) return;
+
+  var icon = toggleBtn.querySelector("i");
+  if (!icon) return;
+
+  if (enabled) {
+    icon.classList.remove("fa-toggle-off");
+    icon.classList.add("fa-toggle-on");
+    toggleBtn.title = "Disable animations";
+    toggleBtn.setAttribute("aria-label", "Disable animations");
+  } else {
+    icon.classList.remove("fa-toggle-on");
+    icon.classList.add("fa-toggle-off");
+    toggleBtn.title = "Enable animations";
+    toggleBtn.setAttribute("aria-label", "Enable animations");
+  }
+}
+
+function setAnimationsEnabled(enabled) {
+  window.localStorage.setItem(ANIMATIONS_ENABLED_KEY, enabled ? "true" : "false");
+  applyAnimationPreference(enabled);
+  updateAnimationToggleUI(enabled);
+}
+
+function triggerDeferredResizeForSidebar() {
+  // Heavy listeners (e.g. Plotly redraws) are bound to resize; defer until
+  // after the sidebar transition so collapse feels instant.
+  requestAnimationFrame(function () {
+    setTimeout(function () {
+      window.dispatchEvent(new Event("resize"));
+    }, 180);
+  });
+}
+
+function renderLoggedInEmail(user) {
+  var identity = null;
+  if (user && user.email) {
+    identity = user.email;
+  } else if (user && user.id) {
+    identity = user.id;
+  }
+
+  setHeaderIdentityText(identity || "Not logged in");
+
+  var infoPill = document.getElementById("info");
+  if (!infoPill) return;
+
+  if (!identity) {
+    infoPill.classList.add("hidden");
+    infoPill.classList.remove("flex");
+    return;
+  }
+
+  infoPill.classList.remove("hidden");
+  infoPill.classList.add("flex");
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  applyAnimationPreference(areAnimationsEnabled());
+
+  hydrateActiveSpotifyClientId();
+
+  // Hydrate in-memory token so API calls always use the latest persisted value.
+  accessToken = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+
+  // Detect Client ID changes to prevent using incompatible tokens
+  var lastClientId = window.localStorage.getItem("omy_last_client_id");
+  var currentClientId = getActiveSpotifyClientId();
+  if (lastClientId && lastClientId !== currentClientId) {
+    console.warn("Client ID change detected. Clearing stored session.");
+    window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+    window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    window.localStorage.removeItem("code_verifier");
+    // Access token will be cleared upon first failure or manual reset
+    accessToken = null;
+  }
+  if (currentClientId) {
+    window.localStorage.setItem("omy_last_client_id", currentClientId);
+    window.localStorage.setItem(ACTIVE_CLIENT_ID_STORAGE_KEY, currentClientId);
+  }
+
+  var urlParams = new URLSearchParams(window.location.search);
+  var code = urlParams.get("code");
+  var authError = urlParams.get("error");
+
+  var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.onclick = function () {
+      var sidebar = document.getElementById("sidebar");
+      if (sidebar) {
+        var isCurrentlyCollapsed = sidebar.classList.contains("sidebar-collapsed");
+
+        if (isCurrentlyCollapsed) {
+          sidebar.classList.remove("sidebar-collapsed");
+          window.localStorage.setItem(SIDEBAR_VISIBLE_KEY, "true");
+          // Update icon to indent
+          var icon = toggleSidebarBtn.querySelector("i");
+          if (icon) {
+            icon.classList.remove("fa-outdent");
+            icon.classList.add("fa-indent");
+          }
+        } else {
+          sidebar.classList.add("sidebar-collapsed");
+          window.localStorage.setItem(SIDEBAR_VISIBLE_KEY, "false");
+          // Update icon to outdent
+          var icon = toggleSidebarBtn.querySelector("i");
+          if (icon) {
+            icon.classList.remove("fa-indent");
+            icon.classList.add("fa-outdent");
+          }
+        }
+        triggerDeferredResizeForSidebar();
+      }
+    };
+  }
+
+  var toggleAnimationsBtn = document.getElementById("toggle-animations");
+  if (toggleAnimationsBtn) {
+    updateAnimationToggleUI(areAnimationsEnabled());
+    toggleAnimationsBtn.onclick = function () {
+      setAnimationsEnabled(!areAnimationsEnabled());
+    };
+  }
+
+  var collectionType = document.getElementById("collection-type");
+  if (collectionType) {
+    collectionType.onchange = function () {
+      var type = collectionType.value;
+      var uriPrompt = document.getElementById("uri-prompt");
+      if (type == "playlist") {
+        uriPrompt.classList.remove("hidden");
+        uriPrompt.classList.add("block");
+      } else {
+        uriPrompt.classList.remove("block");
+        uriPrompt.classList.add("hidden");
+      }
+    };
+  }
+
+  var globalSearch = document.getElementById("global-search");
+  if (globalSearch) {
+    globalSearch.oninput = function (e) {
+      currentSearchQuery = e.target.value.trim().toLowerCase();
+      if (curNode) {
+        showPlaylist(curNode);
+      }
+    };
+  }
+
+  var loginButton = document.getElementById("login-button");
+  if (loginButton) {
+    loginButton.onclick = function () {
+      authorizeUser();
+    };
+  }
+
+  document.querySelectorAll(".max-shown").forEach(function (el) {
+    el.textContent = maxTracksShown;
+  });
+  document.querySelectorAll(".work").forEach(function (el) {
+    el.classList.add("hidden");
+    el.classList.remove("flex");
+  });
+
+  function showSelectionUI() {
+    document.body.classList.remove("is-loading");
+    var loginState = document.getElementById("login-state");
+    if (loginState) loginState.style.display = "none";
+
+    var selectionState = document.getElementById("selection-state");
+    if (selectionState) {
+      selectionState.classList.remove("hidden");
+      selectionState.style.display = "block";
+    }
+
+    // Hide sidebar and toggle button on home screen
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+      sidebar.classList.add("hidden");
+      sidebar.classList.remove("md:block", "md:flex", "flex");
+      sidebar.style.setProperty("display", "none", "important");
+    }
+    var toggleSidebarBtn = document.getElementById("toggle-sidebar");
+    if (toggleSidebarBtn) {
+      toggleSidebarBtn.classList.add("hidden");
+      toggleSidebarBtn.classList.remove("md:flex");
+    }
+
+    var headerTabs = document.getElementById("header-tabs");
+    if (headerTabs) {
+      headerTabs.classList.add("hidden");
+      headerTabs.classList.remove("flex");
+    }
+
+    var mainWrapper = document.getElementById("main-wrapper");
+    if (mainWrapper) {
+      mainWrapper.classList.add("hidden");
+      mainWrapper.classList.remove("flex");
+      mainWrapper.style.setProperty("display", "none", "important");
+    }
+
+    thePlot = document.getElementById("the-plot");
+
+    var stopLoadingBtn = document.getElementById("stop-loading");
+    if (stopLoadingBtn)
+      stopLoadingBtn.onclick = function () {
+        stopLoading();
+      };
+
+    // Native inline edit for playlist name
+    initNativePlaylistEdit();
+
+    var saveBtn = document.getElementById("save-button");
+    if (saveBtn)
+      saveBtn.onclick = function () {
+        savePlaylist();
+      };
+
+    // Native Tabs setup
+    initNativeTabs();
+    initTrackListSubviewTabs();
+
+    // google.charts.load("current", { packages: ["table"] });
+    // google.charts.setOnLoadCallback(initTables);
+    initTables();
+    initPlot();
+
+    function initTables() {
+      // Tables are now handled by React
+      theTrackTable = {
+        getContainer: function () {
+          return document.getElementById("gthe-track-table");
+        },
+        draw: function () { },
+        currentPage: 0,
+        totalRows: 0,
+      };
+      theStagingTable = {
+        getContainer: function () {
+          return document.getElementById("gthe-staging-table");
+        },
+        draw: function () { },
+        currentPage: 0,
+        totalRows: 0,
+      };
+    }
+
+    fetchCurrentUserProfile()
+      .then(function (user) {
+        if (user) {
+          curUserID = user.id;
+          renderLoggedInEmail(user);
+        }
+      })
+      .catch(function (err) {
+        console.error("Failed to fetch user profile", err);
+        renderLoggedInEmail(null);
+      });
+  }
+
+  if (authError) {
+    error(
+      "Sorry, I can't read your music collection from Spotify without authorization",
+    );
+    var loginState = document.getElementById("login-state");
+    if (loginState) loginState.style.display = "block";
+    var selectionState = document.getElementById("selection-state");
+    if (selectionState) selectionState.style.display = "none";
+  } else if (code) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    exchangeCodeForToken(code)
+      .then(function () {
+        showSelectionUI();
+      })
+      .catch(function (err) {
+        console.error("Exchange failed", err);
+        restartAuthorization("Failed to exchange authorization code for token");
+      });
+  } else {
+    var storedRefreshToken = window.localStorage.getItem(
+      REFRESH_TOKEN_STORAGE_KEY,
+    );
+    if (storedRefreshToken) {
+      refreshAccessToken()
+        .then(function () {
+          showSelectionUI();
+        })
+        .catch(function (err) {
+          console.error("Refresh failed", err);
+          restartAuthorization();
+        });
+    } else {
+      restartAuthorization();
+    }
+  }
+
+  var goButton = document.getElementById("go");
+  if (goButton) {
+    goButton.onclick = function () {
+      go();
+    };
+  }
+
+  var whoResizeFrame = null;
+  window.addEventListener("resize", function () {
+    if (whoResizeFrame) {
+      cancelAnimationFrame(whoResizeFrame);
+    }
+    whoResizeFrame = requestAnimationFrame(function () {
+      refreshHeaderCarouselText();
+    });
+  });
+});
+
+function initNativePlaylistEdit() {
+  var el = document.getElementById("staging-playlist-name");
+  if (!el) return;
+  el.onclick = function (e) {
+    e.preventDefault();
+    var currentName = el.textContent.trim();
+    var input = document.createElement("input");
+    input.type = "text";
+    input.value = currentName;
+    input.className =
+      "text-4xl font-black text-white bg-transparent border-b-2 border-spotify-green outline-none w-full";
+
+    var originalDisplay = el.style.display;
+    el.style.display = "none";
+    el.parentNode.insertBefore(input, el);
+    input.focus();
+
+    function finishEdit() {
+      var newName = input.value.trim() || currentName;
+      el.textContent = newName;
+      input.remove();
+      el.style.display = originalDisplay;
+    }
+
+    input.onblur = finishEdit;
+    input.onkeydown = function (ev) {
+      if (ev.key === "Enter") finishEdit();
+      if (ev.key === "Escape") {
+        input.value = currentName;
+        finishEdit();
+      }
+    };
+  };
+}
+
+function initNativeTabs() {
+  var tabLinks = document.querySelectorAll("ul.nav-tabs a");
+  tabLinks.forEach(function (link) {
+    link.onclick = function (e) {
+      e.preventDefault();
+      var targetId = link.getAttribute("href");
+      showTab(targetId);
+    };
+  });
+}
+
+function initTrackListSubviewTabs() {
+  // Track-list subviews are now driven by the header tabs.
+}
+
+function showTab(selector) {
+  // selector can be #the-track-list-tab, #playlist-order-tab, #the-plots-tab, #staging-tab
+  var targetId = selector.replace("-tab", "");
+
+  // 1. Determine target panel and handle aliases
+  if (targetId === "#playlist-order" && !playlistSourceTabVisible) {
+    targetId = "#the-track-list";
+  }
+
+  var targetPanelId = targetId === "#playlist-order" ? "#the-track-list" : targetId;
+
+  // 2. Update Tab Active States
+  var tabIds = ["#the-track-list", "#playlist-order", "#the-plots", "#staging"];
+  tabIds.forEach(function (tabId) {
+    var tabLinkElem = document.getElementById(tabId.substring(1) + "-tab");
+    if (tabLinkElem) {
+      var parentLi = tabLinkElem.closest("li");
+      if (tabId === targetId) {
+        if (parentLi) parentLi.classList.add("active");
+        tabLinkElem.classList.add("active");
+      } else {
+        if (parentLi) parentLi.classList.remove("active");
+        tabLinkElem.classList.remove("active");
+      }
+    }
+  });
+
+  // 3. Update Panel Visibility
+  // We iterate through panels, not tabs, to ensure each panel's visibility is set exactly once
+  var panelIds = ["#the-track-list", "#the-plots", "#staging"];
+  panelIds.forEach(function (panelId) {
+    var tabPanel = document.getElementById(panelId.substring(1));
+    if (tabPanel) {
+      if (panelId === targetPanelId) {
+        tabPanel.classList.add("active", "in");
+      } else {
+        tabPanel.classList.remove("active", "in");
+      }
+    }
+  });
+
+  // 4. Trigger Logic for specific targets
+  if (targetId === "#the-plots") {
+    stagingIsVisible = false;
+    redrawPlot();
+  } else if (targetId === "#staging") {
+    stagingIsVisible = true;
+    showStagingList();
+  } else if (targetId === "#playlist-order") {
+    stagingIsVisible = false;
+    showTrackListSubview("playlist-sequence");
+  } else {
+    // Default for #the-track-list or any unknown targets
+    stagingIsVisible = false;
+    showTrackListSubview("track-list");
+    if (window.renderTrackTable && curNode && curNode.tracks) {
+      window.renderTrackTable(curNode.tracks);
+    }
+  }
+}
+
+function saveTrack(_track) {
+  return;
+}
+function loadTrack(_id) {
+  return null;
+}

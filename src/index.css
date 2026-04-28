@@ -1,0 +1,228 @@
+@import "tailwindcss";
+
+@source "../index.html";
+
+@theme {
+	--color-spotify-green: #1DB954;
+	--color-spotify-green-hover: #1ed760;
+	--color-spotify-base: #121212;
+	--color-spotify-elevated: #242424;
+	--color-spotify-highlight: #3E3E3E;
+	--color-spotify-light: #b3b3b3;
+	--font-sans: "Circular", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	
+	--animate-float: float 6s ease-in-out infinite;
+	--animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Global Scrollbar Styling */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background-color: #121212;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: #3e3e3e;
+	border-radius: 9999px;
+	border: 2px solid #121212;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background-color: #52525b;
+}
+
+@keyframes float {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-20px); }
+}
+
+@layer components {
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+
+	.sidebar-transition {
+		transition-property: width, min-width, max-width, opacity, margin, padding;
+		transition-duration: 160ms;
+		transition-timing-function: ease-out;
+	}
+
+	.sidebar-collapsed {
+		@apply w-0! h-0! min-w-0! min-h-0! opacity-0! p-0! m-0! overflow-hidden! border-none! pointer-events-none;
+	}
+
+	/* Tab Compatibility */
+	.tab-pane {
+		display: none !important;
+	}
+
+	.tab-pane.active {
+		display: flex !important;
+	}
+
+	.hidden {
+		display: none !important;
+	}
+}
+
+/* Tooltip Animations */
+@keyframes tooltip-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -100%) translateY(0) scale(0.95);
+	}
+
+	to {
+		opacity: 1;
+		transform: translate(-50%, -100%) translateY(-20px) scale(1);
+	}
+}
+
+.animate-in.fade-in.zoom-in-95 {
+	animation: tooltip-in 0.15s ease-out forwards;
+}
+
+/* Custom transitions */
+.spotify-transition {
+	transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::selection {
+	background-color: var(--color-spotify-green);
+	color: #121212;
+}
+
+/* Global Loading State Overrides */
+body.is-loading {
+	padding-top: 0 !important;
+}
+
+body.is-loading nav,
+body.is-loading #intro {
+	display: none !important;
+}
+
+body.is-loading #main-wrapper {
+	padding: 0 !important;
+}
+
+body.is-loading #loading {
+	margin-top: 10vh;
+	margin-bottom: 10vh;
+}
+
+.who-carousel {
+	position: relative;
+	overflow: hidden;
+	white-space: nowrap;
+	line-height: 1.1;
+	--who-duration: 12s;
+	--who-shift: 120px;
+}
+
+.who-carousel-track {
+	display: inline-flex;
+	align-items: center;
+	min-width: max-content;
+	gap: 0.6rem;
+	will-change: transform;
+}
+
+.who-carousel-divider,
+.who-carousel-clone {
+	display: none;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+.who-carousel--scrolling .who-carousel-divider,
+.who-carousel--scrolling .who-carousel-clone {
+	display: inline;
+}
+
+.who-carousel--scrolling .who-carousel-track {
+	animation: who-carousel-scroll var(--who-duration) linear infinite;
+}
+
+@keyframes who-carousel-scroll {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(calc(-1 * var(--who-shift)));
+	}
+}
+
+
+/* Responsive Header Adjustments */
+#navbar {
+	transition: padding 0.3s ease;
+}
+
+@media (max-width: 768px) {
+	#navbar {
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+	}
+	
+	#header-tabs {
+		position: absolute;
+		bottom: -40px;
+		left: 0;
+		right: 0;
+		background: rgba(0, 0, 0, 0.9);
+		border-radius: 0;
+		border-top: 1px solid rgba(255, 255, 255, 0.05);
+		justify-content: center;
+		padding: 4px;
+		display: none; /* Managed by JS, but keeping it consistent */
+	}
+
+	#header-tabs.flex {
+		display: flex !important;
+	}
+
+	#info {
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+		gap: 0.5rem;
+	}
+}
+
+@media (max-width: 480px) {
+	#navbar a i.fa-spotify {
+		font-size: 1.5rem;
+	}
+	
+	#navbar a span {
+		font-size: 1rem;
+	}
+
+	#info i.fa-user {
+		font-size: 0.75rem;
+	}
+}
+
+/* Ensure horizontal scroll for tabs if they overflow on small screens */
+#header-tabs {
+	overflow-x: auto;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	-webkit-overflow-scrolling: touch;
+}
+
+#header-tabs::-webkit-scrollbar {
+	display: none;
+}
+
+#header-tabs li {
+	flex-shrink: 0;
+}

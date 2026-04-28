@@ -1,2 +1,0 @@
-#!/bin/bash
-rsync -azv . root@50.116.51.150:/home/www/organizeyourmusic/
