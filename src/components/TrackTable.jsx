@@ -295,10 +295,10 @@ const TrackTable = ({
     const [dropTargetRowId, setDropTargetRowId] = useState(null);
     const [rowDropSide, setRowDropSide] = useState(null); // 'top' or 'bottom'
 
-    const [autoScrollDir, setAutoScrollDir] = useState(null); // 'left', 'right', 'up', 'down', or null
-    const [scrollVelocity, setScrollVelocity] = useState(0);
+    // Auto-scroll Logic Refs
     const tableScrollRef = useRef(null);
-    const scrollIntervalRef = useRef(null);
+    const mousePosRef = useRef({ x: 0, y: 0 });
+    const scrollLoopRef = useRef(null);
 
     const storageKey = isStaging
         ? 'oym_column_order_staging'
@@ -544,70 +544,89 @@ const TrackTable = ({
     const isSomeSelected = !isAllSelected && tracks.some(t => selectedIds.has(getTrackId(t)));
     const hasPendingPlaylistOrderChanges = isPlaylistSequenceMode && !areOrdersEqual(currentPlaylistOrder, appliedRowOrder);
 
-    // Auto-scroll Effect
+    // Updated Auto-scroll logic with global mouse tracking
     useEffect(() => {
-        if (!autoScrollDir || !tableScrollRef.current) {
-            if (scrollIntervalRef.current) cancelAnimationFrame(scrollIntervalRef.current);
+        const isDragging = !!(draggedColId || draggedRowId);
+        
+        if (!isDragging) {
+            if (scrollLoopRef.current) cancelAnimationFrame(scrollLoopRef.current);
             return;
         }
 
-        const scroll = () => {
-            if (!tableScrollRef.current) return;
-            const delta = (autoScrollDir === 'right' || autoScrollDir === 'down') ? scrollVelocity : -scrollVelocity;
-            if (autoScrollDir === 'left' || autoScrollDir === 'right') {
-                tableScrollRef.current.scrollLeft += delta;
-            } else {
-                tableScrollRef.current.scrollTop += delta;
+        const handleGlobalDragOver = (e) => {
+            mousePosRef.current = { x: e.clientX, y: e.clientY };
+            // Ensure drop is possible globally during our drag
+            if (draggedColId || draggedRowId) {
+                e.preventDefault();
             }
-            scrollIntervalRef.current = requestAnimationFrame(scroll);
         };
 
-        scrollIntervalRef.current = requestAnimationFrame(scroll);
-        return () => {
-            if (scrollIntervalRef.current) cancelAnimationFrame(scrollIntervalRef.current);
+        window.addEventListener('dragover', handleGlobalDragOver, { passive: false });
+
+        const performScroll = () => {
+            if (!tableScrollRef.current) return;
+            
+            const container = tableScrollRef.current;
+            const { x, y } = mousePosRef.current;
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            
+            let scrollX = 0;
+            let scrollY = 0;
+
+            // Screen-based Vertical Scroll (High priority for rows)
+            if (draggedRowId) {
+                const threshold = 120;
+                if (y > winH - threshold) {
+                    scrollY = 35;
+                } else if (y < threshold) {
+                    scrollY = -35;
+                }
+            }
+
+            // Screen-based Horizontal Scroll (For columns)
+            if (draggedColId) {
+                const threshold = 120;
+                if (x > winW - threshold) {
+                    scrollX = 35;
+                } else if (x < threshold) {
+                    scrollX = -35;
+                }
+            }
+
+            if (scrollX !== 0 || scrollY !== 0) {
+                // Try scrolling the container first
+                const prevTop = container.scrollTop;
+                const prevLeft = container.scrollLeft;
+                
+                container.scrollBy(scrollX, scrollY);
+                
+                // If container didn't scroll, scroll the window
+                if (scrollY !== 0 && container.scrollTop === prevTop) {
+                    window.scrollBy(0, scrollY);
+                }
+                if (scrollX !== 0 && container.scrollLeft === prevLeft) {
+                    window.scrollBy(scrollX, 0);
+                }
+            }
+
+            scrollLoopRef.current = requestAnimationFrame(performScroll);
         };
-    }, [autoScrollDir, scrollVelocity]);
+
+        scrollLoopRef.current = requestAnimationFrame(performScroll);
+
+        return () => {
+            window.removeEventListener('dragover', handleGlobalDragOver);
+            if (scrollLoopRef.current) cancelAnimationFrame(scrollLoopRef.current);
+        };
+    }, [draggedColId, draggedRowId]);
 
     const handleAutoScroll = (e) => {
-        if (!tableScrollRef.current) return;
-        const rect = tableScrollRef.current.getBoundingClientRect();
-
-        if (draggedColId) {
-            const threshold = 100;
-            const x = e.clientX;
-
-            if (x > rect.right - threshold) {
-                setAutoScrollDir('right');
-                const dist = rect.right - x;
-                const velocity = Math.max(2, (1 - Math.max(0, dist) / threshold) * 20);
-                setScrollVelocity(velocity);
-            } else if (x < rect.left + threshold) {
-                setAutoScrollDir('left');
-                const dist = x - rect.left;
-                const velocity = Math.max(2, (1 - Math.max(0, dist) / threshold) * 20);
-                setScrollVelocity(velocity);
-            } else {
-                setAutoScrollDir(null);
-                setScrollVelocity(0);
-            }
-        } else if (draggedRowId) {
-            const threshold = 60;
-            const y = e.clientY;
-
-            if (y > rect.bottom - threshold) {
-                setAutoScrollDir('down');
-                const dist = rect.bottom - y;
-                const velocity = Math.max(2, (1 - Math.max(0, dist) / threshold) * 20);
-                setScrollVelocity(velocity);
-            } else if (y < rect.top + threshold) {
-                setAutoScrollDir('up');
-                const dist = y - rect.top;
-                const velocity = Math.max(2, (1 - Math.max(0, dist) / threshold) * 20);
-                setScrollVelocity(velocity);
-            } else {
-                setAutoScrollDir(null);
-                setScrollVelocity(0);
-            }
+        // Now handled by the global effect, but we keep this as a stub 
+        // to prevent breakage if called from other handlers
+        if (draggedColId || draggedRowId) {
+            e.preventDefault();
+            mousePosRef.current = { x: e.clientX, y: e.clientY };
         }
     };
 
@@ -725,14 +744,12 @@ const TrackTable = ({
         setDraggedRowId(null);
         setDropTargetRowId(null);
         setRowDropSide(null);
-        setAutoScrollDir(null);
     };
 
     const clearDragState = () => {
         setDraggedColId(null);
         setDropTargetColId(null);
         setDropSide(null);
-        setAutoScrollDir(null);
     };
 
     const handleApplyPlaylistOrder = async () => {
@@ -819,7 +836,10 @@ const TrackTable = ({
     };
 
     return (
-        <div className="flex flex-col w-full h-full min-h-[inherit] bg-spotify-base overflow-hidden">
+        <div 
+            className="flex flex-col w-full h-full min-h-[inherit] bg-spotify-base overflow-hidden"
+            onDragOver={handleAutoScroll}
+        >
             {/* Portal for Hide Columns Button */}
             {typeof document !== 'undefined' &&
                 document.getElementById(actionsContainerId || (isStaging ? 'staging-actions-container' : 'playlist-actions-container')) &&
@@ -949,7 +969,10 @@ const TrackTable = ({
 
             <div
                 ref={tableScrollRef}
-                onDragOver={(e) => onDragOver(e, null)}
+                onDragOver={(e) => {
+                    // Still need this for column dragging logic
+                    if (draggedColId) onDragOver(e, null);
+                }}
                 onDrop={clearDragState}
                 className={`overflow-x-auto overflow-y-auto flex-1 bg-spotify-base custom-scrollbar ${draggedColId ? '' : 'snap-x snap-proximity'}`}
                 style={{ scrollPaddingLeft: `${totalStickyWidth}px` }}
