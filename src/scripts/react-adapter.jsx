@@ -4,7 +4,7 @@ import TrackTable from '../components/TrackTable';
 import Sidebar from '../components/Sidebar';
 
 // Wrapper component to manage state that comes from legacy JS
-const TableWrapper = ({ initialTracks, isStaging, autoPlayInitialTrack = true, actionsContainerId, storageNamespace }) => {
+const TableWrapper = ({ initialTracks, isStaging, autoPlayInitialTrack = false, actionsContainerId, storageNamespace }) => {
     const [tracks, setTracks] = useState(initialTracks || []);
     const [selectedIds, setSelectedIds] = useState(new Set(window.curSelected || []));
     const [nowPlayingId, setNowPlayingId] = useState(window.nowPlaying ? window.nowPlaying.id : null);
@@ -14,40 +14,25 @@ const TableWrapper = ({ initialTracks, isStaging, autoPlayInitialTrack = true, a
     useEffect(() => {
         setTracks(initialTracks || []);
         
-        // Auto-play the first track when a new collection is loaded (not in staging)
-        if (autoPlayInitialTrack && !isStaging && initialTracks && initialTracks.length > 0) {
-            const firstTrack = initialTracks[0];
-            // Small delay to ensure the player container is ready and window.playTrack is available
-            setTimeout(() => {
-                handlePlayTrack(firstTrack);
-            }, 500);
-        }
-    }, [initialTracks, isStaging, autoPlayInitialTrack]);
+        // Auto-play removed to avoid automatic player opening
+    }, [initialTracks]);
 
     // Sync with global state changes from legacy JS
     useEffect(() => {
-        const interval = setInterval(() => {
-            if (window.curSelected) {
-                // Only update if size changed or we need to sync (simplified sync)
-                if (window.curSelected.size !== selectedIds.size) {
-                    setSelectedIds(new Set(window.curSelected));
-                }
-            }
-            if (window.nowPlaying) {
-                if (window.nowPlaying.id !== nowPlayingId) {
-                    setNowPlayingId(window.nowPlaying.id);
-                }
-            } else if (nowPlayingId) {
-                setNowPlayingId(null);
-            }
+        const handleSync = () => {
+            const currentSelected = new Set(window.curSelected || []);
+            setSelectedIds(currentSelected);
+            
+            const currentNowPlayingId = window.nowPlaying ? window.nowPlaying.id : null;
+            const currentIsPlaying = !!window.nowPlaying;
+            
+            setNowPlayingId(currentNowPlayingId);
+            setIsPlaying(currentIsPlaying);
+        };
 
-            const playing = !!window.nowPlaying;
-            if (playing !== isPlaying) {
-                setIsPlaying(playing);
-            }
-        }, 250);
-        return () => clearInterval(interval);
-    }, [selectedIds, nowPlayingId, isPlaying]);
+        window.addEventListener('oym-sync-table', handleSync);
+        return () => window.removeEventListener('oym-sync-table', handleSync);
+    }, []); 
 
     const handleToggleSelection = (ids, isSelected) => {
         const idList = Array.isArray(ids) ? ids : [ids];
@@ -128,34 +113,29 @@ const SidebarWrapper = ({ initialWorld }) => {
     }, [initialWorld]);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            // Update active node from legacy state
-            if (window.curNode !== activeNode) {
-                setActiveNode(window.curNode);
+        const handleSync = () => {
+            setActiveNode(window.curNode);
+            setIsExpandedGlobally(window.sidebarExpanded);
+            
+            if (window.theWorld && window.theWorld.length !== world.length) {
+                setWorld([...window.theWorld]);
             }
-            // Update expanded state from legacy state
-            if (window.sidebarExpanded !== undefined && window.sidebarExpanded !== isExpandedGlobally) {
-                setIsExpandedGlobally(window.sidebarExpanded);
-            }
+        };
 
-            // Periodically sync with global theWorld ONLY if it changed
-            const currentWorld = window.theWorld || [];
-            if (currentWorld.length > 0 && currentWorld.length !== world.length) {
-                setWorld([...currentWorld]);
-            }
-        }, 1000); // Increased interval to reduce CPU churn
-        return () => clearInterval(interval);
-    }, [activeNode, isExpandedGlobally, world]);
+        window.addEventListener('oym-sync-sidebar', handleSync);
+        return () => window.removeEventListener('oym-sync-sidebar', handleSync);
+    }, [world.length]);
 
-    const handleNodeClick = (node) => {
+    const handleNodeClick = React.useCallback((node) => {
+        setActiveNode(node);
+        // Dispatch event for legacy code to react
         if (window.plotPlaylist) window.plotPlaylist(node);
         if (window.showPlaylist) window.showPlaylist(node);
-        setActiveNode(node);
-    };
+    }, []);
 
-    const handleToggleAll = () => {
+    const handleToggleAll = React.useCallback(() => {
         if (window.toggleSidebarSections) window.toggleSidebarSections();
-    };
+    }, []);
 
     return (
         <Sidebar
@@ -262,10 +242,7 @@ window.renderStagingTable = (tracks) => {
 
 window.renderSidebar = (theWorld) => {
     const container = document.getElementById('sidebar');
-    if (!container) {
-        console.error("Sidebar container not found!");
-        return;
-    }
+    if (!container) return;
 
     if (!sidebarRoot || !container.isConnected) {
         if (sidebarRoot) {
@@ -277,6 +254,15 @@ window.renderSidebar = (theWorld) => {
     sidebarRoot.render(
         <SidebarWrapper initialWorld={theWorld} />
     );
+};
+
+// Global notification helper for legacy JS
+window.oymNotify = (type) => {
+    if (type === 'sidebar') {
+        window.dispatchEvent(new CustomEvent('oym-sync-sidebar'));
+    } else if (type === 'table' || type === 'selection' || type === 'playback') {
+        window.dispatchEvent(new CustomEvent('oym-sync-table'));
+    }
 };
 
 // Initial proactive render check

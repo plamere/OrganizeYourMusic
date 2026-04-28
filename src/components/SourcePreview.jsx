@@ -48,7 +48,7 @@ const SourcePreview = React.memo(({ imageUrl }) => {
                     <img
                         src={imageUrl}
                         alt="Preview"
-                        className="w-56 h-56 object-cover scale-100 group-hover:scale-105 transition-transform duration-700"
+                        className="w-56 h-56 object-contain scale-100 group-hover:scale-105 transition-transform duration-700 bg-zinc-950/50"
                         loading="lazy"
                         onError={(e) => e.target.style.display = 'none'}
                     />

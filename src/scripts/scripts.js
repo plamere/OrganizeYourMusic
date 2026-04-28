@@ -1040,6 +1040,7 @@ function filterTracks(tracks) {
   });
 
   console.log(`[Performance] filterTracks took ${now() - start}ms for ${tracks.length} tracks`);
+  if (window.oymNotify) window.oymNotify('sidebar');
 }
 
 var totRefresh = 0;
@@ -1227,8 +1228,8 @@ function redrawPlot() {
       responsive: true,
     }).then(function () {
       if (!thePlot._hasClickEvent) {
-        thePlot.on("plotly_click", function (data) {
-          if (data.points.length > 0) {
+        thePlot.on("plotly_doubleclick", function (data) {
+          if (data && data.points && data.points.length > 0) {
             var idx = data.points[0].pointNumber;
             var track = data.points[0].data.node.tracks[idx];
             playTrack(track);
@@ -1315,6 +1316,7 @@ function showTrackListSubview(subview) {
 function showPlaylist(node) {
   curNode = node;
   window.curNode = node;
+  if (window.oymNotify) window.oymNotify('sidebar');
   var playlistSourceSelected = isPlaylistSourceNode(node);
   activePlaylistReference = playlistSourceSelected
     ? (node.sourceUri || node.playlistUri || node.uri || (getInfo() && getInfo().uri) || null)
@@ -1780,8 +1782,67 @@ async function reorderSpotifyPlaylist(nextOrder, playlistReference) {
     return item.id;
   });
 }
-
 window.reorderSpotifyPlaylist = reorderSpotifyPlaylist;
+
+async function deleteTracksFromPlaylist(trackIds, playlistReference) {
+  var playlistUri = getActivePlaylistUri(playlistReference);
+  var playlistID = getPlaylistIdFromReference(playlistUri);
+  if (!playlistID) {
+    throw new Error("bad playlist URI");
+  }
+
+  var url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
+  var currentTracks =
+    curNode && Array.isArray(curNode.tracks) ? curNode.tracks : [];
+
+  // Map selected IDs to their positions and URIs in the full playlist
+  var itemsToDelete = [];
+  currentTracks.forEach(function (track, index) {
+    if (trackIds.indexOf(track.id) !== -1) {
+      itemsToDelete.push({
+        uri:
+          track && track.details && track.details.uri
+            ? track.details.uri
+            : null,
+        position: index,
+      });
+    }
+  });
+
+  if (itemsToDelete.length === 0) return;
+
+  // Sort by position DESCENDING to avoid indexing shifts if Spotify processed them sequentially
+  // (though Spotify's positions array in a single request handles this, across multiple requests it matters)
+  var deletePayloads = itemsToDelete
+    .filter(function (item) {
+      return item.uri;
+    })
+    .sort(function (a, b) {
+      return b.position - a.position;
+    });
+
+  // Batch by 100 as per Spotify API limits
+  for (
+    var deleteIndex = 0;
+    deleteIndex < deletePayloads.length;
+    deleteIndex += 100
+  ) {
+    var chunk = deletePayloads
+      .slice(deleteIndex, deleteIndex + 100)
+      .map(function (item) {
+        return {
+          uri: item.uri,
+          positions: [item.position],
+        };
+      });
+
+    await spotifyFetcher.apiCall(url, "DELETE", {
+      tracks: chunk,
+    });
+  }
+}
+window.deleteTracksFromPlaylist = deleteTracksFromPlaylist;
+
 
 function makeNode(name, label, filter, getter, sorter, plottable) {
   var node = {
@@ -1820,12 +1881,14 @@ function collapseAllSidebar() {
   sidebarExpanded = false;
   window.sidebarExpanded = false;
   window.localStorage.setItem(SIDEBAR_EXPANDED_KEY, "false");
+  if (window.oymNotify) window.oymNotify('sidebar');
 }
 
 function expandAllSidebar() {
   sidebarExpanded = true;
   window.sidebarExpanded = true;
   window.localStorage.setItem(SIDEBAR_EXPANDED_KEY, "true");
+  if (window.oymNotify) window.oymNotify('sidebar');
 }
 
 function toggleSidebarSections() {

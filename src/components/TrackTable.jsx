@@ -70,8 +70,8 @@ const TrackRow = memo(({
     setLastClickedId,
     setHoveredImage,
     filteredTracks,
-    draggedRowId,
-    dropTargetRowId,
+    isDragged,
+    isDropTarget,
     rowDropSide,
     onRowDragStart,
     onRowDragOver,
@@ -83,23 +83,23 @@ const TrackRow = memo(({
     const isSelected = selectedIds.has(rowId);
     const isEven = idx % 2 === 0;
     const [isHovered, setIsHovered] = useState(false);
-    const rowBg = isSelected
-        ? (isEven ? '#193826' : '#14331f')
-        : (isEven ? '#18181b' : '#121212');
 
-    const rowHoverBg = isSelected
-        ? '#274732'
-        : '#2a2a2a';
+    // Optimize background color logic
+    const rowBaseClass = isSelected
+        ? (isEven ? 'bg-[#193826]' : 'bg-[#14331f]')
+        : (isEven ? 'bg-[#18181b]' : 'bg-[#121212]');
 
-    const isDraggingRow = draggedRowId === rowId;
+    const rowHoverClass = isSelected
+        ? 'hover:bg-[#274732]'
+        : 'hover:bg-[#2a2a2a]';
 
-    const stickyStyleBase = {
+    const stickyStyleBase = useMemo(() => ({
         zIndex: 25,
         transform: 'translateZ(0)',
-        opacity: isDraggingRow ? 0.3 : 1,
+        opacity: isDragged ? 0.3 : 1,
         boxShadow: '1px 0 0 0 rgba(255,255,255,0.05)',
-        backgroundColor: isHovered ? rowHoverBg : rowBg
-    };
+        willChange: 'transform, opacity, background-color'
+    }), [isDragged]);
 
     return (
         <tr
@@ -108,28 +108,29 @@ const TrackRow = memo(({
             onDragOver={(e) => onRowDragOver(e, rowId)}
             onDrop={(e) => onRowDrop(e, rowId)}
             onDragEnd={clearRowDragState}
-            className={`group transition-colors select-none relative ${isSelected ? 'google-visualization-table-tr-sel' : ''} ${isDraggingRow ? 'opacity-30' : ''}`}
+            className={`group select-none relative ${rowBaseClass} ${rowHoverClass} ${isSelected ? 'google-visualization-table-tr-sel' : ''} ${isDragged ? 'opacity-30' : ''}`}
             style={{
-                backgroundColor: isHovered ? rowHoverBg : rowBg,
-                height: '40px' // Fix height to prevent layout shifts
+                height: '40px',
+                willChange: isDragged || isDropTarget ? 'transform, opacity' : 'auto',
+                contain: 'content'
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onDoubleClick={() => {
+                const previewUrl = getPreviewUrl(track);
+                onPlayTrack(track.details ? track : {
+                    ...track,
+                    id: rowId,
+                    details: {
+                        ...(track.details || {}),
+                        preview_url: previewUrl
+                    }
+                });
+            }}
             onClick={(e) => {
                 if (e.target.type === 'checkbox') return;
 
                 const isSelecting = !isSelected;
-                if (isSelecting) {
-                    const previewUrl = getPreviewUrl(track);
-                    onPlayTrack(track.details ? track : {
-                        ...track,
-                        id: rowId,
-                        details: {
-                            ...(track.details || {}),
-                            preview_url: previewUrl
-                        }
-                    });
-                }
 
                 if (e.shiftKey && lastClickedId) {
                     const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
@@ -149,57 +150,45 @@ const TrackRow = memo(({
             }}
         >
             <td
-                className="track-table-cell text-center! w-13 sticky left-0 shadow-[1px_0_0_0_#2d2d2d] box-border"
+                className={`track-table-cell text-center! w-13 sticky left-0 shadow-[1px_0_0_0_#2d2d2d] box-border bg-inherit group-hover:bg-inherit`}
                 style={stickyStyleBase}
             >
                 <div className="flex items-center justify-center gap-2 relative">
                     <div className="relative flex items-center justify-center">
-                            <input
-                                type="checkbox"
-                                className="peer appearance-none w-4 h-4 text-spotify-green bg-zinc-800 border border-zinc-700 rounded checked:bg-spotify-green checked:border-spotify-green focus:ring-0 cursor-pointer transition-all"
-                                checked={isSelected}
-                                readOnly
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const newState = !isSelected;
-                                    const previewUrl = getPreviewUrl(track);
+                        <input
+                            type="checkbox"
+                            className="peer appearance-none w-4 h-4 text-spotify-green bg-zinc-800 border border-zinc-700 rounded checked:bg-spotify-green checked:border-spotify-green focus:ring-0 cursor-pointer transition-all"
+                            checked={isSelected}
+                            readOnly
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const newState = !isSelected;
 
-                                    if (newState) {
-                                        onPlayTrack(track.details ? track : {
-                                            ...track,
-                                            id: rowId,
-                                            details: {
-                                                ...(track.details || {}),
-                                                preview_url: previewUrl
-                                            }
-                                        });
+                                if (e.shiftKey && lastClickedId) {
+                                    const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
+                                    const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
+
+                                    if (lastIdx !== -1 && currentIdx !== -1) {
+                                        const start = Math.min(lastIdx, currentIdx);
+                                        const end = Math.max(lastIdx, currentIdx);
+                                        const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
+                                        onToggleSelection(rangeIds, newState);
+                                        setLastClickedId(rowId);
+                                        return;
                                     }
-
-                                    if (e.shiftKey && lastClickedId) {
-                                        const lastIdx = filteredTracks.findIndex(t => getTrackId(t) === lastClickedId);
-                                        const currentIdx = filteredTracks.findIndex(t => getTrackId(t) === rowId);
-
-                                        if (lastIdx !== -1 && currentIdx !== -1) {
-                                            const start = Math.min(lastIdx, currentIdx);
-                                            const end = Math.max(lastIdx, currentIdx);
-                                            const rangeIds = filteredTracks.slice(start, end + 1).map(t => getTrackId(t));
-                                            onToggleSelection(rangeIds, newState);
-                                            setLastClickedId(rowId);
-                                            return;
-                                        }
-                                    }
-                                    onToggleSelection(rowId, newState);
-                                    setLastClickedId(rowId);
-                                }}
-                            />
-                            <i className="fa fa-check absolute text-[10px] text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity"></i>
-                        </div>
-                        {nowPlayingId === rowId && isPlaying && (
-                            <i className="fa fa-volume-up text-spotify-green text-xs animate-pulse"></i>
-                        )}
+                                }
+                                onToggleSelection(rowId, newState);
+                                setLastClickedId(rowId);
+                            }}
+                        />
+                        <i className="fa fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity"></i>
                     </div>
+                    {nowPlayingId === rowId && isPlaying && (
+                        <i className="fa fa-volume-up text-spotify-green text-xs animate-pulse"></i>
+                    )}
+                </div>
 
-                {dropTargetRowId === rowId && (
+                {isDropTarget && (
                     <div
                         className={`absolute left-0 right-0 h-0.5 bg-spotify-green z-100 pointer-events-none`}
                         style={{ [rowDropSide === 'top' ? 'top' : 'bottom']: 0 }}
@@ -208,21 +197,31 @@ const TrackRow = memo(({
             </td>
 
             {activeColumns.map((col) => {
+                const isStaticCol = col.id === 'index' || col.id === 'popularity' || col.id === 'duration' || col.id === 'year';
 
                 return (
                     <td
                         key={col.id}
-                        className={`py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/2 ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky' : 'snap-start'}`}
-                        style={col.sticky ? {
-                            ...stickyStyleBase,
-                            left: `${col.stickyLeft}px`,
-                            minWidth: `${col.widthPx}px`,
-                            maxWidth: `${col.widthPx}px`
-                        } : { zIndex: 1 }}
+                        className={`py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/2 ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky' : 'snap-start'} ${col.sticky ? 'bg-inherit group-hover:bg-inherit' : ''}`}
+                        style={{
+                            zIndex: col.sticky ? 25 : 1,
+                            ...(col.sticky ? {
+                                ...stickyStyleBase,
+                                left: `${col.stickyLeft}px`,
+                            } : {}),
+                            ...(col.widthPx ? {
+                                minWidth: `${col.widthPx}px`,
+                                maxWidth: `${col.widthPx}px`
+                            } : {})
+                        }}
                     >
-                        <TextCarousel isHovered={isHovered}>{col.render(track, globalIdx)}</TextCarousel>
+                        {isStaticCol ? (
+                            <div className="truncate">{col.render(track, globalIdx)}</div>
+                        ) : (
+                            <TextCarousel isHovered={isHovered}>{col.render(track, globalIdx)}</TextCarousel>
+                        )}
 
-                        {dropTargetRowId === rowId && (
+                        {isDropTarget && (
                             <div
                                 className={`absolute left-0 right-0 h-0.5 bg-spotify-green z-100 pointer-events-none`}
                                 style={{ [rowDropSide === 'top' ? 'top' : 'bottom']: 0 }}
@@ -296,7 +295,7 @@ const TrackTable = ({
     const [dropTargetRowId, setDropTargetRowId] = useState(null);
     const [rowDropSide, setRowDropSide] = useState(null); // 'top' or 'bottom'
 
-    const [autoScrollDir, setAutoScrollDir] = useState(null); // 'left', 'right', or null
+    const [autoScrollDir, setAutoScrollDir] = useState(null); // 'left', 'right', 'up', 'down', or null
     const [scrollVelocity, setScrollVelocity] = useState(0);
     const tableScrollRef = useRef(null);
     const scrollIntervalRef = useRef(null);
@@ -422,20 +421,26 @@ const TrackTable = ({
             return indexA - indexB;
         });
 
-        // Handle dynamic sticky offsets
+        // Handle dynamic sticky offsets and width calculations
         let currentLeft = 52; // Base checkbox/play column
         return cols.map(col => {
-            if (col.sticky) {
-                let width = 120;
-                if (col.id === 'title') width = 240;
-                else if (col.id === 'artist') width = 200;
-                else if (col.id === 'index') width = 64;
+            let width = null;
+            if (col.id === 'title') width = 220;
+            else if (col.id === 'artist') width = 160;
+            else if (col.id === 'album') width = 100;
+            else if (col.id === 'index') width = 64;
+            else if (col.width) {
+                // Parse width from string like 'w-[100px]'
+                const match = col.width.match(/\[(\d+)px\]/);
+                if (match) width = parseInt(match[1], 10);
+            }
 
-                const colWithOffset = { ...col, stickyLeft: currentLeft, widthPx: width };
-                currentLeft += width;
+            if (col.sticky) {
+                const colWithOffset = { ...col, stickyLeft: currentLeft, widthPx: width || 120 };
+                currentLeft += (width || 120);
                 return colWithOffset;
             }
-            return col;
+            return { ...col, widthPx: width };
         });
     }, [isStaging, columnOrder, hiddenColumns]);
 
@@ -548,8 +553,12 @@ const TrackTable = ({
 
         const scroll = () => {
             if (!tableScrollRef.current) return;
-            const delta = autoScrollDir === 'right' ? scrollVelocity : -scrollVelocity;
-            tableScrollRef.current.scrollLeft += delta;
+            const delta = (autoScrollDir === 'right' || autoScrollDir === 'down') ? scrollVelocity : -scrollVelocity;
+            if (autoScrollDir === 'left' || autoScrollDir === 'right') {
+                tableScrollRef.current.scrollLeft += delta;
+            } else {
+                tableScrollRef.current.scrollTop += delta;
+            }
             scrollIntervalRef.current = requestAnimationFrame(scroll);
         };
 
@@ -559,24 +568,11 @@ const TrackTable = ({
         };
     }, [autoScrollDir, scrollVelocity]);
 
-    // Drag and Drop Handlers
-    const onDragStart = (e, colId) => {
-        setDraggedColId(colId);
-        e.dataTransfer.effectAllowed = 'move';
-        // HTML5 DND sometimes needs this to work well
-        e.dataTransfer.setData('text/plain', colId);
+    const handleAutoScroll = (e) => {
+        if (!tableScrollRef.current) return;
+        const rect = tableScrollRef.current.getBoundingClientRect();
 
-        // Custom ghost image if needed, but browser default is okay for now
-    };
-
-    const onDragOver = (e, colId) => {
-        if (!draggedColId) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-
-        // Auto-scroll detection
-        if (tableScrollRef.current) {
-            const rect = tableScrollRef.current.getBoundingClientRect();
+        if (draggedColId) {
             const threshold = 100;
             const x = e.clientX;
 
@@ -594,7 +590,45 @@ const TrackTable = ({
                 setAutoScrollDir(null);
                 setScrollVelocity(0);
             }
+        } else if (draggedRowId) {
+            const threshold = 60;
+            const y = e.clientY;
+
+            if (y > rect.bottom - threshold) {
+                setAutoScrollDir('down');
+                const dist = rect.bottom - y;
+                const velocity = Math.max(2, (1 - Math.max(0, dist) / threshold) * 20);
+                setScrollVelocity(velocity);
+            } else if (y < rect.top + threshold) {
+                setAutoScrollDir('up');
+                const dist = y - rect.top;
+                const velocity = Math.max(2, (1 - Math.max(0, dist) / threshold) * 20);
+                setScrollVelocity(velocity);
+            } else {
+                setAutoScrollDir(null);
+                setScrollVelocity(0);
+            }
         }
+    };
+
+    // Drag and Drop Handlers
+    const onDragStart = (e, colId) => {
+        setDraggedColId(colId);
+        e.dataTransfer.effectAllowed = 'move';
+        // HTML5 DND sometimes needs this to work well
+        e.dataTransfer.setData('text/plain', colId);
+
+        // Custom ghost image if needed, but browser default is okay for now
+    };
+
+    const onDragOver = (e, colId) => {
+        if (!draggedColId && !draggedRowId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        handleAutoScroll(e);
+
+        if (!draggedColId) return;
 
         // Drop position detection
         if (colId && colId !== draggedColId) {
@@ -650,6 +684,8 @@ const TrackTable = ({
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
 
+        handleAutoScroll(e);
+
         if (rowId && rowId !== draggedRowId) {
             const rect = e.currentTarget.getBoundingClientRect();
             const midpoint = rect.top + rect.height / 2;
@@ -689,6 +725,7 @@ const TrackTable = ({
         setDraggedRowId(null);
         setDropTargetRowId(null);
         setRowDropSide(null);
+        setAutoScrollDir(null);
     };
 
     const clearDragState = () => {
@@ -740,6 +777,47 @@ const TrackTable = ({
         }
     };
 
+    const handleDeleteSelected = async () => {
+        const selectedIdArray = Array.from(selectedIds);
+        if (selectedIdArray.length === 0) {
+            if (typeof window.info === 'function') window.info("Select songs to delete first");
+            return;
+        }
+
+        const confirmMsg = `Are you sure you want to remove ${selectedIdArray.length} selected song${selectedIdArray.length > 1 ? 's' : ''} from this playlist?`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const playlistReference = window?.curNode?.sourceUri
+                || window?.curNode?.playlistUri
+                || window?.curNode?.uri
+                || window?.curNode?.details?.uri
+                || null;
+
+            if (typeof window.deleteTracksFromPlaylist === 'function') {
+                if (typeof window.info === 'function') window.info(`Deleting ${selectedIdArray.length} songs...`);
+
+                await window.deleteTracksFromPlaylist(selectedIdArray, playlistReference);
+
+                if (typeof window.info === 'function') window.info("Songs deleted successfully");
+
+                // Clear selection
+                onToggleAll(false, tracks);
+
+                // Refresh the collection to show changes
+                if (typeof window.refetchCurrentCollection === 'function') {
+                    window.refetchCurrentCollection();
+                }
+            } else {
+                console.error("deleteTracksFromPlaylist function not found on window");
+                if (typeof window.error === 'function') window.error("Deletion not supported for this source");
+            }
+        } catch (error) {
+            console.error("Deletion failed:", error);
+            if (typeof window.error === 'function') window.error("Failed to delete songs");
+        }
+    };
+
     return (
         <div className="flex flex-col w-full h-full min-h-[inherit] bg-spotify-base overflow-hidden">
             {/* Portal for Hide Columns Button */}
@@ -757,7 +835,7 @@ const TrackTable = ({
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute left-0 top-full mt-2 z-1000 w-64 max-h-[70vh] overflow-y-auto bg-[#181818] border border-zinc-800 rounded-xl shadow-2xl p-3 custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute right-0 top-full mt-2 z-1000 w-64 max-h-[70vh] overflow-y-auto bg-[#181818] border border-zinc-800 rounded-xl shadow-2xl p-3 custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="flex items-center justify-between mb-3 px-1">
                                     <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                                         Display Columns
@@ -842,10 +920,18 @@ const TrackTable = ({
             {isPlaylistSequenceMode && typeof document !== 'undefined' &&
                 document.getElementById(actionsContainerId || 'playlist-sequence-actions-container') &&
                 createPortal(
-                    <div class="flex items-center gap-4">
+                    <div className="flex items-center gap-4">
                         <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-md border transition-all duration-300 ${hasPendingPlaylistOrderChanges ? 'border-spotify-green/30 bg-spotify-green/5 text-spotify-green animate-pulse' : 'border-white/5 bg-zinc-900/60 text-zinc-500'}`}>
                             {hasPendingPlaylistOrderChanges ? 'Pending Changes' : 'All Changes Saved'}
                         </span>
+                        <button
+                            type="button"
+                            onClick={handleDeleteSelected}
+                            className="flex items-center gap-2.5 px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:scale-105 active:scale-95 shadow-lg h-9"
+                        >
+                            <i className="fa fa-trash text-xs"></i>
+                            <span>Delete Selected</span>
+                        </button>
                         <button
                             type="button"
                             onClick={handleApplyPlaylistOrder}
@@ -922,7 +1008,7 @@ const TrackTable = ({
                                         onDragOver={(e) => onDragOver(e, col.id)}
                                         onDrop={(e) => onDrop(e, col.id)}
                                         onDragEnd={clearDragState}
-                                        className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-all duration-200 snap-start ${col.width || ''} ${stickyClass} ${isDragging ? 'opacity-30 bg-zinc-800 shadow-inner' : ''} relative`}
+                                        className={`track-header-cell cursor-pointer hover:bg-zinc-800 transition-colors duration-200 snap-start ${col.width || ''} ${stickyClass} ${isDragging ? 'opacity-30 bg-zinc-800 shadow-inner' : ''} relative`}
                                         style={{ ...style }}
                                         onClick={() => requestSort(col.sortKey)}
                                     >
@@ -958,8 +1044,8 @@ const TrackTable = ({
                                 setLastClickedId={setLastClickedId}
                                 setHoveredImage={setHoveredImage}
                                 filteredTracks={filteredTracks}
-                                draggedRowId={draggedRowId}
-                                dropTargetRowId={dropTargetRowId}
+                                isDragged={draggedRowId === getTrackId(track)}
+                                isDropTarget={dropTargetRowId === getTrackId(track)}
                                 rowDropSide={rowDropSide}
                                 onRowDragStart={onRowDragStart}
                                 onRowDragOver={onRowDragOver}

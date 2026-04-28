@@ -234,6 +234,7 @@ export const trackColumns = [
         getValue: (track) => getGenre(track),
         render: (track) => getGenre(track),
         className: 'text-zinc-400',
+        width: 'w-[130px]',
         tooltip: 'The primary genre for the track'
     },
     {
@@ -244,6 +245,7 @@ export const trackColumns = [
         getValue: (track) => getAlbumName(track),
         render: (track) => getAlbumName(track),
         className: 'text-zinc-400',
+        width: 'w-[100px]',
         tooltip: 'The album the track belongs to'
     },
     {
@@ -539,6 +541,7 @@ export const trackColumns = [
         getValue: (track) => getArtists(track),
         render: (track) => getArtists(track),
         className: 'text-zinc-400',
+        width: 'w-[180px]',
         tooltip: 'All artists associated with the track'
     },
     {
@@ -550,6 +553,7 @@ export const trackColumns = [
         getValue: (track) => getGenres(track),
         render: (track) => getGenres(track),
         className: 'text-zinc-400',
+        width: 'w-[160px]',
         tooltip: 'All genre classifications associated with the track'
     }
 ];

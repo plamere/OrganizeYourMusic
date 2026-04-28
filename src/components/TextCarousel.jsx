@@ -10,26 +10,37 @@ const TextCarousel = ({ children, isHovered, className = "", active = true }) =>
     const [overflows, setOverflows] = useState(false);
     const [shift, setShift] = useState(0);
 
+    const checkedRef = useRef(false);
+    
     useEffect(() => {
-        if (!active || !isHovered) {
-            if (overflows) setOverflows(false);
-            return;
-        }
-
+        if (!active) return;
+        
         const checkOverflow = () => {
             if (containerRef.current && textRef.current) {
                 const isOverflowing = textRef.current.scrollWidth > containerRef.current.clientWidth;
-                setOverflows(isOverflowing);
+                if (isOverflowing !== overflows) setOverflows(isOverflowing);
                 if (isOverflowing) {
-                    setShift(textRef.current.scrollWidth + 24); // 24px for divider + gap
+                    const newShift = textRef.current.scrollWidth + 24;
+                    if (newShift !== shift) setShift(newShift);
                 }
+                checkedRef.current = true;
             }
         };
 
-        // Small delay to ensure layout is stable
-        const timer = setTimeout(checkOverflow, 50);
-        return () => clearTimeout(timer);
-    }, [isHovered, children, overflows, active]);
+        if (isHovered && !checkedRef.current) {
+            checkOverflow();
+        } else if (!isHovered && checkedRef.current && !overflows) {
+            // Reset checked state if we're not hovering and it didn't overflow, 
+            // so we re-check next time (in case container width changed)
+            checkedRef.current = false;
+        }
+
+        // Periodically re-check if hovered and already checked (in case of dynamic layout changes)
+        if (isHovered && checkedRef.current) {
+            const timer = setTimeout(checkOverflow, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [isHovered, children, overflows, shift, active]);
 
     const duration = Math.max(8, Math.round(shift / 28));
 

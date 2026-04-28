@@ -527,7 +527,7 @@
             class="flex items-center gap-1.5 px-2.5 md:px-4 py-2 text-[10px] md:text-[11px] font-black uppercase tracking-wide text-zinc-500 hover:text-white rounded-full group-[.active]:text-spotify-green transition-all duration-200"
           >
             <i class="fa fa-sort"></i>
-            <span>Playlist Order</span>
+            <span>Modify Playlist</span>
           </a>
         </li>
         <li class="group">
@@ -1390,7 +1390,7 @@
             <div id="exTab3" class="w-full flex-1 flex flex-col min-h-0">
               <div class="tab-content flex-1 min-h-0">
                 <div
-                  class="tab-pane active h-full flex flex-col overflow-hidden"
+                  class="tab-pane active h-full flex flex-col"
                   id="the-track-list"
                 >
                   <div class="flex flex-col mb-8 gap-2">
@@ -1447,7 +1447,7 @@
                     id="track-list-view"
                     class="flex flex-col flex-1 min-h-0"
                   >
-                    <div class="flex justify-end mb-4 px-1">
+                    <div class="flex justify-end mb-4 px-1 relative z-40">
                       <div
                         id="playlist-actions-container"
                         class="flex items-center gap-3"
@@ -1483,7 +1483,7 @@
                     class="hidden flex-col flex-1 min-h-0"
                   >
                     <div
-                      class="flex items-center justify-between mb-6 bg-zinc-900/40 p-6 rounded-2xl border border-white/5 backdrop-blur-sm"
+                      class="flex items-center justify-between mb-6 bg-zinc-900/40 p-6 rounded-2xl border border-white/5 backdrop-blur-sm relative z-40"
                     >
                       <div class="flex flex-col gap-1.5">
                         <div
@@ -1492,7 +1492,7 @@
                           Sequential Management
                         </div>
                         <div class="text-xl font-black text-white">
-                          Playlist Order
+                          Modify Playlist
                         </div>
                         <div class="text-[11px] text-zinc-500 font-medium">
                           Drag rows to reorder tracks, then apply changes to
@@ -1514,7 +1514,7 @@
                 </div>
 
                 <div
-                  class="tab-pane hidden flex-col min-h-0 h-full"
+                  class="tab-pane h-full flex flex-col"
                   id="the-plots"
                 >
                   <div
@@ -1592,7 +1592,7 @@
                 </div>
 
                 <div
-                  class="tab-pane h-full hidden flex-col overflow-hidden"
+                  class="tab-pane h-full hidden flex-col"
                   id="staging"
                 >
                   <div
@@ -1686,7 +1686,7 @@
                           Your new playlist
                         </a>
                       </div>
-                      <div class="flex items-center gap-6">
+                      <div class="flex items-center gap-6 relative z-40">
                         <div id="staging-actions-container" class="flex items-center gap-3"></div>
                         <button
                           id="save-button"

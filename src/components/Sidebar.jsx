@@ -46,18 +46,25 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
     const itemRef = useRef(null);
 
     useEffect(() => {
+        if (isVisible) return;
         const observer = new IntersectionObserver(([entry]) => {
-            setIsVisible(entry.isIntersecting);
-        }, {
-            rootMargin: '100px',
-            threshold: 0.01
-        });
+            if (entry.isIntersecting) {
+                // Reduced delay for snappier feel while still preventing batch spikes
+                const delay = Math.floor(Math.random() * 30); 
+                const timer = setTimeout(() => {
+                    setIsVisible(true);
+                }, delay);
+                observer.disconnect();
+                return () => clearTimeout(timer);
+            }
+        }, { rootMargin: '400px' }); // Increased margin for more proactive loading
 
         if (itemRef.current) observer.observe(itemRef.current);
         return () => observer.disconnect();
-    }, [viewMode]);
+    }, [isVisible]);
 
     const handleMouseEnter = useCallback(() => {
+        setIsHovered(true);
         if (showHoverImage) {
             const img = node.imageUrl || (node.tracks?.length > 0 ? getTrackImage(node.tracks[0]) : null);
             if (img) onHoverImageChange(img);
@@ -65,58 +72,79 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
     }, [node, showHoverImage, onHoverImageChange]);
 
     const handleMouseLeave = useCallback(() => {
+        setIsHovered(false);
         if (showHoverImage) onHoverImageChange(null);
     }, [showHoverImage, onHoverImageChange]);
 
-    const imageUrl = useMemo(() => node.imageUrl || (node.tracks && node.tracks.length > 0 ? getTrackImage(node.tracks[0]) : null), [node]);
+    const imageUrl = node.imageUrl || (node.tracks && node.tracks.length > 0 ? getTrackImage(node.tracks[0]) : null);
 
     if (viewMode === 'grid' || viewMode === 'compact') {
-        const imageUrl = node.imageUrl || (node.tracks?.length > 0 ? getTrackImage(node.tracks[0]) : null);
         const isCompact = viewMode === 'compact';
-        
         return (
             <div
                 ref={itemRef}
                 className="group relative"
+                style={{
+                    contentVisibility: isVisible ? 'visible' : 'auto',
+                    containIntrinsicSize: isCompact ? '0 72px' : '0 100px'
+                }}
             >
                 {isVisible ? (
                     <button
                         onClick={() => onNodeClick(node)}
-                        onMouseEnter={(e) => {
-                            handleMouseEnter();
-                            setIsHovered(true);
-                        }}
-                        onMouseLeave={(e) => {
-                            handleMouseLeave();
-                            setIsHovered(false);
-                        }}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
                         className={`w-full text-left transition-all duration-300 flex flex-col group/btn relative overflow-hidden ${isCompact ? 'p-1 gap-1 rounded-lg' : 'p-2 gap-2 rounded-xl'} ${isActive
-                            ? 'bg-zinc-800 ring-2 ring-spotify-green shadow-xl'
-                            : 'hover:bg-zinc-800/60'
+                            ? 'bg-zinc-800 ring-2 ring-spotify-green shadow-xl scale-[0.98]'
+                            : 'hover:bg-zinc-800/60 hover:scale-[1.01]'
                             }`}
+                        style={{ willChange: 'transform, background-color' }}
                     >
-                        {/* Active Glow Background */}
                         {isActive && (
-                            <div className="absolute inset-0 bg-spotify-green/5 blur-2xl pointer-events-none"></div>
+                            <div className="absolute inset-0 bg-spotify-green/10 blur-2xl pointer-events-none animate-pulse"></div>
                         )}
 
                         <div className={`aspect-square w-full overflow-hidden bg-zinc-950 shadow-inner relative z-10 ${isCompact ? 'rounded-md' : 'rounded-lg'}`}>
                             {imageUrl ? (
-                                <img src={imageUrl} alt={node.name} className="w-full h-full object-cover transition-transform duration-700 group-hover/btn:scale-110" />
+                                <div className="w-full h-full relative">
+                                    {/* Main Image - Lazy Loaded by src deferral */}
+                                    <img
+                                        src={isVisible ? imageUrl : ''}
+                                        alt={node.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                        onLoad={(e) => {
+                                            e.target.classList.remove('opacity-0');
+                                            // Show blurred background only after main image is ready
+                                            const bg = e.target.previousSibling;
+                                            if (bg) bg.classList.remove('opacity-0');
+                                        }}
+                                        className="relative z-10 w-full h-full object-contain transition-all duration-300 opacity-0 group-hover/btn:scale-105"
+                                        style={{ willChange: 'transform, opacity' }}
+                                    />
+                                    {/* Blurred background - Defer display until main image loaded */}
+                                    <img
+                                        src={isVisible ? imageUrl : ''}
+                                        alt=""
+                                        className="absolute inset-0 w-full h-full object-cover blur-md opacity-0 scale-105 saturate-125 pointer-events-none transition-opacity duration-700"
+                                    />
+                                </div>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-zinc-800 to-zinc-900 text-zinc-600">
-                                    <i className={`fa ${getCategoryIcon(node.name)} ${isCompact ? 'text-sm' : 'text-2xl'}`}></i>
+                                <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-zinc-800/30 via-zinc-900/30 to-black/30 text-zinc-600 backdrop-blur-xs">
+                                    <i className={`fa ${getCategoryIcon(node.name)} ${isCompact ? 'text-sm' : 'text-2xl'} group-hover/btn:scale-110 transition-transform duration-300`}></i>
                                 </div>
                             )}
-                            <div className={`absolute bottom-1 right-1 px-1.5 py-0.5 rounded-full font-black backdrop-blur-md transition-all duration-300 ${isCompact ? 'text-[7px]' : 'text-[9px]'} ${isActive ? 'bg-spotify-green text-black' : 'bg-black/60 text-white group-hover/btn:bg-spotify-green group-hover/btn:text-black'}`}>
+                            <div className={`absolute bottom-1 right-1 px-1.5 py-0.5 rounded-full font-black backdrop-blur-md transition-all duration-200 z-20 ${isCompact ? 'text-[7px]' : 'text-[9px]'} ${isActive ? 'bg-spotify-green text-black' : 'bg-black/60 text-white group-hover/btn:bg-spotify-green group-hover/btn:text-black'}`}>
                                 {node.tracks?.length || 0}
                             </div>
                         </div>
-                        <div className={`font-black w-full px-0.5 relative z-10 transition-colors duration-300 ${isCompact ? 'text-[8px]' : 'text-[10px]'} ${isActive ? 'text-spotify-green' : 'text-zinc-400 group-hover/btn:text-zinc-100'}`}>
+                        <div className={`font-black w-full px-0.5 relative z-10 transition-colors duration-200 ${isCompact ? 'text-[8px]' : 'text-[10px]'} ${isActive ? 'text-spotify-green' : 'text-zinc-400 group-hover/btn:text-zinc-100'}`}>
                             <TextCarousel isHovered={isHovered}>{node.name}</TextCarousel>
                         </div>
                     </button>
-                ) : <div className="aspect-square w-full rounded-lg bg-zinc-900/20" />}
+                ) : (
+                    <div className={`w-full rounded-lg bg-zinc-900/20 animate-pulse ${isCompact ? 'aspect-[1/1.2]' : 'aspect-[1/1.3]'}`} />
+                )}
             </div>
         );
     }
@@ -124,19 +152,18 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
     return (
         <div
             ref={itemRef}
-            className="group min-h-8" // Maintain height for observer
+            className="group"
+            style={{
+                height: '30px',
+                contentVisibility: isVisible ? 'visible' : 'auto',
+                containIntrinsicSize: '0 30px'
+            }}
         >
             {isVisible ? (
                 <button
                     onClick={() => onNodeClick(node)}
-                    onMouseEnter={() => {
-                        handleMouseEnter();
-                        setIsHovered(true);
-                    }}
-                    onMouseLeave={() => {
-                        handleMouseLeave();
-                        setIsHovered(false);
-                    }}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
                     className={`w-full text-left px-3 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center justify-between group/btn gap-2 overflow-hidden ${isActive
                         ? 'bg-spotify-green text-black shadow-[0_4px_12px_rgba(29,185,84,0.3)]'
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
@@ -150,7 +177,9 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
                         {node.tracks?.length || 0}
                     </span>
                 </button>
-            ) : null}
+            ) : (
+                <div className="w-full h-[30px] rounded bg-zinc-900/10 animate-pulse" />
+            )}
         </div>
     );
 });
@@ -167,6 +196,14 @@ const SidebarSection = React.memo(({
     onItemMouseEnter,
     viewMode
 }) => {
+    const [hasBeenOpened, setHasBeenOpened] = useState(isExpanded);
+
+    useEffect(() => {
+        if (isExpanded && !hasBeenOpened) {
+            setHasBeenOpened(true);
+        }
+    }, [isExpanded, hasBeenOpened]);
+
     const sectionIcon = useMemo(() => getCategoryIcon(bin.name), [bin.name]);
     const sectionName = useMemo(() => formatName(bin.name), [bin.name]);
 
@@ -187,10 +224,15 @@ const SidebarSection = React.memo(({
 
             <div
                 className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}
-                style={{ willChange: 'grid-template-rows, opacity' }}
+                style={{
+                    willChange: 'grid-template-rows, opacity',
+                    // Use content-visibility: hidden for extreme performance when collapsed
+                    contentVisibility: isExpanded ? 'visible' : 'hidden',
+                    display: !isExpanded && !hasBeenOpened ? 'none' : 'grid'
+                }}
             >
                 <div className={`overflow-hidden px-1 ${viewMode === 'grid' ? 'grid grid-cols-2 gap-2 pt-2 pb-3' : viewMode === 'compact' ? 'grid grid-cols-3 gap-1.5 pt-2 pb-3' : 'space-y-0.5 py-1'}`}>
-                    {bin.visibleNodes.map((node) => (
+                    {(isExpanded || hasBeenOpened) && bin.visibleNodes.map((node) => (
                         <SidebarItem
                             key={node.name}
                             node={node}
@@ -290,24 +332,21 @@ const Sidebar = ({
     const processedWorld = useMemo(() => {
         if (!theWorld || theWorld.length === 0) return [];
 
-        const result = theWorld
-            .map(bin => ({
-                ...bin,
-                visibleNodes: bin.nodes.filter(n => (n.tracks?.length || 0) >= (bin.name === "All Results" ? 0 : 3))
-            }))
-            .filter(bin => bin.visibleNodes.length > 0 || bin.name === "All Results");
+        const orderMap = { "All Results": 0, "Sources": 1 };
 
-        const allIdx = result.findIndex(b => b.name === "All Results");
-        if (allIdx > -1) {
-            const [all] = result.splice(allIdx, 1);
-            result.unshift(all);
-        }
-        const srcIdx = result.findIndex(b => b.name === "Sources");
-        if (srcIdx > -1) {
-            const [src] = result.splice(srcIdx, 1);
-            result.splice(1, 0, src);
-        }
-        return result;
+        // Pre-filter and sort once per world change
+        return theWorld
+            .map(bin => {
+                const nodes = bin.nodes.filter(n => (n.tracks?.length || 0) >= (bin.name === "All Results" ? 0 : 3));
+                if (nodes.length === 0 && bin.name !== "All Results") return null;
+                return { ...bin, visibleNodes: nodes };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                const aOrder = orderMap[a.name] ?? 99;
+                const bOrder = orderMap[b.name] ?? 99;
+                return aOrder - bOrder;
+            });
     }, [theWorld]);
 
     return (
@@ -325,7 +364,7 @@ const Sidebar = ({
                     {/* View Toggles */}
                     <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-white/5 mr-1 shadow-inner">
                         <Tooltip text="List View">
-                            <button 
+                            <button
                                 onClick={() => setViewMode('list')}
                                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-zinc-800 text-spotify-green shadow-lg ring-1 ring-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
                             >
@@ -333,7 +372,7 @@ const Sidebar = ({
                             </button>
                         </Tooltip>
                         <Tooltip text="Grid View">
-                            <button 
+                            <button
                                 onClick={() => setViewMode('grid')}
                                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${viewMode === 'grid' ? 'bg-zinc-800 text-spotify-green shadow-lg ring-1 ring-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
                             >
@@ -341,7 +380,7 @@ const Sidebar = ({
                             </button>
                         </Tooltip>
                         <Tooltip text="Compact Grid">
-                            <button 
+                            <button
                                 onClick={() => setViewMode('compact')}
                                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 ${viewMode === 'compact' ? 'bg-zinc-800 text-spotify-green shadow-lg ring-1 ring-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
                             >
