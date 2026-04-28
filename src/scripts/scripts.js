@@ -985,7 +985,7 @@ function addTracks(tracks) {
 
 function filterTracks(tracks) {
   const start = now();
-  
+
   // 1. Reset all nodes
   theWorld.forEach(function (bin) {
     bin.nodes.forEach(function (node) {
@@ -1025,7 +1025,7 @@ function filterTracks(tracks) {
     // We iterate the categories that aren't optimized yet
     theWorld.forEach(function (bin) {
       if (bin.name === "Genres" || bin.name === "Sources") return;
-      
+
       bin.nodes.forEach(function (node) {
         if (node.filter(track)) {
           node.tracks.push(track);
@@ -1357,17 +1357,21 @@ function showPlaylist(node) {
     if (resetBtn) resetBtn.classList.add("hidden");
     if (resetRowBtn) resetRowBtn.classList.add("hidden");
   } else {
-    if (node.name == "All results") {
-      playlistTitle("All results in this collection");
-    } else {
-      var displayName = node.name && node.name.toLowerCase().startsWith("your ")
-        ? node.name
-        : "Your " + uname(node.name);
-      playlistTitle(displayName + " playlist");
-    }
-    if (resetBtn) resetBtn.classList.remove("hidden");
-    if (resetRowBtn) resetRowBtn.classList.remove("hidden");
-    playlistSubtitle(nTracks + " tracks / " + nArtists + " artists");
+    const isAllResults = node.name === "All results";
+    const formatName = (name) => {
+      if (!name) return "";
+      return name.toLowerCase().startsWith("your ")
+        ? name.replace(/^your\s+/i, "")
+        : uname(name);
+    };
+    const title = isAllResults
+      ? "All results in this collection"
+      : `Your "${formatName(node.name)}" playlist`;
+    playlistTitle(title);
+    [resetBtn, resetRowBtn].forEach(btn => {
+      if (btn) btn.classList.remove("hidden");
+    });
+    playlistSubtitle(`${nTracks} tracks / ${nArtists} artists`);
   }
 
   // document.getElementById("tbl-param").textContent = node.label; // Missing element in new UI
