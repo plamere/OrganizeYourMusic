@@ -927,7 +927,8 @@ const TrackTable = ({
                         <button
                             type="button"
                             onClick={handleDeleteSelected}
-                            className="flex items-center gap-2.5 px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:scale-105 active:scale-95 shadow-lg h-9"
+                            disabled={selectedIds.size === 0}
+                            className="flex items-center gap-2.5 px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:scale-105 active:scale-95 shadow-lg h-9 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
                         >
                             <i className="fa fa-trash text-xs"></i>
                             <span>Delete Selected</span>
