@@ -379,17 +379,18 @@
       .modebar {
         display: flex !important;
         flex-direction: row !important;
-        justify-content: flex-end !important;
+        justify-content: center !important;
         align-items: center !important;
         flex-wrap: nowrap !important;
         width: auto !important;
-        background-color: rgba(24, 24, 27, 0.8) !important;
-        padding: 4px !important;
-        border-radius: 8px !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(4px) !important;
-        margin-right: 8px !important;
-        margin-top: 8px !important;
+        background-color: rgba(18, 18, 18, 0.9) !important;
+        padding: 4px 6px !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        backdrop-filter: blur(12px) !important;
+        margin-right: 12px !important;
+        margin-top: 12px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
       }
 
       .modebar-group {
@@ -402,8 +403,15 @@
       }
 
       .modebar-btn {
-        padding: 4px 6px !important;
-        border-radius: 4px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 30px !important;
+        height: 30px !important;
+        padding: 0 !important;
+        border-radius: 6px !important;
+        margin: 0 1px !important;
+        transition: all 0.2s ease !important;
       }
 
       .modebar-btn:hover {
@@ -1827,8 +1835,6 @@
     <script type="text/javascript">
       // Configuration injected by Vite during build/dev
       window.SPOTIFY_CLIENT_ID = "%VITE_SPOTIFY_CLIENT_ID%";
-      window.SPOTIFY_DEV_FALLBACK_CLIENT_ID =
-        "%VITE_SPOTIFY_DEV_FALLBACK_CLIENT_ID%";
       window.SPOTIFY_REDIRECT_URI = "%VITE_SPOTIFY_REDIRECT_URI%";
       window.SPOTIFY_PROXY_URL = "%VITE_SPOTIFY_PROXY_URL%";
       window.SPOTIFY_AUTH_URL = "%VITE_SPOTIFY_AUTH_URL%";

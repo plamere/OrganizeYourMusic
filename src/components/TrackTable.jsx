@@ -83,21 +83,6 @@ const TrackRow = memo(({
     const isSelected = selectedIds.has(rowId);
     const isEven = idx % 2 === 0;
     const [isHovered, setIsHovered] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
-    const rowRef = useRef(null);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(([entry]) => {
-            setIsVisible(entry.isIntersecting);
-        }, {
-            rootMargin: '200px',
-            threshold: 0.01
-        });
-
-        if (rowRef.current) observer.observe(rowRef.current);
-        return () => observer.disconnect();
-    }, []);
-
     const rowBg = isSelected
         ? (isEven ? '#193826' : '#14331f')
         : (isEven ? '#18181b' : '#121212');
@@ -118,7 +103,6 @@ const TrackRow = memo(({
 
     return (
         <tr
-            ref={rowRef}
             draggable={!sortConfig.key}
             onDragStart={(e) => onRowDragStart(e, rowId)}
             onDragOver={(e) => onRowDragOver(e, rowId)}
@@ -165,17 +149,11 @@ const TrackRow = memo(({
             }}
         >
             <td
-                className="track-table-cell text-center! w-13 sticky left-0 transition-colors shadow-[1px_0_0_0_#2d2d2d] box-border"
+                className="track-table-cell text-center! w-13 sticky left-0 shadow-[1px_0_0_0_#2d2d2d] box-border"
                 style={stickyStyleBase}
-                onMouseEnter={() => {
-                    const img = getTrackImage(track);
-                    if (img) setHoveredImage(img);
-                }}
-                onMouseLeave={() => setHoveredImage(null)}
             >
-                {isVisible ? (
-                    <div className="flex items-center justify-center gap-2 relative">
-                        <div className="relative flex items-center justify-center">
+                <div className="flex items-center justify-center gap-2 relative">
+                    <div className="relative flex items-center justify-center">
                             <input
                                 type="checkbox"
                                 className="peer appearance-none w-4 h-4 text-spotify-green bg-zinc-800 border border-zinc-700 rounded checked:bg-spotify-green checked:border-spotify-green focus:ring-0 cursor-pointer transition-all"
@@ -220,9 +198,6 @@ const TrackRow = memo(({
                             <i className="fa fa-volume-up text-spotify-green text-xs animate-pulse"></i>
                         )}
                     </div>
-                ) : (
-                    <div className="w-4 h-4" /> // Placeholder
-                )}
 
                 {dropTargetRowId === rowId && (
                     <div
@@ -233,12 +208,11 @@ const TrackRow = memo(({
             </td>
 
             {activeColumns.map((col) => {
-                const cellContent = isVisible ? col.render(track, globalIdx) : '';
 
                 return (
                     <td
                         key={col.id}
-                        className={`py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/2 transition-colors whitespace-nowrap ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky transition-colors' : 'snap-start'}`}
+                        className={`py-2 px-3 text-[13px] font-bold text-zinc-400 border-b border-white/2 ${col.className || ''} text-${col.align === 'center' ? 'center!' : 'left'} ${col.sticky ? 'sticky' : 'snap-start'}`}
                         style={col.sticky ? {
                             ...stickyStyleBase,
                             left: `${col.stickyLeft}px`,
@@ -246,9 +220,7 @@ const TrackRow = memo(({
                             maxWidth: `${col.widthPx}px`
                         } : { zIndex: 1 }}
                     >
-                        {isVisible ? (
-                            <TextCarousel isHovered={isHovered}>{cellContent}</TextCarousel>
-                        ) : null}
+                        <TextCarousel isHovered={isHovered}>{col.render(track, globalIdx)}</TextCarousel>
 
                         {dropTargetRowId === rowId && (
                             <div
@@ -769,7 +741,7 @@ const TrackTable = ({
     };
 
     return (
-        <div className="flex flex-col w-full h-full min-h-[inherit]">
+        <div className="flex flex-col w-full h-full min-h-[inherit] bg-spotify-base overflow-hidden">
             {/* Portal for Hide Columns Button */}
             {typeof document !== 'undefined' &&
                 document.getElementById(actionsContainerId || (isStaging ? 'staging-actions-container' : 'playlist-actions-container')) &&
@@ -891,10 +863,10 @@ const TrackTable = ({
                 ref={tableScrollRef}
                 onDragOver={(e) => onDragOver(e, null)}
                 onDrop={clearDragState}
-                className={`overflow-x-auto flex-1 ${draggedColId ? '' : 'snap-x snap-proximity'}`}
+                className={`overflow-x-auto overflow-y-auto flex-1 bg-spotify-base custom-scrollbar ${draggedColId ? '' : 'snap-x snap-proximity'}`}
                 style={{ scrollPaddingLeft: `${totalStickyWidth}px` }}
             >
-                <table className="google-visualization-table-table w-full border-separate border-spacing-0">
+                <table className="google-visualization-table-table w-full border-separate border-spacing-0 min-h-full">
                     <thead>
                         <tr className="google-visualization-table-tr-head">
                             <th
@@ -1000,8 +972,8 @@ const TrackTable = ({
                 </table>
             </div>
 
-            {/* Pagination UI */}
-            <div className="google-visualization-table-div-page flex items-center justify-between p-2 border-t border-zinc-800">
+            {/* Pagination UI - Fixed at bottom, stretched content above */}
+            <div className="google-visualization-table-div-page flex-none flex items-center justify-between p-4 border-t border-white/5 bg-spotify-base">
                 <div id="page-size-selector-container" className="flex items-center gap-2">
                     <span className="text-zinc-500 text-sm">Show:</span>
                     <select

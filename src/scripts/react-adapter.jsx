@@ -45,7 +45,7 @@ const TableWrapper = ({ initialTracks, isStaging, autoPlayInitialTrack = true, a
             if (playing !== isPlaying) {
                 setIsPlaying(playing);
             }
-        }, 100);
+        }, 250);
         return () => clearInterval(interval);
     }, [selectedIds, nowPlayingId, isPlaying]);
 
@@ -202,7 +202,10 @@ window.renderTrackTable = (tracks) => {
     const emptyState = document.getElementById('track-table-empty');
     if (emptyState) emptyState.classList.add('hidden');
 
-    if (!trackTableRoot) {
+    if (!trackTableRoot || !container.isConnected) {
+        if (trackTableRoot) {
+            try { trackTableRoot.unmount(); } catch (e) { }
+        }
         trackTableRoot = createRoot(container);
     }
 
@@ -220,7 +223,10 @@ window.renderPlaylistTrackTable = (tracks) => {
         return;
     }
 
-    if (!playlistTableRoot) {
+    if (!playlistTableRoot || !container.isConnected) {
+        if (playlistTableRoot) {
+            try { playlistTableRoot.unmount(); } catch (e) { }
+        }
         playlistTableRoot = createRoot(container);
     }
 
@@ -242,7 +248,10 @@ window.renderStagingTable = (tracks) => {
         return;
     }
 
-    if (!stagingTableRoot) {
+    if (!stagingTableRoot || !container.isConnected) {
+        if (stagingTableRoot) {
+            try { stagingTableRoot.unmount(); } catch (e) { }
+        }
         stagingTableRoot = createRoot(container);
     }
 
@@ -258,7 +267,10 @@ window.renderSidebar = (theWorld) => {
         return;
     }
 
-    if (!sidebarRoot) {
+    if (!sidebarRoot || !container.isConnected) {
+        if (sidebarRoot) {
+            try { sidebarRoot.unmount(); } catch (e) { }
+        }
         sidebarRoot = createRoot(container);
     }
 

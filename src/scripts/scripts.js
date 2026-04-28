@@ -3833,34 +3833,45 @@ function initTrackListSubviewTabs() {
 function showTab(selector) {
   // selector can be #the-track-list-tab, #playlist-order-tab, #the-plots-tab, #staging-tab
   var targetId = selector.replace("-tab", "");
+
+  // 1. Determine target panel and handle aliases
   if (targetId === "#playlist-order" && !playlistSourceTabVisible) {
     targetId = "#the-track-list";
   }
 
-  var tabs = ["#the-track-list", "#playlist-order", "#the-plots", "#staging"];
+  var targetPanelId = targetId === "#playlist-order" ? "#the-track-list" : targetId;
 
-  tabs.forEach(function (tabId) {
+  // 2. Update Tab Active States
+  var tabIds = ["#the-track-list", "#playlist-order", "#the-plots", "#staging"];
+  tabIds.forEach(function (tabId) {
     var tabLinkElem = document.getElementById(tabId.substring(1) + "-tab");
-    var panelId = tabId === "#playlist-order" ? "#the-track-list" : tabId;
-    var tabPanel = document.getElementById(panelId.substring(1));
-
-    if (tabId === targetId) {
-      if (tabLinkElem) {
-        var parentLi = tabLinkElem.closest("li");
+    if (tabLinkElem) {
+      var parentLi = tabLinkElem.closest("li");
+      if (tabId === targetId) {
         if (parentLi) parentLi.classList.add("active");
         tabLinkElem.classList.add("active");
-      }
-      if (tabPanel) tabPanel.classList.add("active", "in");
-    } else {
-      if (tabLinkElem) {
-        var parentLi = tabLinkElem.closest("li");
+      } else {
         if (parentLi) parentLi.classList.remove("active");
         tabLinkElem.classList.remove("active");
       }
-      if (tabPanel) tabPanel.classList.remove("active", "in");
     }
   });
 
+  // 3. Update Panel Visibility
+  // We iterate through panels, not tabs, to ensure each panel's visibility is set exactly once
+  var panelIds = ["#the-track-list", "#the-plots", "#staging"];
+  panelIds.forEach(function (panelId) {
+    var tabPanel = document.getElementById(panelId.substring(1));
+    if (tabPanel) {
+      if (panelId === targetPanelId) {
+        tabPanel.classList.add("active", "in");
+      } else {
+        tabPanel.classList.remove("active", "in");
+      }
+    }
+  });
+
+  // 4. Trigger Logic for specific targets
   if (targetId === "#the-plots") {
     stagingIsVisible = false;
     redrawPlot();
@@ -3870,12 +3881,13 @@ function showTab(selector) {
   } else if (targetId === "#playlist-order") {
     stagingIsVisible = false;
     showTrackListSubview("playlist-sequence");
-  } else if (targetId === "#the-track-list") {
-    stagingIsVisible = false;
-    showTrackListSubview("track-list");
   } else {
+    // Default for #the-track-list or any unknown targets
     stagingIsVisible = false;
     showTrackListSubview("track-list");
+    if (window.renderTrackTable && curNode && curNode.tracks) {
+      window.renderTrackTable(curNode.tracks);
+    }
   }
 }
 
