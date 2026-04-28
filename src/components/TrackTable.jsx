@@ -748,10 +748,11 @@ const TrackTable = ({
                 createPortal(
                     <div className="relative inline-block" ref={dropdownRef}>
                         <button
+                            type="button"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm h-7 ${isDropdownOpen ? 'bg-spotify-green text-black border-spotify-green' : 'bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/5'}`}
+                            className={`flex items-center gap-2.5 px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-[0.15em] transition-all border shadow-sm h-9 ${isDropdownOpen ? 'bg-spotify-green text-black border-spotify-green scale-95' : 'bg-zinc-800/40 hover:bg-zinc-800 text-zinc-400 hover:text-white border-white/5'}`}
                         >
-                            <i className="fa fa-columns text-[10px]"></i>
+                            <i className="fa fa-columns text-xs"></i>
                             <span>Columns</span>
                         </button>
 
@@ -841,18 +842,18 @@ const TrackTable = ({
             {isPlaylistSequenceMode && typeof document !== 'undefined' &&
                 document.getElementById(actionsContainerId || 'playlist-sequence-actions-container') &&
                 createPortal(
-                    <div className="flex items-center gap-2">
-                        <span className={`text-[9px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border ${hasPendingPlaylistOrderChanges ? 'border-spotify-green/40 bg-spotify-green/10 text-spotify-green' : 'border-white/5 bg-zinc-900/60 text-zinc-500'}`}>
-                            {hasPendingPlaylistOrderChanges ? 'Unsaved changes' : 'Saved'}
+                    <div class="flex items-center gap-4">
+                        <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-md border transition-all duration-300 ${hasPendingPlaylistOrderChanges ? 'border-spotify-green/30 bg-spotify-green/5 text-spotify-green animate-pulse' : 'border-white/5 bg-zinc-900/60 text-zinc-500'}`}>
+                            {hasPendingPlaylistOrderChanges ? 'Pending Changes' : 'All Changes Saved'}
                         </span>
                         <button
                             type="button"
                             onClick={handleApplyPlaylistOrder}
                             disabled={!hasPendingPlaylistOrderChanges || isApplyingPlaylistOrder}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm h-7 ${isApplyingPlaylistOrder ? 'bg-zinc-800 text-zinc-200 border-zinc-600 scale-[0.98]' : 'bg-spotify-green text-black border-spotify-green'} disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500`}
+                            className={`flex items-center gap-2.5 px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all border shadow-lg h-9 ${isApplyingPlaylistOrder ? 'bg-zinc-800 text-zinc-200 border-zinc-600 scale-[0.98]' : 'bg-spotify-green text-black border-spotify-green hover:scale-105 active:scale-95'} disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed`}
                         >
-                            <i className={`fa ${isApplyingPlaylistOrder ? 'fa-spinner fa-spin' : 'fa-check'} text-[10px]`}></i>
-                            <span>{isApplyingPlaylistOrder ? 'Applying...' : 'Apply Changes'}</span>
+                            <i className={`fa ${isApplyingPlaylistOrder ? 'fa-spinner fa-spin' : 'fa-check'} text-xs`}></i>
+                            <span>{isApplyingPlaylistOrder ? 'Applying...' : 'Apply Sequence'}</span>
                         </button>
                     </div>,
                     document.getElementById(actionsContainerId || 'playlist-sequence-actions-container')
