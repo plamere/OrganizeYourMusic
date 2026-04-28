@@ -148,12 +148,24 @@ const getContextType = (track) => {
 const getGenres = (track) => {
     const genres = getField(track, 'genres');
     if (genres instanceof Set) {
-        return Array.from(genres)[0] || '-';
+        return Array.from(genres).filter(Boolean).join(', ') || '-';
     }
     if (Array.isArray(genres)) {
-        return genres[0] || '-';
+        return genres.filter(Boolean).join(', ') || '-';
     }
-    return getField(track, 'topGenre') || '-';
+    return getGenre(track);
+};
+
+const getGenre = (track) => {
+    const genres = getField(track, 'genres');
+    if (genres instanceof Set) {
+        return Array.from(genres).find(Boolean) || getField(track, 'topGenre') || '-';
+    }
+    if (Array.isArray(genres)) {
+        return genres.find(Boolean) || getField(track, 'topGenre') || '-';
+    }
+
+    return getField(track, 'topGenre') || getField(track, 'genre') || '-';
 };
 
 const getPercentLabel = (val) => {
@@ -214,6 +226,17 @@ export const trackColumns = [
         tooltip: 'The primary artist of the track'
     },
     {
+        id: 'genre',
+        label: 'Genre',
+        sortKey: 'genre',
+        align: 'left',
+        isExtra: true,
+        getValue: (track) => getGenre(track),
+        render: (track) => getGenre(track),
+        className: 'text-zinc-400',
+        tooltip: 'The primary genre for the track'
+    },
+    {
         id: 'album',
         label: 'Album',
         sortKey: 'album',
@@ -222,17 +245,6 @@ export const trackColumns = [
         render: (track) => getAlbumName(track),
         className: 'text-zinc-400',
         tooltip: 'The album the track belongs to'
-    },
-    {
-        id: 'genres',
-        label: 'Genres',
-        sortKey: 'genres',
-        align: 'left',
-        isExtra: true,
-        getValue: (track) => getGenres(track),
-        render: (track) => getGenres(track),
-        className: 'text-zinc-400',
-        tooltip: 'All genre classifications associated with the track'
     },
     {
         id: 'year',
@@ -268,6 +280,17 @@ export const trackColumns = [
         tooltip: 'The length of the track'
     },
     {
+        id: 'release_date',
+        label: 'Release',
+        sortKey: 'release_date',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => getAlbumReleaseDate(track) || '',
+        render: (track) => formatDate(getAlbumReleaseDate(track)),
+        className: 'text-zinc-400',
+        tooltip: 'The full release date'
+    },
+    {
         id: 'date_added',
         label: 'Added',
         sortKey: 'date_added',
@@ -280,6 +303,45 @@ export const trackColumns = [
         render: (track) => formatDate(getAddedAt(track)),
         className: 'text-zinc-400',
         tooltip: 'The date the track was added to your collection'
+    },
+    {
+        id: 'last_played_at',
+        label: 'Played At',
+        sortKey: 'last_played_at',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => {
+            const val = getLastPlayedAt(track);
+            return val ? new Date(val).getTime() : 0;
+        },
+        render: (track) => formatDate(getLastPlayedAt(track)),
+        className: 'text-zinc-400',
+        tooltip: 'The last time you played this track'
+    },
+    {
+        id: 'context_type',
+        label: 'Context',
+        sortKey: 'context_type',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => getContextType(track) || '-',
+        render: (track) => getContextType(track) || '-',
+        className: 'text-zinc-400',
+        tooltip: 'The context in which the track was found'
+    },
+    {
+        id: 'explicit',
+        label: 'Explicit',
+        sortKey: 'explicit',
+        align: 'center',
+        isExtra: true,
+        getValue: (track) => track?.explicit ?? track?.feats?.explicit,
+        render: (track) => {
+            const val = track?.explicit ?? track?.feats?.explicit;
+            return val === true ? 'Yes' : val === false ? 'No' : '-';
+        },
+        className: 'text-zinc-400',
+        tooltip: 'Whether the track contains explicit content'
     },
     {
         id: 'tempo',
@@ -528,5 +590,16 @@ export const trackColumns = [
         render: (track) => getArtists(track),
         className: 'text-zinc-400',
         tooltip: 'All artists associated with the track'
+    },
+    {
+        id: 'genres',
+        label: 'Genres',
+        sortKey: 'genres',
+        align: 'left',
+        isExtra: true,
+        getValue: (track) => getGenres(track),
+        render: (track) => getGenres(track),
+        className: 'text-zinc-400',
+        tooltip: 'All genre classifications associated with the track'
     }
 ];

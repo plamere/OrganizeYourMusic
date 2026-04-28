@@ -199,7 +199,7 @@ const TrackRow = memo(({
 
                 {dropTargetRowId === rowId && (
                     <div
-                        className={`absolute left-0 right-0 h-[2px] bg-spotify-green z-100 pointer-events-none`}
+                        className={`absolute left-0 right-0 h-0.5 bg-spotify-green z-100 pointer-events-none`}
                         style={{ [rowDropSide === 'top' ? 'top' : 'bottom']: 0 }}
                     />
                 )}
@@ -225,7 +225,7 @@ const TrackRow = memo(({
 
                         {dropTargetRowId === rowId && (
                             <div
-                                className={`absolute left-0 right-0 h-[2px] bg-spotify-green z-100 pointer-events-none`}
+                                className={`absolute left-0 right-0 h-0.5 bg-spotify-green z-100 pointer-events-none`}
                                 style={{ [rowDropSide === 'top' ? 'top' : 'bottom']: 0 }}
                             />
                         )}
@@ -851,7 +851,7 @@ const TrackTable = ({
 
                                         {/* Drop Indicator */}
                                         {isDropTarget && (
-                                            <div className={`absolute top-0 bottom-0 w-[2px] bg-spotify-green shadow-[0_0_8px_rgba(29,185,84,0.8)] z-50 pointer-events-none animate-pulse ${dropSide === 'left' ? 'left-0' : 'right-0'}`} />
+                                            <div className={`absolute top-0 bottom-0 w-0.5 bg-spotify-green shadow-[0_0_8px_rgba(29,185,84,0.8)] z-50 pointer-events-none animate-pulse ${dropSide === 'left' ? 'left-0' : 'right-0'}`} />
                                         )}
                                     </th>
                                 );
