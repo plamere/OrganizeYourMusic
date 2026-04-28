@@ -65,7 +65,6 @@ app.post(SPOTIFY_PROXY_ROUTE, async (req, res) => {
             finalUrl = `${url}?${params.toString()}`;
         }
 
-        // console.log(`Proxying ${method} request to: ${finalUrl}`);
         const response = await fetch(finalUrl, options);
 
         if (!response.ok) {

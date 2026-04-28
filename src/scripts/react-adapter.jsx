@@ -4,7 +4,7 @@ import TrackTable from '../components/TrackTable';
 import Sidebar from '../components/Sidebar';
 
 // Wrapper component to manage state that comes from legacy JS
-const TableWrapper = ({ initialTracks, isStaging }) => {
+const TableWrapper = ({ initialTracks, isStaging, autoPlayInitialTrack = true, actionsContainerId, storageNamespace }) => {
     const [tracks, setTracks] = useState(initialTracks || []);
     const [selectedIds, setSelectedIds] = useState(new Set(window.curSelected || []));
     const [nowPlayingId, setNowPlayingId] = useState(window.nowPlaying ? window.nowPlaying.id : null);
@@ -12,18 +12,17 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
 
     // Sync with tracks prop change
     useEffect(() => {
-        console.log("TableWrapper received new tracks:", initialTracks?.length, "isStaging:", isStaging);
         setTracks(initialTracks || []);
         
         // Auto-play the first track when a new collection is loaded (not in staging)
-        if (!isStaging && initialTracks && initialTracks.length > 0) {
+        if (autoPlayInitialTrack && !isStaging && initialTracks && initialTracks.length > 0) {
             const firstTrack = initialTracks[0];
             // Small delay to ensure the player container is ready and window.playTrack is available
             setTimeout(() => {
                 handlePlayTrack(firstTrack);
             }, 500);
         }
-    }, [initialTracks, isStaging]);
+    }, [initialTracks, isStaging, autoPlayInitialTrack]);
 
     // Sync with global state changes from legacy JS
     useEffect(() => {
@@ -96,6 +95,8 @@ const TableWrapper = ({ initialTracks, isStaging }) => {
                 nowPlayingId={nowPlayingId}
                 isPlaying={isPlaying}
                 isStaging={isStaging}
+                actionsContainerId={actionsContainerId}
+                storageNamespace={storageNamespace}
             />
         );
     } catch (e) {
@@ -140,7 +141,6 @@ const SidebarWrapper = ({ initialWorld }) => {
             // Periodically sync with global theWorld ONLY if it changed
             const currentWorld = window.theWorld || [];
             if (currentWorld.length > 0 && currentWorld.length !== world.length) {
-                console.log("React-Adapter: World changed, syncing sidebar. New size:", currentWorld.length);
                 setWorld([...currentWorld]);
             }
         }, 1000); // Increased interval to reduce CPU churn
@@ -171,11 +171,11 @@ const SidebarWrapper = ({ initialWorld }) => {
 // Global roots
 let trackTableRoot = null;
 let stagingTableRoot = null;
+let playlistTableRoot = null;
 let sidebarRoot = null;
 
 window.renderTrackTable = (tracks) => {
     const trackCount = tracks?.length || 0;
-    console.log(`[ReactAdapter] Attempting to render Track Table with ${trackCount} tracks`);
 
     let container = document.getElementById('gthe-track-table');
     if (!container) {
@@ -183,7 +183,6 @@ window.renderTrackTable = (tracks) => {
         trackTableRoot = null; // Reset root reference
         const shell = document.getElementById('track-table-shell');
         if (shell) {
-            console.log("[ReactAdapter] Found shell, recreating container div");
             const inner = shell.querySelector('.overflow-x-auto');
             if (inner) {
                 inner.innerHTML = '<div id="gthe-track-table" class="w-full text-left"></div>';
@@ -203,19 +202,40 @@ window.renderTrackTable = (tracks) => {
     const emptyState = document.getElementById('track-table-empty');
     if (emptyState) emptyState.classList.add('hidden');
 
-    console.log("[ReactAdapter] Container ready, mounting TrackTable root");
     if (!trackTableRoot) {
         trackTableRoot = createRoot(container);
     }
 
     trackTableRoot.render(
-        <TableWrapper initialTracks={tracks} isStaging={false} />
+        <TableWrapper initialTracks={tracks} isStaging={false} actionsContainerId="playlist-actions-container" />
     );
-    console.log("[ReactAdapter] TrackTable.render() called");
+};
+
+window.renderPlaylistTrackTable = (tracks) => {
+    const trackCount = tracks?.length || 0;
+
+    const container = document.getElementById('gthe-playlist-sequence-table');
+    if (!container) {
+        console.error("[ReactAdapter] Playlist sequence container not found!");
+        return;
+    }
+
+    if (!playlistTableRoot) {
+        playlistTableRoot = createRoot(container);
+    }
+
+    playlistTableRoot.render(
+        <TableWrapper
+            initialTracks={tracks}
+            isStaging={false}
+            autoPlayInitialTrack={false}
+            actionsContainerId="playlist-sequence-actions-container"
+            storageNamespace="playlist-sequence"
+        />
+    );
 };
 
 window.renderStagingTable = (tracks) => {
-    console.log("Rendering Staging Table with", tracks?.length, "tracks");
     const container = document.getElementById('gthe-staging-table');
     if (!container) {
         console.error("Staging table container not found!");
@@ -227,12 +247,11 @@ window.renderStagingTable = (tracks) => {
     }
 
     stagingTableRoot.render(
-        <TableWrapper initialTracks={tracks} isStaging={true} />
+        <TableWrapper initialTracks={tracks} isStaging={true} actionsContainerId="staging-actions-container" />
     );
 };
 
 window.renderSidebar = (theWorld) => {
-    console.log("Rendering Sidebar with", theWorld?.length, "categories");
     const container = document.getElementById('sidebar');
     if (!container) {
         console.error("Sidebar container not found!");
@@ -255,6 +274,9 @@ const proactiveRender = () => {
     }
     if (window.curNode && window.curNode.tracks) {
         window.renderTrackTable(window.curNode.tracks);
+        if (window.curNode.sourceType === 'playlist') {
+            window.renderPlaylistTrackTable(window.curNode.tracks);
+        }
     } else if (window.allTracks && window.allTracks.length > 0) {
         // Fallback to all tracks if no node selected but data exists
         window.renderTrackTable(window.allTracks);

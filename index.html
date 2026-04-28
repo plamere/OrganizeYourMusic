@@ -467,6 +467,13 @@
           <span>Plots</span>
         </a>
       </li>
+      <li id="playlist-order-tab-item" class="hidden group">
+        <a id="playlist-order-tab" href="#playlist-order" data-toggle="tab"
+          class="flex items-center gap-1.5 px-2.5 md:px-4 py-2 text-[10px] md:text-[11px] font-black uppercase tracking-wide text-zinc-500 hover:text-white rounded-full group-[.active]:text-spotify-green transition-all duration-200">
+          <i class="fa fa-sort"></i>
+          <span>Playlist Order</span>
+        </a>
+      </li>
       <li class="group">
         <a href="#staging" id="staging-tab" data-toggle="tab"
           class="flex items-center gap-1.5 px-2.5 md:px-4 py-2 text-[10px] md:text-[11px] font-black uppercase tracking-wide text-zinc-500 hover:text-white rounded-full group-[.active]:text-spotify-green transition-all duration-200">
@@ -1006,28 +1013,46 @@
                         class="absolute top-1 right-1 w-6 h-6 bg-zinc-900/50 backdrop-blur-md rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all z-10 opacity-0 group-hover:opacity-100">
                         <i class="fa fa-times text-[10px]"></i>
                       </button>
-                      <iframe id="spotify-player" src="" width="300" height="80" frameborder="0"
+                      <iframe id="spotify-player" src="" width="420" height="90" frameborder="0"
                         allowtransparency="true"
                         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        style="width:420px; height:90px; max-width:calc(100vw - 32px);"
                         class="rounded-xl"></iframe>
                     </div>
                   </div>
                 </div>
 
-                <div id="track-table-empty"
-                  class="hidden items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 px-6 py-20 text-center">
-                  <div class="text-zinc-500 m-2">
-                    <i class="fa fa-search text-4xl"></i>
+                <div id="track-list-view" class="flex flex-col flex-1 min-h-0">
+                  <div id="track-table-empty"
+                    class="hidden items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 px-6 py-20 text-center">
+                    <div class="text-zinc-500 m-2">
+                      <i class="fa fa-search text-4xl"></i>
+                    </div>
+                    <div class="text-zinc-400 font-medium">
+                      No tracks match the current filter.
+                    </div>
                   </div>
-                  <div class="text-zinc-400 font-medium">
-                    No tracks match the current filter.
+
+                  <div id="track-table-shell"
+                    class="flex flex-col flex-1 min-h-0">
+                    <div class="overflow-hidden w-full flex-1 flex flex-col">
+                      <div id="gthe-track-table" class="w-full text-left flex-1 flex flex-col min-h-0"></div>
+                    </div>
                   </div>
                 </div>
 
-                <div id="track-table-shell"
-                  class="flex flex-col flex-1 min-h-0">
+                <div id="playlist-sequence-view" class="hidden flex-col flex-1 min-h-0">
+                  <div class="flex flex-col mb-4 gap-1">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-white">
+                      Playlist Order
+                    </div>
+                    <div class="text-[9px] text-zinc-500 font-bold uppercase tracking-tight">
+                      Reorder the playlist, then apply changes to save the new sequence.
+                    </div>
+                    <div id="playlist-sequence-actions-container" class="flex items-center gap-2 pt-2"></div>
+                  </div>
                   <div class="overflow-hidden w-full flex-1 flex flex-col">
-                    <div id="gthe-track-table" class="w-full text-left flex-1 flex flex-col min-h-0"></div>
+                    <div id="gthe-playlist-sequence-table" class="w-full text-left flex-1 flex flex-col min-h-0"></div>
                   </div>
                 </div>
               </div>

@@ -520,56 +520,6 @@ export const trackColumns = [
         tooltip: 'The disc number on the album'
     },
     {
-        id: 'release_date',
-        label: 'Release',
-        sortKey: 'release_date',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => getAlbumReleaseDate(track) || '',
-        render: (track) => formatDate(getAlbumReleaseDate(track)),
-        className: 'text-zinc-400',
-        tooltip: 'The full release date'
-    },
-    {
-        id: 'last_played_at',
-        label: 'Played At',
-        sortKey: 'last_played_at',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => {
-            const val = getLastPlayedAt(track);
-            return val ? new Date(val).getTime() : 0;
-        },
-        render: (track) => formatDate(getLastPlayedAt(track)),
-        className: 'text-zinc-400',
-        tooltip: 'The last time you played this track'
-    },
-    {
-        id: 'context_type',
-        label: 'Context',
-        sortKey: 'context_type',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => getContextType(track) || '-',
-        render: (track) => getContextType(track) || '-',
-        className: 'text-zinc-400',
-        tooltip: 'The context in which the track was found'
-    },
-    {
-        id: 'explicit',
-        label: 'Explicit',
-        sortKey: 'explicit',
-        align: 'center',
-        isExtra: true,
-        getValue: (track) => track?.explicit ?? track?.feats?.explicit,
-        render: (track) => {
-            const val = track?.explicit ?? track?.feats?.explicit;
-            return val === true ? 'Yes' : val === false ? 'No' : '-';
-        },
-        className: 'text-zinc-400',
-        tooltip: 'Whether the track contains explicit content'
-    },
-    {
         id: 'isrc',
         label: 'ISRC',
         sortKey: 'isrc',

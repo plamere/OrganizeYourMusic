@@ -124,7 +124,7 @@ const SidebarItem = memo(({ node, activeNode, onNodeClick, showHoverImage, onHov
     return (
         <div
             ref={itemRef}
-            className="group min-h-[32px]" // Maintain height for observer
+            className="group min-h-8" // Maintain height for observer
         >
             {isVisible ? (
                 <button
@@ -365,7 +365,7 @@ const Sidebar = ({
             </div>
 
             {/* Sections */}
-            <div className="flex-1 overflow-y-auto px-1 py-1 space-y-2 [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb:hover]:bg-white/20">
+            <div className="flex-1 overflow-y-auto px-1 py-1 space-y-2 [&::-webkit-scrollbar]:w-1.25 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb:hover]:bg-white/20">
                 {processedWorld.map((bin) => (
                     <SidebarSection
                         key={bin.name}

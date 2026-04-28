@@ -203,6 +203,11 @@ var nowPlaying = null;
 var curNode = null;
 var abortLoading = false;
 var sourceImages = {};
+var sourceTypes = {};
+var sourceUris = {};
+var activePlaylistReference = null;
+var playlistSourceTabVisible = false;
+var activeTrackListSubview = "track-list";
 
 var progressBar = document.getElementById("progress-bar");
 
@@ -960,10 +965,14 @@ function addTracks(tracks) {
             featSorter("popularity", true),
             false,
           );
+          node.sourceType = sourceTypes[source] || null;
+          node.sourceUri = sourceUris[source] || null;
           if (sourceImages[source]) {
             node.imageUrl = sourceImages[source];
           }
           theWorld[sourceIndex].nodes.push(node);
+        } else if (nodeMap[source] && sourceUris[source] && !nodeMap[source].sourceUri) {
+          nodeMap[source].sourceUri = sourceUris[source];
         }
       });
     }
@@ -1253,9 +1262,65 @@ function clearPlot() {
   redrawPlot();
 }
 
+function isPlaylistSourceNode(node) {
+  return !!node && node.sourceType === "playlist";
+}
+
+function setPlaylistSourceTabVisible(isVisible) {
+  playlistSourceTabVisible = !!isVisible;
+
+  var tabItem = document.getElementById("playlist-order-tab-item");
+  if (tabItem) {
+    tabItem.classList.toggle("hidden", !playlistSourceTabVisible);
+  }
+
+  if (!playlistSourceTabVisible && activeTrackListSubview === "playlist-sequence") {
+    showTab("#the-track-list-tab");
+    return;
+  }
+
+  showTrackListSubview(activeTrackListSubview);
+}
+
+function showTrackListSubview(subview) {
+  var nextSubview = subview === "playlist-sequence" && playlistSourceTabVisible
+    ? "playlist-sequence"
+    : "track-list";
+
+  activeTrackListSubview = nextSubview;
+  var trackListPanel = document.getElementById("track-list-view");
+  var playlistPanel = document.getElementById("playlist-sequence-view");
+
+  if (trackListPanel) {
+    if (nextSubview === "track-list") {
+      trackListPanel.classList.remove("hidden");
+      trackListPanel.classList.add("flex");
+    } else {
+      trackListPanel.classList.add("hidden");
+      trackListPanel.classList.remove("flex");
+    }
+  }
+
+  if (playlistPanel) {
+    if (nextSubview === "playlist-sequence" && playlistSourceTabVisible) {
+      playlistPanel.classList.remove("hidden");
+      playlistPanel.classList.add("flex");
+    } else {
+      playlistPanel.classList.add("hidden");
+      playlistPanel.classList.remove("flex");
+    }
+  }
+}
+
 function showPlaylist(node) {
   curNode = node;
   window.curNode = node;
+  var playlistSourceSelected = isPlaylistSourceNode(node);
+  activePlaylistReference = playlistSourceSelected
+    ? (node.sourceUri || node.playlistUri || node.uri || (getInfo() && getInfo().uri) || null)
+    : null;
+  window.activePlaylistReference = activePlaylistReference;
+  setPlaylistSourceTabVisible(playlistSourceSelected);
   if (theTrackTable == null) return;
 
   if (stagingIsVisible) {
@@ -1293,7 +1358,10 @@ function showPlaylist(node) {
     if (node.name == "All results") {
       playlistTitle("All results in this collection");
     } else {
-      playlistTitle("Your " + uname(node.name) + " tracks");
+      var displayName = node.name && node.name.toLowerCase().startsWith("your ")
+        ? node.name
+        : "Your " + uname(node.name);
+      playlistTitle(displayName + " playlist");
     }
     if (resetBtn) resetBtn.classList.remove("hidden");
     if (resetRowBtn) resetRowBtn.classList.remove("hidden");
@@ -1337,7 +1405,19 @@ function showPlaylist(node) {
     node.getter,
     node.label,
     false,
+    "main",
   );
+
+  if (playlistSourceSelected) {
+    showTracksInTable(
+      theTrackTable,
+      displayTracks,
+      node.getter,
+      node.label,
+      false,
+      "playlist",
+    );
+  }
 }
 
 function getGlobalSearchTracks(query) {
@@ -1552,6 +1632,13 @@ function showTracksInTable(_table, tracks, _getter, _label, isStagingList) {
       window.renderStagingTable(mergedTracks);
     }
   } else {
+    if (arguments[5] === "playlist") {
+      if (window.renderPlaylistTrackTable) {
+        window.renderPlaylistTrackTable(mergedTracks);
+      }
+      return;
+    }
+
     if (window.renderTrackTable) {
       window.renderTrackTable(mergedTracks);
     } else {
@@ -1591,6 +1678,110 @@ function saveTracksToPlaylist(playlist, inputTracks) {
   }
   saveTracks();
 }
+
+function getActivePlaylistUri(overrideUri) {
+  if (overrideUri && typeof overrideUri === "string") {
+    return overrideUri;
+  }
+
+  if (activePlaylistReference && typeof activePlaylistReference === "string") {
+    return activePlaylistReference;
+  }
+
+  if (curNode && (curNode.sourceUri || curNode.playlistUri || curNode.uri)) {
+    return curNode.sourceUri || curNode.playlistUri || curNode.uri;
+  }
+
+  var info = getInfo();
+  if (info && info.type === "playlist" && info.uri) {
+    return info.uri;
+  }
+
+  return null;
+}
+
+async function reorderSpotifyPlaylist(nextOrder, playlistReference) {
+  var playlistUri = getActivePlaylistUri(playlistReference);
+  var playlistID = getPlaylistIdFromReference(playlistUri);
+  if (!playlistID) {
+    throw new Error("bad playlist URI");
+  }
+
+  var url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
+  var currentTracks = curNode && Array.isArray(curNode.tracks) ? curNode.tracks : [];
+  var currentItems = currentTracks
+    .map(function (track, index) {
+      return {
+        track: track,
+        id: track && track.id ? track.id : null,
+        uri: track && track.details && track.details.uri ? track.details.uri : null,
+        position: index,
+      };
+    })
+    .filter(function (item) {
+      return item.id && item.uri;
+    });
+
+  var trackBuckets = new Map();
+  currentItems.forEach(function (item) {
+    if (!trackBuckets.has(item.id)) {
+      trackBuckets.set(item.id, []);
+    }
+    trackBuckets.get(item.id).push(item);
+  });
+
+  var desiredOrder = Array.isArray(nextOrder) ? nextOrder.filter(Boolean) : [];
+  var orderedItems = [];
+  desiredOrder.forEach(function (id) {
+    var bucket = trackBuckets.get(id);
+    if (bucket && bucket.length > 0) {
+      orderedItems.push(bucket.shift());
+    }
+  });
+
+  trackBuckets.forEach(function (bucket) {
+    while (bucket.length > 0) {
+      orderedItems.push(bucket.shift());
+    }
+  });
+
+  var deletePayloads = currentItems
+    .slice()
+    .sort(function (a, b) {
+      return b.position - a.position;
+    });
+
+  for (var deleteIndex = 0; deleteIndex < deletePayloads.length; deleteIndex += 100) {
+    var deleteBatch = deletePayloads.slice(deleteIndex, deleteIndex + 100).map(function (item) {
+      return {
+        uri: item.uri,
+        positions: [item.position],
+      };
+    });
+
+    await spotifyFetcher.apiCall(url, "DELETE", {
+      tracks: deleteBatch,
+    });
+  }
+
+  for (var addIndex = 0; addIndex < orderedItems.length; addIndex += 100) {
+    var addBatch = orderedItems.slice(addIndex, addIndex + 100).map(function (item) {
+      return item.uri;
+    });
+
+    if (addBatch.length > 0) {
+      await spotifyFetcher.apiCall(url, "POST", {
+        uris: addBatch,
+      });
+    }
+  }
+
+  return orderedItems.map(function (item) {
+    return item.id;
+  });
+}
+
+window.reorderSpotifyPlaylist = reorderSpotifyPlaylist;
 
 function makeNode(name, label, filter, getter, sorter, plottable) {
   var node = {
@@ -2748,9 +2939,15 @@ async function collectAllMetadata(tracks) {
 /**
  * Replaces recursive fetching with parallel page fetching
  */
-async function getTracksFromAPI(source, uri, sourceImageUrl = null) {
+async function getTracksFromAPI(source, uri, sourceImageUrl = null, sourceType = null) {
   if (source && sourceImageUrl) {
     sourceImages[source] = sourceImageUrl;
+  }
+  if (source) {
+    sourceTypes[source] = sourceType || sourceTypes[source] || null;
+    if (sourceType === "playlist") {
+      sourceUris[source] = uri;
+    }
   }
   const now = new Date();
   const limit = 50;
@@ -2895,6 +3092,8 @@ async function getSavedTracks() {
     await getTracksFromAPI(
       "Your Saved tracks",
       configuredSpotifyMeTracksUrl,
+      null,
+      "library",
     );
     await finalizeCollection();
   } catch (error) {
@@ -2912,6 +3111,8 @@ async function getAllMusic() {
     await getTracksFromAPI(
       "Your Saved Tracks",
       configuredSpotifyMeTracksUrl,
+      null,
+      "library",
     );
     await getMusicFromPlaylists(true);
     await finalizeCollection();
@@ -2989,7 +3190,7 @@ async function getPlaylistTracks(playlist) {
     const playlistID = getPlaylistPid(uri);
     const url = configuredSpotifyPlaylistsUrl + "/" + playlistID + "/tracks";
     const imageUrl = (playlist.images && playlist.images.length > 0) ? playlist.images[0].url : null;
-    return getTracksFromAPI(playlist.name, url, imageUrl);
+    return getTracksFromAPI(playlist.name, url, imageUrl, "playlist");
   } else {
     throw new Error("bad playlist URI");
   }
@@ -3031,6 +3232,25 @@ function getPlaylistPid(uri) {
   return null;
 }
 
+function getPlaylistIdFromReference(reference) {
+  if (!reference || typeof reference !== "string") return null;
+
+  if (reference.indexOf("/tracks") !== -1) {
+    var trackMatch = reference.match(/\/playlists\/([^/]+)\/tracks/);
+    if (trackMatch && trackMatch[1]) return trackMatch[1];
+  }
+
+  if (isValidPlaylistUri(reference)) {
+    return getPlaylistPid(reference);
+  }
+
+  if (reference.indexOf(":") === -1 && reference.indexOf("/") === -1) {
+    return reference;
+  }
+
+  return getPlaylistPid(reference);
+}
+
 function saveInfo(params) {
   localStorage.setItem("info", JSON.stringify(params));
 }
@@ -3041,6 +3261,8 @@ function getInfo() {
 
 
 function startCollectionFetch(info) {
+  sourceTypes = {};
+  sourceUris = {};
   if (info.type == "saved") getSavedTracks();
   else if (info.type == "added") getMusicFromPlaylists(false);
   else if (info.type == "playlist")
@@ -3464,6 +3686,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Native Tabs setup
     initNativeTabs();
+    initTrackListSubviewTabs();
 
     // google.charts.load("current", { packages: ["table"] });
     // google.charts.setOnLoadCallback(initTables);
@@ -3603,14 +3826,23 @@ function initNativeTabs() {
   });
 }
 
+function initTrackListSubviewTabs() {
+  // Track-list subviews are now driven by the header tabs.
+}
+
 function showTab(selector) {
-  // selector can be #the-track-list-tab, #the-plots-tab, #staging-tab
+  // selector can be #the-track-list-tab, #playlist-order-tab, #the-plots-tab, #staging-tab
   var targetId = selector.replace("-tab", "");
-  var tabs = ["#the-track-list", "#the-plots", "#staging"];
+  if (targetId === "#playlist-order" && !playlistSourceTabVisible) {
+    targetId = "#the-track-list";
+  }
+
+  var tabs = ["#the-track-list", "#playlist-order", "#the-plots", "#staging"];
 
   tabs.forEach(function (tabId) {
     var tabLinkElem = document.getElementById(tabId.substring(1) + "-tab");
-    var tabPanel = document.getElementById(tabId.substring(1));
+    var panelId = tabId === "#playlist-order" ? "#the-track-list" : tabId;
+    var tabPanel = document.getElementById(panelId.substring(1));
 
     if (tabId === targetId) {
       if (tabLinkElem) {
@@ -3635,8 +3867,15 @@ function showTab(selector) {
   } else if (targetId === "#staging") {
     stagingIsVisible = true;
     showStagingList();
+  } else if (targetId === "#playlist-order") {
+    stagingIsVisible = false;
+    showTrackListSubview("playlist-sequence");
+  } else if (targetId === "#the-track-list") {
+    stagingIsVisible = false;
+    showTrackListSubview("track-list");
   } else {
     stagingIsVisible = false;
+    showTrackListSubview("track-list");
   }
 }
 

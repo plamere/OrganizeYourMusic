@@ -28,6 +28,33 @@ const getTrackImage = (track) => {
     return base?.image_url || track?.details?.image_url || track?.image_url || null;
 };
 
+const getTrackIds = (tracks) => tracks.map((track) => getTrackId(track)).filter(Boolean);
+
+const normalizeRowOrder = (order, tracks) => {
+    const trackIds = getTrackIds(tracks);
+    const trackIdSet = new Set(trackIds);
+    const seen = new Set();
+    const normalized = [];
+
+    (order || []).forEach((id) => {
+        if (!id || !trackIdSet.has(id) || seen.has(id)) return;
+        seen.add(id);
+        normalized.push(id);
+    });
+
+    trackIds.forEach((id) => {
+        if (seen.has(id)) return;
+        seen.add(id);
+        normalized.push(id);
+    });
+
+    return normalized;
+};
+
+const areOrdersEqual = (firstOrder, secondOrder) => (
+    firstOrder.length === secondOrder.length && firstOrder.every((id, index) => id === secondOrder[index])
+);
+
 
 const TrackRow = memo(({
     track,
@@ -245,8 +272,11 @@ const TrackTable = ({
     nowPlayingId,
     isPlaying,
     pageSize: initialPageSize = 50,
-    isStaging = false
+    isStaging = false,
+    actionsContainerId,
+    storageNamespace = null
 }) => {
+    const isPlaylistSequenceMode = storageNamespace === 'playlist-sequence';
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState(initialPageSize);
@@ -256,8 +286,9 @@ const TrackTable = ({
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
+    const hiddenColumnsStorageKey = storageNamespace ? `oym_hidden_columns_${storageNamespace}` : 'oym_hidden_columns';
     const [hiddenColumns, setHiddenColumns] = useState(() => {
-        const saved = localStorage.getItem('oym_hidden_columns');
+        const saved = localStorage.getItem(hiddenColumnsStorageKey);
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -269,8 +300,8 @@ const TrackTable = ({
     });
 
     useEffect(() => {
-        localStorage.setItem('oym_hidden_columns', JSON.stringify(hiddenColumns));
-    }, [hiddenColumns]);
+        localStorage.setItem(hiddenColumnsStorageKey, JSON.stringify(hiddenColumns));
+    }, [hiddenColumns, hiddenColumnsStorageKey]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -298,11 +329,9 @@ const TrackTable = ({
     const tableScrollRef = useRef(null);
     const scrollIntervalRef = useRef(null);
 
-    useEffect(() => {
-        console.log("[TrackTable] Component Mounted with", tracks?.length, "tracks");
-    }, []);
-
-    const storageKey = isStaging ? 'oym_column_order_staging' : 'oym_column_order_main';
+    const storageKey = isStaging
+        ? 'oym_column_order_staging'
+        : (storageNamespace ? `oym_column_order_${storageNamespace}` : 'oym_column_order_main');
 
     // Load/Save Column Order
     // Load/Save Column Order with robust fallback
@@ -332,15 +361,18 @@ const TrackTable = ({
             setColumnOrder(defaultOrder);
             setHiddenColumns([]);
             localStorage.removeItem(storageKey);
-            localStorage.removeItem('oym_hidden_columns');
+            localStorage.removeItem(hiddenColumnsStorageKey);
         };
         window.addEventListener('oym_reset_columns', handleReset);
         return () => window.removeEventListener('oym_reset_columns', handleReset);
-    }, [storageKey]);
+    }, [hiddenColumnsStorageKey, storageKey]);
 
     useEffect(() => {
         const handleResetRows = () => {
-            setManualRowOrder(tracks.map(t => getTrackId(t)));
+            const defaultOrder = getTrackIds(tracks);
+            setManualRowOrder(defaultOrder);
+            setAppliedRowOrder(defaultOrder);
+            localStorage.setItem(manualOrderStorageKey, JSON.stringify(defaultOrder));
             setSortConfig({ key: null, direction: 'desc' });
         };
         window.addEventListener('oym_reset_rows', handleResetRows);
@@ -348,44 +380,56 @@ const TrackTable = ({
     }, [tracks]);
 
     // Manual Row Order State
-    const manualOrderStorageKey = isStaging ? 'oym_manual_row_order_staging' : 'oym_manual_row_order_main';
+    const manualOrderStorageKey = isStaging
+        ? 'oym_manual_row_order_staging'
+        : (storageNamespace ? `oym_manual_row_order_${storageNamespace}` : 'oym_manual_row_order_main');
     const [manualRowOrder, setManualRowOrder] = useState(() => {
         const saved = localStorage.getItem(manualOrderStorageKey);
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                if (Array.isArray(parsed) && parsed.length > 0) return normalizeRowOrder(parsed, tracks);
             } catch (e) {
                 console.warn("Failed to parse manual row order:", e);
             }
         }
-        return tracks.map(t => getTrackId(t));
+        return normalizeRowOrder(getTrackIds(tracks), tracks);
     });
+
+    const [appliedRowOrder, setAppliedRowOrder] = useState(() => {
+        const saved = localStorage.getItem(manualOrderStorageKey);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) return normalizeRowOrder(parsed, tracks);
+            } catch (e) {
+                console.warn("Failed to parse manual row order:", e);
+            }
+        }
+        return normalizeRowOrder(getTrackIds(tracks), tracks);
+    });
+    const [isApplyingPlaylistOrder, setIsApplyingPlaylistOrder] = useState(false);
 
     // Sync manualRowOrder with tracks prop
     useEffect(() => {
         if (!tracks || tracks.length === 0) return;
 
-        const trackIds = tracks.map(t => getTrackId(t));
-        const currentIdSet = new Set(trackIds);
+        const nextOrder = normalizeRowOrder(manualRowOrder, tracks);
+        const nextAppliedOrder = normalizeRowOrder(appliedRowOrder, tracks);
 
         setManualRowOrder(prev => {
-            // Filter out IDs that are no longer in the input tracks
-            const filteredPrev = prev.filter(id => currentIdSet.has(id));
-            const filteredSet = new Set(filteredPrev);
-            // Add new IDs that are not in the manual order yet
-            const addedIds = trackIds.filter(id => !filteredSet.has(id));
-
-            if (addedIds.length === 0 && filteredPrev.length === prev.length) {
-                return prev;
-            }
-            return [...filteredPrev, ...addedIds];
+            return areOrdersEqual(prev, nextOrder) ? prev : nextOrder;
         });
-    }, [tracks]);
+
+        setAppliedRowOrder(prev => {
+            return areOrdersEqual(prev, nextAppliedOrder) ? prev : nextAppliedOrder;
+        });
+    }, [tracks, manualRowOrder, appliedRowOrder]);
 
     useEffect(() => {
+        if (isPlaylistSequenceMode) return;
         localStorage.setItem(manualOrderStorageKey, JSON.stringify(manualRowOrder));
-    }, [manualRowOrder, manualOrderStorageKey]);
+    }, [manualRowOrder, manualOrderStorageKey, isPlaylistSequenceMode]);
 
     // Filter and Reorder columns based on context and relevancy (sorting)
     const activeColumns = useMemo(() => {
@@ -487,6 +531,9 @@ const TrackTable = ({
     }, [filteredTracks, currentPage, pageSize]);
 
     const totalPages = Math.ceil(filteredTracks.length / pageSize);
+    const currentPlaylistOrder = useMemo(() => {
+        return sortConfig.key ? getTrackIds(sortedTracks) : manualRowOrder;
+    }, [sortConfig.key, sortedTracks, manualRowOrder]);
 
     // Reset page when search or tracks change
     useEffect(() => {
@@ -518,6 +565,7 @@ const TrackTable = ({
 
     const isAllSelected = tracks.length > 0 && tracks.every(t => selectedIds.has(getTrackId(t)));
     const isSomeSelected = !isAllSelected && tracks.some(t => selectedIds.has(getTrackId(t)));
+    const hasPendingPlaylistOrderChanges = isPlaylistSequenceMode && !areOrdersEqual(currentPlaylistOrder, appliedRowOrder);
 
     // Auto-scroll Effect
     useEffect(() => {
@@ -660,7 +708,7 @@ const TrackTable = ({
             targetIdx = newOrder.indexOf(targetRowId);
             const finalIdx = rowDropSide === 'bottom' ? targetIdx + 1 : targetIdx;
             newOrder.splice(finalIdx, 0, draggedRowId);
-            setManualRowOrder(newOrder);
+            setManualRowOrder(normalizeRowOrder(newOrder, tracks));
         }
         clearRowDragState();
     };
@@ -678,11 +726,53 @@ const TrackTable = ({
         setAutoScrollDir(null);
     };
 
+    const handleApplyPlaylistOrder = async () => {
+        if (!isPlaylistSequenceMode) return;
+
+        const nextOrder = normalizeRowOrder(currentPlaylistOrder, tracks);
+        setIsApplyingPlaylistOrder(true);
+        try {
+            const playlistReference = window?.curNode?.sourceUri
+                || window?.curNode?.playlistUri
+                || window?.curNode?.uri
+                || window?.curNode?.details?.uri
+                || null;
+
+            if (typeof window.reorderSpotifyPlaylist === 'function') {
+                await window.reorderSpotifyPlaylist(nextOrder, playlistReference);
+            }
+
+            setManualRowOrder(nextOrder);
+            setAppliedRowOrder(nextOrder);
+            localStorage.setItem(manualOrderStorageKey, JSON.stringify(nextOrder));
+
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('oym_playlist_order_applied', {
+                    detail: {
+                        storageNamespace,
+                        order: nextOrder.slice()
+                    }
+                }));
+
+                if (typeof window.info === 'function') {
+                    window.info('playlist order applied');
+                }
+            }
+        } catch (error) {
+            if (typeof window !== 'undefined' && typeof window.error === 'function') {
+                window.error('Trouble reordering playlist');
+            }
+            console.error('Playlist reorder failed:', error);
+        } finally {
+            setIsApplyingPlaylistOrder(false);
+        }
+    };
+
     return (
         <div className="flex flex-col w-full h-full min-h-[inherit]">
             {/* Portal for Hide Columns Button */}
             {typeof document !== 'undefined' &&
-                document.getElementById(isStaging ? 'staging-actions-container' : 'playlist-actions-container') &&
+                document.getElementById(actionsContainerId || (isStaging ? 'staging-actions-container' : 'playlist-actions-container')) &&
                 createPortal(
                     <div className="relative inline-block" ref={dropdownRef}>
                         <button
@@ -773,7 +863,27 @@ const TrackTable = ({
                             </div>
                         )}
                     </div>,
-                    document.getElementById(isStaging ? 'staging-actions-container' : 'playlist-actions-container')
+                    document.getElementById(actionsContainerId || (isStaging ? 'staging-actions-container' : 'playlist-actions-container'))
+                )}
+
+            {isPlaylistSequenceMode && typeof document !== 'undefined' &&
+                document.getElementById(actionsContainerId || 'playlist-sequence-actions-container') &&
+                createPortal(
+                    <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full border ${hasPendingPlaylistOrderChanges ? 'border-spotify-green/40 bg-spotify-green/10 text-spotify-green' : 'border-white/5 bg-zinc-900/60 text-zinc-500'}`}>
+                            {hasPendingPlaylistOrderChanges ? 'Unsaved changes' : 'Saved'}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleApplyPlaylistOrder}
+                            disabled={!hasPendingPlaylistOrderChanges || isApplyingPlaylistOrder}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm h-7 ${isApplyingPlaylistOrder ? 'bg-zinc-800 text-zinc-200 border-zinc-600 scale-[0.98]' : 'bg-spotify-green text-black border-spotify-green'} disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500`}
+                        >
+                            <i className={`fa ${isApplyingPlaylistOrder ? 'fa-spinner fa-spin' : 'fa-check'} text-[10px]`}></i>
+                            <span>{isApplyingPlaylistOrder ? 'Applying...' : 'Apply Changes'}</span>
+                        </button>
+                    </div>,
+                    document.getElementById(actionsContainerId || 'playlist-sequence-actions-container')
                 )}
 
 
