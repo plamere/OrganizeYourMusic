@@ -151,7 +151,8 @@ function getConfiguredSpotifyClientIds() {
   return ids;
 }
 
-function hydrateActiveSpotifyClientId() {
+function hydrateActiveSpotifyClientId(options) {
+  var preserveCodeVerifier = options && options.preserveCodeVerifier;
   var configuredIds = getConfiguredSpotifyClientIds();
   var storedClientId = window.localStorage.getItem(ACTIVE_CLIENT_ID_STORAGE_KEY);
 
@@ -162,7 +163,9 @@ function hydrateActiveSpotifyClientId() {
     console.log("Client ID change detected. Clearing tokens...");
     window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
-    window.localStorage.removeItem("code_verifier");
+    if (!preserveCodeVerifier) {
+      window.localStorage.removeItem("code_verifier");
+    }
     accessToken = null;
   }
 
@@ -3902,7 +3905,13 @@ function renderLoggedInEmail(user) {
 document.addEventListener("DOMContentLoaded", function () {
   applyAnimationPreference(areAnimationsEnabled());
 
-  hydrateActiveSpotifyClientId();
+  var urlParams = new URLSearchParams(window.location.search);
+  var code = urlParams.get("code");
+  var authError = urlParams.get("error");
+
+  hydrateActiveSpotifyClientId({
+    preserveCodeVerifier: !!code || !!authError,
+  });
 
   // Hydrate in-memory token so API calls always use the latest persisted value.
   accessToken = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
@@ -3922,10 +3931,6 @@ document.addEventListener("DOMContentLoaded", function () {
     window.localStorage.setItem("omy_last_client_id", currentClientId);
     window.localStorage.setItem(ACTIVE_CLIENT_ID_STORAGE_KEY, currentClientId);
   }
-
-  var urlParams = new URLSearchParams(window.location.search);
-  var code = urlParams.get("code");
-  var authError = urlParams.get("error");
 
   var toggleSidebarBtn = document.getElementById("toggle-sidebar");
   if (toggleSidebarBtn) {

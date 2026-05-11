@@ -6,7 +6,7 @@ export default defineConfig({
     react()
   ],
   server: {
-    host: "0.0.0.0",
+    host: "127.0.0.1",
     port: 5173,
     proxy: {
       '/api/spotify': {

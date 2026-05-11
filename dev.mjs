@@ -38,7 +38,7 @@ const processes = [
     env: {
       ...process.env,
       BACKEND_PORT: String(backendPort),
-      HOST: '0.0.0.0',
+      HOST: '127.0.0.1',
     },
   }),
 ];
